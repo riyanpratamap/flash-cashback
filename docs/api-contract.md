@@ -118,7 +118,7 @@ gaps.
 | ------------------- | --------------- | -------------------------------------------------------------------- |
 | `AWARDED`           | the full 5%     | The full 5% fits today's cap and the budget                          |
 | `PARTIAL_DAILY_CAP` | less than 5%    | Today's cap cut the award                                            |
-| `PARTIAL_BUDGET`    | less than 5%    | The budget cut the award; this was the last of it and the campaign has ended. Also used when both limits cut it |
+| `PARTIAL_BUDGET`    | less than 5%    | The award is what was left of the budget; this was the last of it and the campaign has ended. When both limits cut the award, this reason applies only if the budget was the tighter one (D45) |
 | `BELOW_MINIMUM`     | Rp0             | Amount under `min_payment`                                           |
 | `CAMPAIGN_ENDED`    | Rp0             | The budget is spent                                                  |
 | `CAMPAIGN_PAUSED`   | Rp0             | The award switch is off (D05)                                        |
@@ -198,7 +198,12 @@ The newest items only: `?limit=`, default 20, maximum 50. No paging (D08). Assum
 
 ## GET /healthz
 
-200 when the service can do its job, 503 when it cannot. The body names each dependency.
+The full path is `/v1/healthz`, like every route under the base URL. No `X-User-ID`. 200 when the service can do its
+job, 503 when it cannot. The body names each dependency:
+
+```json
+{ "status": "ok", "dependencies": { "postgres": "ok", "redis": "degraded" } }
+```
 
 - PostgreSQL down: 503.
 - Redis down or slow: 200 with Redis reported as `degraded`. Redis only holds read caches, and reads fall back to

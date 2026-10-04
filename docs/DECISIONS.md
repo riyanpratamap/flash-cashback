@@ -51,6 +51,9 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D40 | Ledger                                         | Append-only ledger; a balance row holds the running total                              |
 | D41 | Constraints                                    | `CHECK` and `UNIQUE` state every invariant the code relies on                          |
 | D42 | Reconcile                                      | A reconcile command proves the invariants and only reports                             |
+| D43 | How a redemption reads the redemption switch   | Plain read of the flag; no lock on the campaign row                                    |
+| D44 | Lock order                                     | `campaigns` → `user_daily_earnings` → `cashback_balances` → new rows                   |
+| D45 | Reason when both limits cut an award           | `PARTIAL_BUDGET` only when the award equals the budget left; else `PARTIAL_DAILY_CAP`  |
 
 ## Open decisions
 
@@ -184,7 +187,7 @@ The rows marked **built** are this project's definition of production ready. The
 | 4   | No cashback balance is negative                                         | `CHECK (balance >= 0)` and a balance row lock                                                                                                                   | Two concurrent redemptions of the same balance, a mutation                | built                                                                    |
 | 5   | Per user, the sum of ledger entries equals the balance                  | Append-only ledger written in the same transaction (D40)                                                                                                        | Reconcile after every concurrency test                                    | built                                                                    |
 | 6   | A payment across midnight counts once, for one day                      | PostgreSQL `now()` at transaction start (D04)                                                                                                                   | Boundary test at 23:59:59 and 00:00:00 WIB                                | built                                                                    |
-| 7   | A pause cannot land in the middle of an award or a redemption           | Flags on the locked campaign row (D05)                                                                                                                          | Concurrent pause during awards and redemptions                            | built                                                                    |
+| 7   | A pause cannot land in the middle of an award. A redemption either sees the pause, or passed the check before it and completes (amended by D43) | Award flag on the locked campaign row (D05); redemption flag read without a lock (D43)                                                                          | A concurrent pause test for each case                                     | built                                                                    |
 | 8   | Redis down or slow never affects money                                  | Money reads PostgreSQL only; the cache falls back to PostgreSQL within about 50 ms (D06)                                                                        | Tests with Redis stopped and with Redis delayed                           | built                                                                    |
 | 9   | A stale cache never misleads a money decision                           | Cache deleted after commit, short TTL; no write path reads the cache (D06)                                                                                     | Pay, then the balance read is fresh; redemption checks PostgreSQL         | built                                                                    |
 | 10  | A restart or redeploy never resets the budget                           | The budget lives in the campaign row; the seed is `ON CONFLICT DO NOTHING`; configuration is read only at the first seed                                       | Pay, restart, budget unchanged                                            | built                                                                    |
@@ -236,6 +239,35 @@ The rows marked **built** are this project's definition of production ready. The
   the API address. That setup can fail."
 - **Would revisit if:** "reviewers cannot run it. Then I add the web build as the easiest path."
 - **Assumption:** the base URL comes from `EXPO_PUBLIC_API_URL`, default `http://localhost:8080/v1`.
+
+### D43 — How a redemption reads the redemption switch
+
+Raised by the spec pass: the draft locked the campaign row `FOR SHARE` in every redemption, so redemptions queued
+behind in-flight awards.
+
+- **Options:** A. Plain read of the flag, no lock on the campaign row · B. `FOR SHARE` lock on the campaign row ·
+  C. The redemption flag on its own row, locked
+- **Recommended:** A
+- **Chosen:** A
+- **Rationale:** "in D03 I decided redemption is a separate flow that moves money the user already owns. It should not
+  wait behind other people's payments. The lock on the campaign row is the cost I accepted for awards in D01, not for
+  redemptions. And in D05 I already accepted that a redemption which passed the check finishes even after a pause, so
+  the lock does not buy anything I asked for."
+- **Cost accepted:** "when the pause command returns, one redemption that already read the flag may still commit a few
+  milliseconds later. The operator cannot say "nothing is in flight" at that instant. It is visible in the log and in
+  reconcile."
+- **Would revisit if:** "operations needs a hard guarantee that nothing completes after a pause, for example for a fraud
+  freeze. Then I move the redemption flag to its own row and lock that (option C)."
+- **Note:** trust condition 7 is amended to match (C13).
+
+## Further batch
+
+Raised by the spec pass and confirmed by the owner as proposed ("confirm all").
+
+| ID  | Decision                             | Chosen                                                                                                                                                                                                                                         | Reason                                                                                                                                                                                         |
+| --- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D44 | Lock order                           | Award: `campaigns` (`FOR NO KEY UPDATE`) → `user_daily_earnings` → `cashback_balances` → new rows. Redemption: plain read of `campaigns` (D43) → `cashback_balances` (`FOR UPDATE`) → new rows. Switch command: `campaigns` only             | One order on every path, so no deadlock; `FOR NO KEY UPDATE` because inserts with a foreign key take `FOR KEY SHARE` on the campaign row (known pitfalls)                                     |
+| D45 | Reason when both limits cut an award | `PARTIAL_BUDGET` only when the award equals what is left of the budget (the campaign ends); otherwise `PARTIAL_DAILY_CAP`. Supersedes the D02 assumption "both cut → `PARTIAL_BUDGET`"                                                          | When the cap is the tighter limit the campaign does not end, so "Flash Cashback has now ended" would be false                                                                                  |
 
 ## Batches
 
@@ -308,3 +340,5 @@ step that follows this file.
 | C10 | Wireframe promise copy "5% cashback" vs the D02 copy "Cashback up to 5%"                                                  | Amend the wireframe promise lines; the rule itself stays 5%                                                             |
 | C11 | AGENTS.md final check runs the walkthrough "on a path that does not need a Mac"; D09 demos on the iOS simulator           | The final check runs on Expo Go on an Android phone; the owner's own demo can use the simulator; no AGENTS.md change    |
 | C12 | Wireframe copy "while quota lasts" vs "While cashback lasts"                                                              | Unify to "while cashback lasts"                                                                                         |
+| C13 | Trust condition 7 claimed a pause cannot land mid-redemption; D43 reads the redemption flag without a lock               | Amend row 7: a redemption either sees the pause or passed the check before it and completes                             |
+| C14 | `api-contract.md` writes `GET /healthz`; the real path is `/v1/healthz`, and the body shape is not named                 | Write `/v1/healthz` and name the body `{"status","dependencies":{"postgres","redis"}}`                                  |
