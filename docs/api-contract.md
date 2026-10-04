@@ -118,7 +118,7 @@ gaps.
 | ------------------- | --------------- | -------------------------------------------------------------------- |
 | `AWARDED`           | the full 5%     | The full 5% fits today's cap and the budget                          |
 | `PARTIAL_DAILY_CAP` | less than 5%    | Today's cap cut the award                                            |
-| `PARTIAL_BUDGET`    | less than 5%    | The award is what was left of the budget; this was the last of it and the campaign has ended. When both limits cut the award, this reason applies only if the budget was the tighter one (D45) |
+| `PARTIAL_BUDGET`    | less than 5%    | The award equals what was left of the budget, so the campaign has ended, including a tie with what was left of the cap (D45) |
 | `BELOW_MINIMUM`     | Rp0             | Amount under `min_payment`                                           |
 | `CAMPAIGN_ENDED`    | Rp0             | The budget is spent                                                  |
 | `CAMPAIGN_PAUSED`   | Rp0             | The award switch is off (D05)                                        |
@@ -203,6 +203,12 @@ job, 503 when it cannot. The body names each dependency:
 
 ```json
 { "status": "ok", "dependencies": { "postgres": "ok", "redis": "degraded" } }
+```
+
+PostgreSQL down is 503:
+
+```json
+{ "status": "unavailable", "dependencies": { "postgres": "down", "redis": "ok" } }
 ```
 
 - PostgreSQL down: 503.

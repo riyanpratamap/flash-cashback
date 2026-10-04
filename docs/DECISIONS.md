@@ -54,6 +54,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D43 | How a redemption reads the redemption switch   | Plain read of the flag; no lock on the campaign row                                    |
 | D44 | Lock order                                     | `campaigns` → `user_daily_earnings` → `cashback_balances` → new rows                   |
 | D45 | Reason when both limits cut an award           | `PARTIAL_BUDGET` only when the award equals the budget left; else `PARTIAL_DAILY_CAP`  |
+| D46 | When a redemption reads the switch flag        | After the balance lock; supersedes the D44 redemption order                            |
 
 ## Open decisions
 
@@ -260,6 +261,26 @@ behind in-flight awards.
   freeze. Then I move the redemption flag to its own row and lock that (option C)."
 - **Note:** trust condition 7 is amended to match (C13).
 
+### D46 — When a redemption reads the redemption switch
+
+Raised by the spec repair: in the D44 order the flag was read before the balance lock, so a redemption waiting on its
+balance row could hold an old "not paused" answer for up to the lock timeout. Supersedes the redemption order in D44.
+
+- **Options:** A. Read the flag after taking the balance lock (amend the D44 redemption order) · B. Keep the D44 order
+  and widen the D43 cost to the lock timeout
+- **Recommended:** A
+- **Chosen:** A
+- **Rationale:** "the check should happen as late as possible. If the redemption reads the flag first and then waits for
+  the balance row, it can hold an old "not paused" answer for up to the lock timeout and still commit after the pause.
+  Locking the balance first means the waiting is done before the check, so the check sees any pause that already
+  committed. The read still takes no lock, so redemptions do not queue behind awards."
+- **Cost accepted:** "the redemption order in D44 changes, and the spec steps change with it. There is still a small
+  window between the flag read and the commit, a few milliseconds, which is the cost I accepted in D43."
+- **Would revisit if:** "same as D43. If operations needs a hard guarantee that nothing completes after a pause, I move
+  the redemption flag to its own row and lock it."
+- **Redemption order now:** `cashback_balances` (`FOR UPDATE`) → plain read of the `campaigns` flag → new rows. A user
+  with no balance row takes no lock; the flag is read at once.
+
 ## Further batch
 
 Raised by the spec pass and confirmed by the owner as proposed ("confirm all").
@@ -342,3 +363,5 @@ step that follows this file.
 | C12 | Wireframe copy "while quota lasts" vs "While cashback lasts"                                                              | Unify to "while cashback lasts"                                                                                         |
 | C13 | Trust condition 7 claimed a pause cannot land mid-redemption; D43 reads the redemption flag without a lock               | Amend row 7: a redemption either sees the pause or passed the check before it and completes                             |
 | C14 | `api-contract.md` writes `GET /healthz`; the real path is `/v1/healthz`, and the body shape is not named                 | Write `/v1/healthz` and name the body `{"status","dependencies":{"postgres","redis"}}`                                  |
+| C15 | `api-contract.md` `PARTIAL_BUDGET` row says "only if the budget was the tighter one", leaving a tie undefined           | Match D45: the award equals what was left of the budget, so the campaign has ended, including a tie with the cap       |
+| C16 | The `/v1/healthz` 503 body values were not in the contract                                                                | Add 503 `{"status":"unavailable","dependencies":{"postgres":"down","redis":"ok" or "degraded"}}` to the contract     |
