@@ -57,6 +57,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D46 | When a redemption reads the switch flag        | After the balance lock; supersedes the D44 redemption order                            |
 | D47 | Operator action trail (spec check F1)          | Not built; trust condition 11 becomes stated only                                      |
 | D48 | App killed while checking                      | Persist the in-flight attempt; resume with the same key after relaunch                 |
+| D49 | Repository name and Go module path             | `flash-cashback`; `github.com/riyanpratamap/flash-cashback/backend`                     |
 
 ## Open decisions
 
@@ -315,6 +316,18 @@ lead to a second payment with a new key. Amends trust condition 21.
   key"."
 - **Would revisit if:** "the server offers a way to look up a payment by key without creating one. Then on relaunch the
   app can check the status first instead of resending."
+
+### D49 — Repository name and Go module path
+
+Required by AGENTS.md before P0.
+
+- **Options:** A. `github.com/riyanpratamap/flash-cashback/backend` (repo URL plus the `backend/` directory that holds
+  `go.mod`) · B. `github.com/riyanpratamap/flash-cashback` with `go.mod` in `backend/`
+- **Recommended:** A
+- **Chosen:** A. Repository: `github.com/riyanpratamap/flash-cashback` (the existing remote).
+- **Rationale:** the owner confirmed the recommendation: "yes, use that module path". The path matches where the module
+  lives, so Go tooling resolves it.
+- **Would revisit if:** the Go code moves to the repository root.
 
 ## Further batch
 
