@@ -236,7 +236,7 @@ records them; the summary table there is the list agents follow.
 ## Layout
 
 ```
-backend/     Go module: cmd/ (api, admin, reconcile, loadtest), internal/, migrations/
+backend/     Go module: cmd/ (api, admin, reconcile), internal/, migrations/
 mobile/      React Native app (TypeScript)
 docs/        brief, decisions, contract, wireframe, spec
 plans/       delivery plan, learnings, review reports

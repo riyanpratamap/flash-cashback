@@ -2,18 +2,12 @@
 
 The HTTP API of Flash Cashback, drafted before the build. Screens are in [ui-wireframe.md](ui-wireframe.md).
 
-This draft is deliberately incomplete. Eight decisions are still open (listed in `AGENTS.md`), and every part of this
-contract that depends on one is marked:
-
-> **OPEN — decision N.** The variants, and what each changes here.
-
-After the decision session the markers are replaced by the chosen variant, the owner approves the diff, and from then
-on `prd.md` and `tech-spec.md` link here and never restate a request or response shape.
+Final after the decision session. Every choice here is recorded, with its reason, in [DECISIONS.md](DECISIONS.md) and
+cited by ID. `prd.md` and `tech-spec.md` link here and never restate a request or response shape.
 
 ## Settled defaults
 
-Small choices taken without debate. Each has one line of reason; the owner confirms them as a batch and can pull any
-of them into the session.
+Confirmed as one batch (D10–D23).
 
 | Topic | Default | Reason |
 | --- | --- | --- |
@@ -23,7 +17,7 @@ of them into the session.
 | Minimum | A payment of exactly Rp20.000 earns | The brief says "under 20,000" earns nothing |
 | Amount range | A whole number from 1 to 10,000,000, for payments and redemptions | A sanity bound; rejects obviously wrong input |
 | User identity | `X-User-ID` header matching `^[a-z0-9_-]{1,64}$`, on every route except health. Demo users `user_a`, `user_b`, `user_c` | The brief puts authentication out of scope; a header sits where a verified token would |
-| Retries | `Idempotency-Key` header (canonical UUID) on every POST, scoped per user. The same key and body returns the stored result with 200 and `Idempotent-Replayed: true`; the same key with another body is 409 | A timed-out request may have committed; the client must be able to ask again safely |
+| Retries | `Idempotency-Key` header (canonical UUID) on every POST, scoped per user and operation (payment or redemption). The same key and body returns the stored result with 200 and `Idempotent-Replayed: true`; the same key with another body is 409 | A timed-out request may have committed; the client must be able to ask again safely |
 | Payment and cashback | A valid payment always succeeds; cashback is a separate result and can be Rp0 | The campaign is a bonus on top of paying |
 | Budget figures | Never in any response | Business-sensitive, and stale the moment it is shown |
 | Time | RFC 3339 with an explicit offset | Unambiguous on any device |
@@ -50,21 +44,23 @@ of them into the session.
   "id": "flash-cashback",
   "name": "Flash Cashback",
   "status": "ACTIVE",
-  "rules": { "rate_bps": 500, "min_payment": 20000, "daily_cap": 50000 }
+  "redemption_status": "AVAILABLE",
+  "rules": { "rate_bps": 500, "min_payment": 20000, "daily_cap": 50000, "timezone": "Asia/Jakarta" }
 }
 ```
 
-`status` is `ACTIVE` or `ENDED` at least. The rules are served, not hard-coded in the app, so a different rate or cap
-needs no app release.
+The rules are served, not hard-coded in the app, so a different rate or cap needs no app release.
 
-> **OPEN — decision 5 (kill switch).** If a switch exists, add `PAUSED` to `status`. What `PAUSED` stops (awards only,
-> awards and redemptions, or two separate flags) decides the copy on Home and Redeem and whether `POST /redemptions`
-> gains an error code.
+- `status` is about earning: `ACTIVE`, `PAUSED` (the award switch is off, D05), or `ENDED` (the budget is spent, D03).
+  `ENDED` wins over `PAUSED`.
+- `redemption_status` is about redeeming: `AVAILABLE` or `PAUSED` (the redemption switch is off, D05). It is
+  independent of `status`; redemption still works after the campaign has ended.
+- The day is a calendar day in `rules.timezone` (D04).
+- This response may be served from a cache and be a few seconds old (D06). It is for display only; `POST /payments`
+  always decides from the database.
 
-> **OPEN — decision 8 (scope).** An `ENDING_SOON` status (budget below a threshold) is a candidate. It adds a threshold
-> setting and one banner; the brief does not ask for it.
-
-> **OPEN — decision 4 (per day).** If the day is a calendar day in one time zone, add `rules.timezone`.
+Assumption: the second switch is a separate `redemption_status` field rather than another `status` value, because
+the two switches are independent.
 
 ## GET /me/cashback
 
@@ -73,12 +69,17 @@ A user with no activity gets zeros, never a 404.
 ```json
 {
   "balance": 15000,
-  "today": { "earned": 47000, "remaining": 3000 }
+  "today": {
+    "date": "2026-10-03",
+    "earned": 47000,
+    "remaining": 3000,
+    "resets_at": "2026-10-04T00:00:00+07:00"
+  }
 }
 ```
 
-> **OPEN — decision 4 (per day).** A calendar day adds `today.date` and `today.resets_at`. A rolling 24 hours has no
-> single reset time and needs a different field (for example the time the oldest counted award expires).
+`today` is the current campaign day: a calendar day in WIB, by the database clock (D04). This response may be served
+from a per-user cache that is cleared after each of the user's payments and redemptions commits (D06).
 
 ## POST /payments
 
@@ -106,29 +107,31 @@ Content-Type: application/json
 }
 ```
 
-`cashback.reason` says why the award is what it is. Settled codes: `AWARDED` (the full 5%), `BELOW_MINIMUM`,
-`DAILY_CAP_REACHED`, `CAMPAIGN_ENDED`. A Rp0 result has exactly one reason; the order in which the Rp0 reasons are
-checked is fixed in the spec.
+The award is decided in PostgreSQL inside the payment's transaction, so the response is final when it returns (D01).
+The award is `min(5% rounded down, what is left of today's cap, what is left of the budget)` (D02), and the budget is
+spent at that moment (D03). `reference` carries the campaign day in WIB and the zero-padded payment ID; IDs can have
+gaps.
 
-> **OPEN — decision 2 (award at a limit).**
-> A. Partial award: a payment that crosses the daily cap or the end of the budget earns what still fits. Adds
-> `PARTIAL_DAILY_CAP` and `PARTIAL_BUDGET`, and a rule for when both limits cut the award.
-> B. All or nothing: a payment whose full 5% does not fit earns Rp0 with `DAILY_CAP_REACHED` or `CAMPAIGN_ENDED`. No
-> new codes; a user can be stranded below the cap and the budget may never reach zero.
+`cashback.reason` says why the award is what it is:
 
-> **OPEN — decision 1 (where the cap and budget are enforced).**
-> A. In PostgreSQL, inside the payment's transaction. The response above is final when it returns. A long wait on a
-> lock needs a retryable 503 `SERVICE_BUSY`.
-> B. A Redis counter reserves the cashback and PostgreSQL records it afterwards. The response may need a pending
-> state (`cashback.status`), and a reconciliation between the two stores.
+| Reason              | Award           | When                                                                 |
+| ------------------- | --------------- | -------------------------------------------------------------------- |
+| `AWARDED`           | the full 5%     | The full 5% fits today's cap and the budget                          |
+| `PARTIAL_DAILY_CAP` | less than 5%    | Today's cap cut the award                                            |
+| `PARTIAL_BUDGET`    | less than 5%    | The budget cut the award; this was the last of it and the campaign has ended. Also used when both limits cut it |
+| `BELOW_MINIMUM`     | Rp0             | Amount under `min_payment`                                           |
+| `CAMPAIGN_ENDED`    | Rp0             | The budget is spent                                                  |
+| `CAMPAIGN_PAUSED`   | Rp0             | The award switch is off (D05)                                        |
+| `DAILY_CAP_REACHED` | Rp0             | Nothing is left of today's cap                                       |
 
-> **OPEN — decision 3 (when the budget is spent).** At award, the budget ends the moment the last cashback is granted.
-> At redemption, awards can continue past the budget and `POST /redemptions` needs a way to refuse.
+A Rp0 result has exactly one reason, checked in this order: `BELOW_MINIMUM`, `CAMPAIGN_ENDED`, `CAMPAIGN_PAUSED`,
+`DAILY_CAP_REACHED`.
 
-> **OPEN — decision 5 (kill switch).** If a switch exists, add `CAMPAIGN_PAUSED` to the Rp0 reasons.
+Cashback is awarded at once, because payments here are simulated and settle at once. A real integration awards on
+settlement with a pending state; this simplification is stated in the README (D07, trust condition 18).
 
-> **OPEN — decision 7 (real-money risks).** If cashback is granted only once a payment is settled, `cashback` needs a
-> pending state. If it stays instant, the simplification is stated in the README.
+If the transaction waits too long for a lock, the response is 503 `SERVICE_BUSY`. Nothing is committed, and the app
+retries with the same key (D01).
 
 **Validation.** A body that is not JSON, a missing `amount`, or an `amount` that is not a bare number is 400
 `MALFORMED_REQUEST`. A number outside 1 to 10,000,000 or with a fraction is 422 `INVALID_AMOUNT`.
@@ -165,7 +168,12 @@ Any whole amount from 1 up to the balance; no minimum. An amount above the balan
 422 `INSUFFICIENT_BALANCE` and nothing changes. The amount range is checked before the balance. `balance_after` is the
 balance right after this redemption, and a replay returns the same value as the original response.
 
-> **OPEN — decision 5 (kill switch).** If the switch also stops redemptions, add 409 `REDEMPTION_PAUSED`.
+The budget is not involved: it was spent when the cashback was awarded (D03). Redemption works after the campaign has
+ended. While the redemption switch is off, a new redemption is 409 `REDEMPTION_PAUSED` and nothing changes; a
+redemption that already passed that check completes (D05). A replay of a key that was already accepted returns the
+stored result, even while paused.
+
+Assumption: checks run in this order: amount range, then the switch, then the balance.
 
 ## GET /me/history
 
@@ -185,17 +193,16 @@ Payments (Rp0 ones included) and redemptions in one list, newest first. Each ite
 
 Amounts are always positive; `type` decides the sign the app shows.
 
-> **OPEN — decision 8 (scope).**
-> A. The newest N items only (`limit`, default 20, maximum 50), no paging. Enough for a campaign in which a user makes
-> a handful of payments.
-> B. Cursor paging (`next_cursor`), stable while new payments arrive. More code and more tests.
+The newest items only: `?limit=`, default 20, maximum 50. No paging (D08). Assumption: a `limit` outside 1 to
+50 is 400 `MALFORMED_REQUEST`.
 
 ## GET /healthz
 
 200 when the service can do its job, 503 when it cannot. The body names each dependency.
 
-> **OPEN — decision 6 (what Redis is for).** If Redis never decides money, Redis down is "degraded" with 200. If Redis
-> holds the counters (decision 1 B), Redis down is 503.
+- PostgreSQL down: 503.
+- Redis down or slow: 200 with Redis reported as `degraded`. Redis only holds read caches, and reads fall back to
+  PostgreSQL (D06).
 
 ## Errors
 
@@ -210,11 +217,12 @@ same idempotency key; it never resends with a new key by itself.
 | `INVALID_AMOUNT` | 422 | Not a whole number from 1 to 10,000,000 |
 | `INSUFFICIENT_BALANCE` | 422 | Redeem above the balance |
 | `IDEMPOTENCY_KEY_REUSED` | 409 | Same key, different body |
+| `REDEMPTION_PAUSED` | 409 | A new redemption while the redemption switch is off |
 | `NOT_FOUND`, `METHOD_NOT_ALLOWED` | 404, 405 | No such route, or the wrong method |
 | `INTERNAL_ERROR` | 500 | Anything unexpected |
+| `SERVICE_BUSY` | 503 | A lock wait timed out; nothing was committed; retry with the same key |
 
-> **OPEN — decision 6 (what Redis is for).** A rate limit adds 429 `RATE_LIMITED` with `Retry-After`. If there is one,
-> a retry of a key already accepted must never be refused, or an unknown outcome could be shown as a failure.
+There is no rate limit (D06). A 4xx creates no row, so its idempotency key is not stored (D39).
 
 ## Operations
 
@@ -222,22 +230,20 @@ same idempotency key; it never resends with a new key by itself.
 | --- | --- |
 | Reconcile command | Checks the money invariants and exits non-zero on any mismatch. It reports; it never repairs |
 | Demo state command | Puts the database into a known state for the three demo users. Refuses to run unless a demo flag is set |
-| Budget settings | The budget comes from configuration, defaulting to Rp10.000.000, so the ended state can be reached with a small budget |
+| Budget settings | Configuration seeds the campaign row on first boot only, defaulting to Rp10.000.000, so the ended state can be reached with a small budget on a fresh database. After that the row is the truth: a restart or a changed setting never resets it |
+| Switch commands | Pause and resume awards; pause and resume redemptions (D05). Each writes the flag on the campaign row and a structured log line (who, when, which switch) |
 
-> **OPEN — decision 5 (kill switch).** If chosen: a pause and resume command.
-
-> **OPEN — decision 8 (scope).** A load-test command (many generated users paying until the budget is gone, then
-> reconcile) is a candidate. The concurrency tests already prove the limits; the load test proves them through HTTP.
+There is no load-test command (D08).
 
 ## Library picks
 
-Confirmed as one batch in the session; any row can be pulled out.
+Confirmed as one batch (D24–D37).
 
 | Area | Pick | Reason |
 | --- | --- | --- |
 | HTTP router | `chi` | Standard `net/http` handlers, little to learn |
 | PostgreSQL access | `pgx` v5, hand-written SQL | The locking statements are the design and should be visible |
-| Migrations | `goose`, embedded, run when the API starts | One `docker compose up`, no separate step |
+| Migrations | `goose`, embedded, run when the API starts, with the Postgres session locker | One `docker compose up`, no separate step; two instances never migrate at once |
 | Redis client | `go-redis` v9 | The common client |
 | Logging | Standard library `log/slog`, JSON | No dependency |
 | Go checks | `gofmt`, `go vet`, `staticcheck` | Real mistakes, almost no configuration |
@@ -247,3 +253,6 @@ Confirmed as one batch in the session; any row can be pulled out.
 | Server data in the app | TanStack Query | Loading, error, and refetch states without hand-written flags |
 | Mobile tests | Jest with React Native Testing Library | Tests act as a user would |
 | Key generation | `expo-crypto` on the phone, `google/uuid` in Go | `crypto.randomUUID` is not guaranteed in React Native |
+| Remembered demo user | `@react-native-async-storage/async-storage` | The user switcher is remembered across launches |
+| Mobile lint and typecheck | ESLint with `eslint-config-expo`; `tsc --noEmit` | The agent stop check needs `lint` and `typecheck` scripts |
+| API base URL in the app | `EXPO_PUBLIC_API_URL`, default `http://localhost:8080/v1` | Expo Go on a phone needs the host's address (D09) |
