@@ -165,6 +165,14 @@ reason. No balance is shown here; Done returns to Home, which refetches.
 - The word "failed" never appears for an unknown outcome.
 - Leaving the screen is blocked while checking, so the key is not lost and the user is not led to pay again.
 - For a redemption: "Checking your redemption..." and "Please don't redeem again."
+- **Killed while checking (D48):** before sending, the app saves the attempt (user ID, payment or redemption, amount,
+  key, time) and clears it on a definite answer. On the next launch, if one is saved:
+  - **Recent:** Checking reopens and resends it with the same key and the saved user ID.
+  - **Old:** Home shows a card instead of resending: "A payment of Rp100.000 from 3 Oct, 14:32 wasn't confirmed."
+    with **Check now** (opens Checking, same key) and **Dismiss** ("Check your history before paying again."). For a
+    redemption the card says "A redemption of …".
+  - The attempt is always resent as the user it was made by, whichever demo user is selected.
+  - Assumption: "recent" means under 10 minutes old.
 
 ## 5. Redeem cashback
 

@@ -55,6 +55,8 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D44 | Lock order                                     | `campaigns` → `user_daily_earnings` → `cashback_balances` → new rows                   |
 | D45 | Reason when both limits cut an award           | `PARTIAL_BUDGET` only when the award equals the budget left; else `PARTIAL_DAILY_CAP`  |
 | D46 | When a redemption reads the switch flag        | After the balance lock; supersedes the D44 redemption order                            |
+| D47 | Operator action trail (spec check F1)          | Not built; trust condition 11 becomes stated only                                      |
+| D48 | App killed while checking                      | Persist the in-flight attempt; resume with the same key after relaunch                 |
 
 ## Open decisions
 
@@ -192,7 +194,7 @@ The rows marked **built** are this project's definition of production ready. The
 | 8   | Redis down or slow never affects money                                  | Money reads PostgreSQL only; the cache falls back to PostgreSQL within about 50 ms (D06)                                                                        | Tests with Redis stopped and with Redis delayed                           | built                                                                    |
 | 9   | A stale cache never misleads a money decision                           | Cache deleted after commit, short TTL; no write path reads the cache (D06)                                                                                     | Pay, then the balance read is fresh; redemption checks PostgreSQL         | built                                                                    |
 | 10  | A restart or redeploy never resets the budget                           | The budget lives in the campaign row; the seed is `ON CONFLICT DO NOTHING`; configuration is read only at the first seed                                       | Pay, restart, budget unchanged                                            | built                                                                    |
-| 11  | Every operator action is traceable                                      | A structured log line on every pause and resume (who, when, which switch), written after the commit                                                             | Admin command test                                                        | built (log line) / durable `operator_actions` table stated only          |
+| 11  | Every operator action is traceable (amended by D47)                     | Not guaranteed: the admin command prints its line to the operator's terminal only. Production needs a row written in the same transaction as the flag change | —                                                                        | stated only: no lasting record (D47)                                     |
 | 12  | A rule changed while the campaign runs does not rewrite history         | Each payment stores the `rate_bps`, `min_payment`, and `daily_cap` it used; no live rule-change command                                                         | History unchanged after a rule change                                     | built (snapshot) / live rule change out                                  |
 | 13  | A redemption reaches the main account exactly once                      | The redemption debits the cashback balance and stores its key; the main-account transfer is a stub that completes at once. Production needs a transactional outbox, a pending status, and the key passed to the main-account system | Stub test only                                                            | stated only: the main account system does not exist here                 |
 | 14  | Abuse by one user is bounded                                            | The daily cap; no rate limit (D06)                                                                                                                              | Cap tests (row 2)                                                         | built (cap) / rate limit out                                             |
@@ -202,7 +204,7 @@ The rows marked **built** are this project's definition of production ready. The
 | 18  | Cashback is earned only on settled payments                             | Payments here are simulated and settle at once; production awards on settlement, with a pending state                                                           | —                                                                        | stated only                                                              |
 | 19  | Balances that are never redeemed are known                              | Reconcile reports the outstanding liability; no expiry (D03)                                                                                                    | Reconcile output                                                          | built (report) / expiry out                                              |
 | 20  | Problems are seen                                                       | JSON logs with `request_id`; `/healthz` reports degraded; reconcile exits non-zero on any broken invariant                                                      | Health check and reconcile tests                                          | built / alert routing stated only                                        |
-| 21  | The app never turns an unknown outcome into a second payment            | One idempotency key per attempt, reused on every retry, never shown as failed, back blocked while checking                                                      | App tests for the retry path and the double tap                           | built                                                                    |
+| 21  | The app never turns an unknown outcome into a second payment, even if it is killed while checking (amended by D48) | One idempotency key per attempt, reused on every retry, never shown as failed, back blocked while checking; the attempt (user, kind, amount, key, time) is saved before sending and cleared on a definite answer (D48) | App tests for the retry path, the double tap, and killed during checking → relaunch → same key | built |
 | 22  | Budget figures never leave the server                                   | The response types have no budget field (D18)                                                                                                                   | A test on the API responses                                               | built                                                                    |
 
 ### D08 — Cut line
@@ -280,6 +282,39 @@ balance row could hold an old "not paused" answer for up to the lock timeout. Su
   the redemption flag to its own row and lock it."
 - **Redemption order now:** `cashback_balances` (`FOR UPDATE`) → plain read of the `campaigns` flag → new rows. A user
   with no balance row takes no lock; the flag is read at once.
+
+### D47 — Operator action trail
+
+Raised by the spec check (F1): the admin command runs through `docker compose exec`, so its log line reaches only the
+operator's terminal and is not kept. Amends trust condition 11.
+
+- **Options:** A. Admin writes the line into the API's log stream · B. Durable `operator_actions` table written in the
+  same transaction · C. Not built; trust condition 11 becomes stated only
+- **Recommended:** A
+- **Chosen:** C (against recommendation)
+- **Rationale:** "the brief does not ask for an operator audit trail and I want to keep the scope small. The log line
+  from D07 only reaches the operator's terminal, so I will not call it built."
+- **Cost accepted:** "a pause or resume leaves no lasting record."
+- **Would revisit if:** "this goes to production. Then I add a row written in the same transaction as the flag change."
+
+### D48 — App killed while checking
+
+Raised by the spec check (F11): the attempt's idempotency key lived only in memory, so a kill during Checking could
+lead to a second payment with a new key. Amends trust condition 21.
+
+- **Options:** A. Persist the in-flight attempt · B. Memory only; narrow trust condition 21 to "while the app stays
+  running"
+- **Recommended:** A
+- **Chosen:** A, with two owner details: "save the user ID with the attempt, so it is never resent as another demo
+  user. And save a timestamp, so an old attempt is not resent automatically; show it to the user and let them decide."
+- **Rationale:** "this is the one case where the app itself can cause a double payment. If the app is killed while
+  checking, the key is lost, and the user can pay again with a new key while the first payment may have gone through.
+  The server cannot detect that, because two keys look like two valid payments. Saving the attempt before sending and
+  clearing it on a definite answer means the app always continues with the same key after a relaunch."
+- **Cost accepted:** "one more storage path, a check at launch, and tests for "killed during checking, relaunch, same
+  key"."
+- **Would revisit if:** "the server offers a way to look up a payment by key without creating one. Then on relaunch the
+  app can check the status first instead of resending."
 
 ## Further batch
 
