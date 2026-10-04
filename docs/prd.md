@@ -197,6 +197,9 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
 - **AC-66** With the device in UTC and an item at 2026-10-04T00:30:00+07:00, History groups it under 4 Oct; it shows at most 20 rows and the reason on partial and Rp0 payments.
 - **AC-67** The chosen demo user sets `X-User-ID` on every request and is remembered after the app restarts.
 - **AC-68** The app calls `EXPO_PUBLIC_API_URL` when set, else `http://localhost:8080/v1`.
+- **AC-75** (US-6) How Flash Cashback works shows the rate, minimum, daily cap, and reset time from `GET /campaign`
+  `rules`; with `rules` served as rate 1000 bps, minimum 30000, cap 70000, the screen shows 10%, Rp30.000, and Rp70.000
+  with no app change.
 
 ## Invariants
 
@@ -243,7 +246,7 @@ Trust condition 11 (operator trail) is stated only (D47) and has no AC; AC-40 co
 | Budget 10,000,000 IDR; when gone, the campaign is over           | AC-08–11, AC-25, AC-41, AC-52, AC-53, INV-02    |
 | Users can redeem their cashback balance                          | AC-29–35, AC-37, AC-39, AC-65, AC-69            |
 | In scope: payments that earn or don't                            | AC-01–28, AC-70, AC-71                          |
-| In scope: what a user needs to see and do                        | AC-41–49, AC-58–68, AC-72–74                    |
+| In scope: what a user needs to see and do                        | AC-41–49, AC-58–68, AC-72–75                    |
 | Out of scope: refunds and clawback                               | Non-goals (TC17)                                |
 | Out of scope: authentication                                     | AC-18, AC-48; non-goals (TC15, TC16)            |
 | Out of scope: products; a payment is just an amount              | AC-17                                           |
