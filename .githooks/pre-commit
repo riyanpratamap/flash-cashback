@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Fast only: formatting of staged Go files. Database tests never run here.
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^backend/.*\.go$' || true)
+[ -z "$staged" ] && exit 0
+command -v gofmt >/dev/null 2>&1 || { echo "pre-commit: gofmt not found; install Go." >&2; exit 1; }
+unformatted=$(printf '%s\n' "$staged" | xargs gofmt -l)
+if [ -n "$unformatted" ]; then
+  echo "pre-commit: run gofmt -w on:" >&2
+  printf '%s\n' "$unformatted" >&2
+  exit 1
+fi
+exit 0

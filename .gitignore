@@ -1,0 +1,22 @@
+# Go
+backend/bin/
+*.test
+*.out
+coverage/
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local
+*.log
+.DS_Store
+local-tmp/

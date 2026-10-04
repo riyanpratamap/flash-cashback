@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Unit tests only (no database). Inactive until the Makefile defines a test target.
+[ -f Makefile ] && grep -q '^test:' Makefile || exit 0
+make test
