@@ -2,7 +2,7 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import { randomUUID } from 'expo-crypto';
 import { BackHandler, Pressable, Text } from 'react-native';
 
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptActions, useAttemptLaunch, useAttemptState } from '@/attempts/AttemptProvider';
 import { moneyOk, moneyRejected, posts, renderApp, resetStorage, serveMoney, type MoneyAnswer } from '@/test/fixtures';
 import Checking from '@/app/checking';
 
@@ -19,7 +19,7 @@ const settle = (ms: number) =>
   });
 
 function Harness() {
-  const a = useAttempts();
+  const a = { state: useAttemptState(), ...useAttemptLaunch(), ...useAttemptActions() };
   return (
     <>
       <Pressable accessibilityRole="button" onPress={() => a.press('payment', 100000)}>

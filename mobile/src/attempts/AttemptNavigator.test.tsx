@@ -13,7 +13,7 @@ import {
 } from '@/test/fixtures';
 import { back, dismissTo, push, replace, resetRouter } from '@/test/router-mock';
 import { AttemptNavigator } from '@/attempts/AttemptNavigator';
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptActions, useAttemptLaunch, useAttemptState } from '@/attempts/AttemptProvider';
 import { ATTEMPTS_STORAGE_KEY } from '@/attempts/store';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -25,7 +25,7 @@ jest.mock('expo-crypto', () => ({ randomUUID: jest.fn() }));
 const NOW = Date.parse('2026-10-03T10:00:00.000Z');
 
 function Buttons() {
-  const a = useAttempts();
+  const a = { state: useAttemptState(), ...useAttemptLaunch(), ...useAttemptActions() };
   return (
     <>
       <Text>phase: {a.state.phase}</Text>

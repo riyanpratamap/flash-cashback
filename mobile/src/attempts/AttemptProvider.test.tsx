@@ -2,11 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { randomUUID } from 'expo-crypto';
+import { useEffect, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
 import { newClient } from '@/test/fixtures';
 import { UserProvider, useUser } from '@/user/UserProvider';
-import { AttemptProvider, useAttempts } from '@/attempts/AttemptProvider';
+import { AttemptProvider, useAttemptActions, useAttemptLaunch, useAttemptState } from '@/attempts/AttemptProvider';
 import { ATTEMPTS_STORAGE_KEY, RESOLVED_STORAGE_KEY } from '@/attempts/store';
 import type { SavedAttempt } from '@/attempts/types';
 
@@ -58,10 +59,28 @@ function installFetch() {
 }
 
 function Probe() {
-  const a = useAttempts();
-  const { user } = useUser();
+  const a = { state: useAttemptState(), ...useAttemptLaunch(), ...useAttemptActions() };
+  const { user, setUser } = useUser();
+  const { press } = a;
+  const [payOnSwitch, setPayOnSwitch] = useState(false);
+  // A child's passive effect runs before the provider's own passive effects, in the commit that shows the new user.
+  useEffect(() => {
+    if (payOnSwitch && user === 'user_b') press('payment', 100000);
+  }, [payOnSwitch, user, press]);
   return (
     <>
+      <Pressable accessibilityRole="button" onPress={() => void setUser('user_b')}>
+        <Text>switch to b</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          setPayOnSwitch(true);
+          void setUser('user_b');
+        }}
+      >
+        <Text>switch to b and pay</Text>
+      </Pressable>
       <Text>phase: {a.state.phase}</Text>
       <Text>selected: {user}</Text>
       <Text>launch: {a.launchChecked ? 'checked' : 'pending'}</Text>
@@ -153,6 +172,28 @@ describe('AC-59 double press', () => {
     expect(calls).toHaveLength(1);
     expect(keyCounter).toBe(1);
     expect(phase('done')).toBeTruthy();
+  });
+});
+
+describe('D48 attempt user', () => {
+  it('carries the user selected at press time: the request and the saved attempt', async () => {
+    await mount();
+    await press('switch to b');
+    await settle(0);
+    await press('pay');
+    await settle(0);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.user).toBe('user_b');
+    expect(calls[0]?.saved.map((a) => a.user_id)).toEqual(['user_b']);
+  });
+
+  it('carries the new user when the press happens in the commit that shows it', async () => {
+    await mount();
+    await press('switch to b and pay');
+    await settle(0);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.user).toBe('user_b');
+    expect(calls[0]?.saved.map((a) => a.user_id)).toEqual(['user_b']);
   });
 });
 

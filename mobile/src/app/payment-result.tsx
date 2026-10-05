@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCampaign } from '@/api/hooks';
 import { parsePaymentResult } from '@/api/payments';
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptState, useAttemptActions } from '@/attempts/AttemptProvider';
 import { reasonCopy, zoneLabel } from '@/copy/codes';
 import { formatStamp } from '@/copy/stamp';
 import { formatRp, formatSigned } from '@/money/format';
@@ -16,7 +16,8 @@ import { fontSize, radius, spacing } from '@/ui/theme';
 /** Screen 3. The payment always shows as successful; the cashback is a separate card (wireframe). */
 export default function PaymentResult() {
   const router = useRouter();
-  const { state, acknowledge } = useAttempts();
+  const state = useAttemptState();
+  const { acknowledge } = useAttemptActions();
   const campaign = useCampaign();
 
   // Leaving by any route (Android back included) ends the result: a launch resend waiting behind it can carry on.

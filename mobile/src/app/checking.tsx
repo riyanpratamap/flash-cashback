@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, BackHandler, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptState, useAttemptActions } from '@/attempts/AttemptProvider';
 import { blocksLeaving } from '@/attempts/blockBack';
 import { formatRp } from '@/money/format';
 import { Button } from '@/ui/Button';
@@ -13,7 +13,8 @@ import { fontSize, spacing } from '@/ui/theme';
  * never says "failed" (AC-60). Leaving is blocked while the outcome is unknown or a request is on its way.
  */
 export default function Checking() {
-  const { state, checkAgain } = useAttempts();
+  const state = useAttemptState();
+  const { checkAgain } = useAttemptActions();
   const phase = state.phase;
 
   useEffect(() => {

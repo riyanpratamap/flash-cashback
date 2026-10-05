@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { randomUUID } from 'expo-crypto';
 
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptState } from '@/attempts/AttemptProvider';
 import { ATTEMPTS_STORAGE_KEY } from '@/attempts/store';
 import { campaign, cashback, moneyOk, moneyRejected, posts, renderApp, resetStorage, serveMoney } from '@/test/fixtures';
 import Home from '@/app/index';
@@ -190,7 +190,7 @@ describe('Pay after a rejection found at launch (P5.3 F5)', () => {
     await seed(['NEWER', 2], ['OLDER', 8]);
     serveMoney([moneyRejected(422, 'INVALID_AMOUNT'), moneyOk()]);
     // The navigator opens Pay once the rejection is known; this stands in for it.
-    const AfterRejection = () => (useAttempts().state.phase === 'rejected' ? <Pay /> : null);
+    const AfterRejection = () => (useAttemptState().phase === 'rejected' ? <Pay /> : null);
     const view = await renderApp(<AfterRejection />);
     await settle(5000);
     expect(screen.getByText('Enter an amount up to Rp10.000.000.')).toBeTruthy();

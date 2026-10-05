@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useCampaign, useCashback } from '@/api/hooks';
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptActions } from '@/attempts/AttemptProvider';
 import { useAmountForm } from '@/attempts/useAmountForm';
 import { errorCopy, MAX_AMOUNT } from '@/copy/codes';
 import { payInfoLine } from '@/copy/payInfo';
@@ -14,7 +14,7 @@ import { spacing } from '@/ui/theme';
 const CHIPS = [20_000, 50_000, 100_000] as const;
 
 export default function Pay() {
-  const { press } = useAttempts();
+  const { press } = useAttemptActions();
   const campaign = useCampaign();
   const cashback = useCashback();
   const { text, setText, amount, inFlight, rejection: rejected } = useAmountForm('payment');

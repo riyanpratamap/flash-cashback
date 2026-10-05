@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useCampaign, useCashback } from '@/api/hooks';
 import { parseRedemptionResult } from '@/api/redemptions';
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptState, useAttemptActions } from '@/attempts/AttemptProvider';
 import { useAmountForm } from '@/attempts/useAmountForm';
 import { errorCopy } from '@/copy/codes';
 import { formatRp } from '@/money/format';
@@ -20,7 +20,8 @@ const PAUSED_LINE = errorCopy('REDEMPTION_PAUSED', {});
  */
 export default function Redeem() {
   const router = useRouter();
-  const { state, press, acknowledge } = useAttempts();
+  const state = useAttemptState();
+  const { press, acknowledge } = useAttemptActions();
   const campaign = useCampaign();
   const cashback = useCashback();
   const { text, setText, amount, inFlight, rejection: rejected } = useAmountForm('redemption');

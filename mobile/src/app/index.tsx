@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '@/api/hooks';
 import type { Campaign, CashbackSummary } from '@/api/queries';
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptLaunch, useAttemptActions } from '@/attempts/AttemptProvider';
 import { bannerCopy, zoneLabel } from '@/copy/codes';
 import { formatRp } from '@/money/format';
 import { useUser } from '@/user/UserProvider';
@@ -27,7 +27,8 @@ export default function Home() {
   const campaign = useCampaign();
   const cashback = useCashback();
   const activity = useHistory(HOME_ACTIVITY_LIMIT);
-  const { unconfirmed, checkNow, dismiss } = useAttempts();
+  const { unconfirmed } = useAttemptLaunch();
+  const { checkNow, dismiss } = useAttemptActions();
   const [refreshing, setRefreshing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 

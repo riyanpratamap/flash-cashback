@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptState, useAttemptActions } from '@/attempts/AttemptProvider';
 import type { AttemptKind } from '@/attempts/types';
 import { formatAsTyped, parseDigits } from '@/money/format';
 
@@ -9,7 +9,8 @@ import { formatAsTyped, parseDigits } from '@/money/format';
  * rejection that matches the typed amount, and the acknowledgement when the screen is left.
  */
 export function useAmountForm(kind: AttemptKind) {
-  const { state, acknowledge } = useAttempts();
+  const state = useAttemptState();
+  const { acknowledge } = useAttemptActions();
   const rejectedAmount = state.phase === 'rejected' && state.attempt.kind === kind ? state.attempt.amount : null;
   // A rejection found at launch lands here with the amount it was for.
   const [text, setTextRaw] = useState(() => (rejectedAmount === null ? '' : formatAsTyped(String(rejectedAmount))));

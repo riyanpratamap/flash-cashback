@@ -1,6 +1,6 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { queryKeys } from '@/api/queries';
 import { useUser } from '@/user/UserProvider';
@@ -9,13 +9,16 @@ import { check, runPress, sendAttempt, type AttemptState, type MachineDeps } fro
 import { loadAttempts, markResolved, removeAttempt, saveAttempt } from '@/attempts/store';
 import type { AttemptKind, SavedAttempt } from '@/attempts/types';
 
-export type AttemptContextValue = {
-  /** The current attempt. `idle` until a press or a launch resend. */
-  state: AttemptState;
+/** What the launch check found. Home reads it; the money screens do not. */
+export type AttemptLaunch = {
   /** True once the launch check has sorted the saved attempts (tech-spec §10). */
   launchChecked: boolean;
   /** Saved attempts too old to resend on their own: one card each on Home. */
   unconfirmed: readonly SavedAttempt[];
+};
+
+/** Stable for the provider's life: reading them never subscribes a component to attempt or launch changes. */
+export type AttemptActions = {
   press: (kind: AttemptKind, amount: number) => void;
   /** From `waiting`: resends the same key. */
   checkAgain: () => void;
@@ -29,7 +32,12 @@ export type AttemptContextValue = {
   acknowledge: (only?: 'done' | 'rejected') => void;
 };
 
-const AttemptContext = createContext<AttemptContextValue | null>(null);
+// Three contexts, so a phase change (saving, sending, done) renders only the screens that show the attempt, and Home,
+// which reads the cards and the actions, is left alone.
+/** The current attempt. `idle` until a press or a launch resend. */
+const StateContext = createContext<AttemptState | null>(null);
+const LaunchContext = createContext<AttemptLaunch | null>(null);
+const ActionsContext = createContext<AttemptActions | null>(null);
 
 const IDLE: AttemptState = { phase: 'idle' };
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -59,13 +67,35 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
   const [launchChecked, setLaunchChecked] = useState(false);
   const [unconfirmed, setUnconfirmed] = useState<readonly SavedAttempt[]>([]);
   const stateRef = useRef<AttemptState>(IDLE);
+  /** The cards, mirrored so the stable actions read the latest list. Written only by `updateUnconfirmed`. */
+  const unconfirmedRef = useRef<readonly SavedAttempt[]>([]);
+  /** The user selected now, read at press time so `press` keeps its identity. */
+  const userRef = useRef(user);
   const busyRef = useRef(false);
   const launchStarted = useRef(false);
+  // The launch queue (F5) sends the saved recent attempts one by one, and after a definite answer waits for the user to
+  // see it. It leaves that wait in one of three ways:
+  //   1. acknowledge: resolves `ackWaiter`, and the loop sends the next attempt;
+  //   2. press takeover: a new press turns `queuedRest` into cards, sets `queueTakenOver`, and resolves `ackWaiter`;
+  //      the loop then returns without touching the guard, which the press owns;
+  //   3. waiting: an attempt that stays unknown ends the loop at once, and the rest become cards.
+  /** Resolves the loop's wait for the user's acknowledgement; null when the loop is not waiting. */
   const ackWaiter = useRef<(() => void) | null>(null);
   /** Recent attempts the launch queue has not sent yet while it waits for an acknowledgement. */
   const queuedRest = useRef<readonly SavedAttempt[]>([]);
   /** Set when a press took over the launch queue: the loop must send nothing more and leave the guard alone. */
   const queueTakenOver = useRef(false);
+
+  // A layout effect, so the ref is current before any press that follows the commit showing the new user.
+  useLayoutEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  /** The one way to change the cards: the ref is updated in the same step, so a call right after sees the new list. */
+  const updateUnconfirmed = useCallback((change: (list: readonly SavedAttempt[]) => readonly SavedAttempt[]) => {
+    unconfirmedRef.current = change(unconfirmedRef.current);
+    setUnconfirmed(unconfirmedRef.current);
+  }, []);
 
   const report = useCallback((next: AttemptState) => {
     stateRef.current = next;
@@ -109,13 +139,13 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
         queuedRest.current = [];
         ackWaiter.current = null;
         queueTakenOver.current = true;
-        setUnconfirmed((list) => [...list, ...rest]);
+        updateUnconfirmed((list) => [...list, ...rest]);
         busyRef.current = false; // the press below takes the guard itself, before anything awaits
         release();
       }
       if (!begin()) return;
       const attempt: SavedAttempt = {
-        user_id: user,
+        user_id: userRef.current,
         kind,
         amount,
         key: randomUUID(),
@@ -123,7 +153,7 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
       };
       void settle(() => runPress(attempt, deps));
     },
-    [begin, deps, settle, user],
+    [begin, deps, settle, updateUnconfirmed],
   );
 
   const checkAgain = useCallback(() => {
@@ -135,22 +165,22 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
 
   const checkNow = useCallback(
     (key: string) => {
-      const attempt = unconfirmed.find((a) => a.key === key);
+      const attempt = unconfirmedRef.current.find((a) => a.key === key);
       if (attempt === undefined || !begin()) return;
-      setUnconfirmed((list) => list.filter((a) => a.key !== key));
+      updateUnconfirmed((list) => list.filter((a) => a.key !== key));
       void settle(() => check(attempt, deps, true));
     },
-    [begin, deps, settle, unconfirmed],
+    [begin, deps, settle, updateUnconfirmed],
   );
 
   const dismiss = useCallback(
     async (key: string) => {
       // Only a card can be dismissed: the attempt in flight is never one, so it cannot be removed from under the machine.
-      if (!unconfirmed.some((a) => a.key === key)) return;
-      setUnconfirmed((list) => list.filter((a) => a.key !== key));
+      if (!unconfirmedRef.current.some((a) => a.key === key)) return;
+      updateUnconfirmed((list) => list.filter((a) => a.key !== key));
       await removeAttempt(key).catch(() => undefined); // still saved at worst: shown again at the next launch
     },
-    [unconfirmed],
+    [updateUnconfirmed],
   );
 
   const acknowledge = useCallback(
@@ -172,14 +202,14 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
     void (async () => {
       const saved = await loadAttempts().catch((): SavedAttempt[] => []);
       const { recent, unconfirmed: old } = splitByAge(saved, Date.now());
-      setUnconfirmed(old);
+      updateUnconfirmed(() => old);
       setLaunchChecked(true);
       for (const [i, attempt] of recent.entries()) {
         const final = await settle(() => check(attempt, deps, true));
         busyRef.current = true; // settle released it; the launch check still holds it until the last attempt
         if (final.phase === 'waiting') {
           // Still unknown: the rest are offered as cards instead of being sent behind an unanswered one.
-          setUnconfirmed((list) => [...list, ...recent.slice(i + 1)]);
+          updateUnconfirmed((list) => [...list, ...recent.slice(i + 1)]);
           break;
         }
         if (i < recent.length - 1) {
@@ -193,17 +223,36 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
       }
       busyRef.current = false;
     })();
-  }, [deps, settle]);
+  }, [deps, settle, updateUnconfirmed]);
 
-  const value = useMemo<AttemptContextValue>(
-    () => ({ state, launchChecked, unconfirmed, press, checkAgain, checkNow, dismiss, acknowledge }),
-    [state, launchChecked, unconfirmed, press, checkAgain, checkNow, dismiss, acknowledge],
+  const launch = useMemo<AttemptLaunch>(() => ({ launchChecked, unconfirmed }), [launchChecked, unconfirmed]);
+  const actions = useMemo<AttemptActions>(
+    () => ({ press, checkAgain, checkNow, dismiss, acknowledge }),
+    [press, checkAgain, checkNow, dismiss, acknowledge],
   );
-  return <AttemptContext.Provider value={value}>{children}</AttemptContext.Provider>;
+  return (
+    <ActionsContext.Provider value={actions}>
+      <LaunchContext.Provider value={launch}>
+        <StateContext.Provider value={state}>{children}</StateContext.Provider>
+      </LaunchContext.Provider>
+    </ActionsContext.Provider>
+  );
 }
 
-export function useAttempts(): AttemptContextValue {
-  const value = useContext(AttemptContext);
-  if (value === null) throw new Error('useAttempts must be used inside AttemptProvider');
+export function useAttemptState(): AttemptState {
+  const value = useContext(StateContext);
+  if (value === null) throw new Error('useAttemptState must be used inside AttemptProvider');
+  return value;
+}
+
+export function useAttemptLaunch(): AttemptLaunch {
+  const value = useContext(LaunchContext);
+  if (value === null) throw new Error('useAttemptLaunch must be used inside AttemptProvider');
+  return value;
+}
+
+export function useAttemptActions(): AttemptActions {
+  const value = useContext(ActionsContext);
+  if (value === null) throw new Error('useAttemptActions must be used inside AttemptProvider');
   return value;
 }

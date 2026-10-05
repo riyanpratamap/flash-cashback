@@ -426,11 +426,12 @@ From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 foll
   - Done when: hook tests (prefill, no overwrite after typing, acknowledge on unmount) red then green; mutation
     (drop the amount match) red; `pay`/`redeem` tests unchanged and green; code-checker report.
   - Result: `make mobile-check` exit 0, 25 suites / 281 tests (7 new in `useAmountForm.test.tsx`; `pay` and `redeem` tests unchanged); `useAmountForm` owns text, prefill, `inFlight`, matching rejection and acknowledge on leave; `Fragment` replaced by `<>`. Mutations red: amount match dropped (rejection test), kind check dropped on the prefill (other-kind test); review: 2 minor test gaps fixed, mutations red (kind check dropped on `rejection` -> new other-kind test red; `inFlight` reduced to `sending` -> `saving` row red).
-- [ ] **C4** Split the attempt context · `ts` · critical (AttemptProvider)
+- [x] **C4** Split the attempt context · `ts` · critical (AttemptProvider)
   - Three contexts: attempt `state`; `unconfirmed` + `launchChecked`; actions (stable for the provider's life,
     `checkNow`/`dismiss` read `unconfirmed` through a ref). Guard, keys, launch queue, `refreshAfter` unchanged.
   - Done when: a Profiler test counts Home commits during a payment press, before and after (numbers in the result
     and learnings); provider and navigator tests unchanged and green; code-checker report.
+  - Result: `make mobile-check` exit 0, 26 suites / 288 tests (2 new in `index.renders.test.tsx`). Three contexts (state, launch, actions) from the one provider; actions stable (`unconfirmed` and the user read through refs, the cards changed only via `updateUnconfirmed`, which writes the ref and the state together); `useAttempts` removed, callers on the narrowest hooks. Home renders (calls of `useCampaign`, a Profiler only reports the mount under this renderer) during a payment press: before 2, after 1 (the refetch after `done`); saving to sending: before 2, after 0. Mutation red: state and `unconfirmed` merged into the actions value (both tests red, 2 and 2 renders). Guard, keys, `refreshAfter`, launch queue logic untouched (comments only). review: F1 fixed (user synced in layout effect; switch-then-press test, mutation red).
 - [ ] **C5** Focus refetch skips fresh queries; screens drop manual memo · `ts` · not critical
   - `useRefreshOnFocus(...queries)` returns `refetchAll` for pull and retry; on focus refetches only queries not
     fetching and older than 2 s. Home and History drop the destructured `refetch` + `useCallback` blocks.

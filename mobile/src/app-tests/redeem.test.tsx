@@ -4,7 +4,7 @@ import { randomUUID } from 'expo-crypto';
 import { useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptActions, useAttemptLaunch, useAttemptState } from '@/attempts/AttemptProvider';
 import { ATTEMPTS_STORAGE_KEY } from '@/attempts/store';
 import {
   campaign,
@@ -44,7 +44,7 @@ const redeemed = (amount: number, balanceAfter: number) =>
 const getCount = (path: string) => requestedUrls().filter((url) => url.includes(path)).length;
 
 function Harness() {
-  const a = useAttempts();
+  const a = { state: useAttemptState(), ...useAttemptLaunch(), ...useAttemptActions() };
   return (
     <>
       <Text>phase: {a.state.phase}</Text>

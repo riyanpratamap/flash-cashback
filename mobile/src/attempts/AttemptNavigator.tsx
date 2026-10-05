@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptState } from '@/attempts/AttemptProvider';
 import type { AttemptState } from '@/attempts/machine';
 
 /**
@@ -10,7 +10,7 @@ import type { AttemptState } from '@/attempts/machine';
  */
 export function AttemptNavigator() {
   const router = useRouter();
-  const { state } = useAttempts();
+  const state = useAttemptState();
   const handled = useRef<AttemptState | null>(null);
   const previous = useRef<AttemptState['phase']>('idle');
   /** True when Checking was opened by a press on a money screen, which is then still open beneath it. */

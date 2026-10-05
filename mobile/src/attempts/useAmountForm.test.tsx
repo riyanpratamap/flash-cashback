@@ -1,15 +1,16 @@
 import { act, renderHook } from '@testing-library/react-native';
 
-import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAttemptActions, useAttemptState } from '@/attempts/AttemptProvider';
 import type { AttemptState } from '@/attempts/machine';
 import { useAmountForm } from '@/attempts/useAmountForm';
 import type { AttemptKind } from '@/attempts/types';
 
-jest.mock('@/attempts/AttemptProvider', () => ({ useAttempts: jest.fn() }));
+jest.mock('@/attempts/AttemptProvider', () => ({ useAttemptState: jest.fn(), useAttemptActions: jest.fn() }));
 
 const acknowledge = jest.fn();
 let current: AttemptState = { phase: 'idle' };
-const mockedUseAttempts = jest.mocked(useAttempts);
+const mockedUseAttemptState = jest.mocked(useAttemptState);
+const mockedUseAttemptActions = jest.mocked(useAttemptActions);
 
 const attempt = (kind: AttemptKind, amount: number) => ({
   user_id: 'user_a',
@@ -29,9 +30,8 @@ const rejected = (kind: AttemptKind, amount: number): AttemptState => ({
 beforeEach(() => {
   acknowledge.mockReset();
   current = { phase: 'idle' };
-  mockedUseAttempts.mockImplementation(
-    () => ({ state: current, acknowledge }) as unknown as ReturnType<typeof useAttempts>,
-  );
+  mockedUseAttemptState.mockImplementation(() => current);
+  mockedUseAttemptActions.mockImplementation(() => ({ acknowledge }) as unknown as ReturnType<typeof useAttemptActions>);
 });
 
 describe('useAmountForm', () => {
