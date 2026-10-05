@@ -407,6 +407,36 @@ by deep link had no back (`initialRouteName: 'index'`). Reconcile exit 0 (INV-01
 
 **P6 gate:** every P6.2 step exits 0 / passes as stated, recorded in the P6.2 commit body.
 
+## Changes — mobile readability and performance
+
+From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 follows the amended tech-spec focus rule.
+
+- [ ] **C1** Shared guards, one month table, one import style · `ts` · not critical
+  - `src/api/guards.ts` (`isRecord`, `isStr`, `isInt`) used by `client.ts`, `payments.ts`, `redemptions.ts`,
+    `queries.ts`, `attempts/store.ts`; `MONTHS` exported once from `copy/stamp.ts`; every import in `src/` uses `@/`.
+  - Done when: `make mobile-check` exits 0 with no test changed.
+- [ ] **C2** Theme tokens and UI primitives · `ts` · not critical
+  - `src/ui/theme.ts` (colours, spacing, radius), `src/ui/Card.tsx`, `src/ui/AmountInput.tsx`, used by every screen
+    and `UnconfirmedCard`, `Button`, `ActivityRow`, `LoadError`.
+  - Done when: `make mobile-check` exits 0 with no test changed.
+- [ ] **C3** `useAmountForm(kind)` for Pay and Redeem · `ts` · critical (press path)
+  - Owns amount text, launch-rejection prefill, acknowledge on leave, `inFlight`, the rejection matching the amount.
+  - Done when: hook tests (prefill, no overwrite after typing, acknowledge on unmount) red then green; mutation
+    (drop the amount match) red; `pay`/`redeem` tests unchanged and green; code-checker report.
+- [ ] **C4** Split the attempt context · `ts` · critical (AttemptProvider)
+  - Three contexts: attempt `state`; `unconfirmed` + `launchChecked`; actions (stable for the provider's life,
+    `checkNow`/`dismiss` read `unconfirmed` through a ref). Guard, keys, launch queue, `refreshAfter` unchanged.
+  - Done when: a Profiler test counts Home commits during a payment press, before and after (numbers in the result
+    and learnings); provider and navigator tests unchanged and green; code-checker report.
+- [ ] **C5** Focus refetch skips fresh queries; screens drop manual memo · `ts` · not critical
+  - `useRefreshOnFocus(...queries)` returns `refetchAll` for pull and retry; on focus refetches only queries not
+    fetching and older than 2 s. Home and History drop the destructured `refetch` + `useCallback` blocks.
+  - Done when: a test red then green: after a `done` payment, returning Home sends no second `/me/cashback` GET
+    within 2 s, and a focus after 2 s does; AC-58 test green.
+
+**Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
+on Expo Go.
+
 ## Slip rule
 
 If the work must shrink, the only planned cut is mobile polish beyond the wireframe's states and copy. Any other cut
