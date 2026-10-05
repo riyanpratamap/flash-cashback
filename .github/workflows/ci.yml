@@ -15,3 +15,18 @@ jobs:
           cache-dependency-path: backend/go.sum
       - run: make gate
       - run: make test-race
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker compose up -d --build --wait
+      - run: curl -fsS localhost:8080/v1/healthz
+      - name: only 8080 is published
+        run: |
+          published=$(docker compose config --format json \
+            | jq -r '[.services[] | .ports[]? | .published] | sort | join(",")')
+          echo "published: $published"
+          test "$published" = "8080"
+      - if: always()
+        run: docker compose down -v
