@@ -168,6 +168,10 @@ no user → 400 `MISSING_USER`; `down` exit 0.
 /v1/payments` 100000 as user_a with a new key → 201, 5000 `AWARDED`; same key again → 200 + `Idempotent-Replayed:
 true` · `docker compose exec api /app/reconcile; echo exit=$?` → exit=0 · `docker compose down` · CI green.
 
+**P2 gate result (2026-10-05):** all steps pass. `make gate` exit 0; `make test-race` exit 0 (178 s); `up -d --build
+--wait` exit 0; POST 100000 as user_a → 201, 5000 `AWARDED`; same key → 200, `Idempotent-Replayed: true`, same body;
+reconcile exit 0 (INV-01–09 ok); `down` exit 0; CI run 37265718476 `gate` and `smoke` green on `fd6e862`.
+
 ## P3 — Redemption and history
 
 - [ ] **P3.1** `Redemptions.Redeem` and `POST /redemptions` — AC-29–32, AC-34, AC-35, AC-16 (redeem), AC-21 (redeem
