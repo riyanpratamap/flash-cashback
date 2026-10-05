@@ -174,7 +174,7 @@ func Command(ctx context.Context, args []string, opts Options, stdout, stderr io
 // log nothing here: the operator's terminal gets the line and any warning.
 func demoReset(ctx context.Context, tx store.TxRunner, opts Options, stdout, stderr io.Writer) int {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	demo := service.NewDemo(tx, service.NewPayments(tx, opts.Cache, quiet), service.NewRedemptions(tx, opts.Cache, quiet), opts.Cache)
+	demo := service.NewDemo(tx, service.NewPayments(tx, opts.Cache, quiet), service.NewRedemptions(tx, quiet), opts.Cache)
 	res, err := demo.Reset(ctx)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, demoFailureMessage(err)) // stderr is the last resort

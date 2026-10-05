@@ -55,20 +55,15 @@ func (p *Payments) Pay(ctx context.Context, cmd domain.MoneyCommand) (domain.Pay
 	if errors.Is(err, store.ErrReplay) && out.Replay != nil {
 		return p.replay(*out.Replay, cmd)
 	}
-	if errors.Is(err, store.ErrUnknownOutcome) {
-		// The commit may have landed: delete the cashback key, which is safe
-		// either way. Not the campaign key: Exhausted is unknown (§6).
-		p.inv.Delete(ctx, cache.CashbackKey(cmd.UserID))
-	}
 	if err != nil {
+		// An unknown COMMIT outcome deletes nothing: Exhausted is unknown (§6).
 		return domain.PaymentResult{}, false, err
 	}
-	// After COMMIT, on a context of its own (§4.1 step 10, §6).
-	keys := []string{cache.CashbackKey(cmd.UserID)}
+	// After COMMIT, on a context of its own (§4.1 step 10, §6): only the
+	// campaign body changes, and only when this award took the last budget.
 	if out.Exhausted {
-		keys = append(keys, cache.CampaignKey)
+		p.inv.Delete(ctx, cache.CampaignKey)
 	}
-	p.inv.Delete(ctx, keys...)
 	p.logMoney(cmd, out.ID, out.Awarded, out.Reason, false)
 	return result(out.ID, out.Day, out.CreatedAt, cmd.Amount, out.Awarded, out.Reason), false, nil
 }

@@ -51,9 +51,8 @@ type DemoResult struct {
 
 // Reset truncates the money tables in one transaction, then builds the demo
 // state through the services, so every row comes from the real rules, and
-// last deletes every cache key (the truncate made every user's cashback body
-// stale, not only the demo users'). The delete also runs when a step fails
-// after the truncate.
+// last deletes every cache key (the truncate makes every cached body stale).
+// The delete also runs when a step fails after the truncate.
 func (d *Demo) Reset(ctx context.Context) (res DemoResult, err error) {
 	var at string
 	err = d.tx.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {

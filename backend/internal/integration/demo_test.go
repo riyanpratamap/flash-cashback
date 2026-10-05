@@ -90,7 +90,7 @@ func TestDemoResetBuildsTheDemoStateAC57(t *testing.T) {
 	fund(t, "user_b", 5000)
 	fund(t, "user_a", 1000)
 	setCampaignSQL(t, `UPDATE campaigns SET awards_paused = true, redemptions_paused = true`)
-	plantKeys(t, cache.CampaignKey, cashbackA, cashbackB, cache.CashbackKey("user_z"))
+	plantKeys(t, cache.CampaignKey, cashbackA, cashbackB, "fc:v1:cashback:user_z")
 
 	var first demoState
 	for run := 1; run <= 2; run++ {
@@ -148,7 +148,7 @@ func TestDemoResetWithRedisDownWarnsAC57(t *testing.T) {
 // truncate had already made them stale.
 func TestDemoResetStateNotReachedAC57(t *testing.T) {
 	reset(t, 50_000)
-	plantKeys(t, cache.CampaignKey, cashbackA, cashbackB, cache.CashbackKey("user_z"))
+	plantKeys(t, cache.CampaignKey, cashbackA, cashbackB, "fc:v1:cashback:user_z")
 
 	code, out, errOut := runDemoReset(t)
 	if code != 1 || out != "" || !strings.Contains(errOut, "demo state not reached") {

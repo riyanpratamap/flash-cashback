@@ -3,7 +3,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -12,7 +11,7 @@ import (
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
 
-// Reads serves the two read endpoints.
+// Reads serves the read endpoints; only GET /campaign goes through the cache.
 type Reads struct {
 	pool  *pgxpool.Pool
 	cache *cache.ReadCache // nil: caching is off (AC-76)
@@ -63,28 +62,15 @@ func (r *Reads) campaignFromDB(ctx context.Context) (domain.CampaignView, error)
 	}, nil
 }
 
-// Cashback returns the user's balance and today's progress, from the cache
-// when it holds a valid body. A user with no rows gets zeros and the
-// campaign's cap. The stored body lives until the campaign day ends at the
-// latest, by the database clock of the same statement (AC-46).
+// Cashback returns the user's balance and today's progress from PostgreSQL;
+// it is never cached (D53). A user with no rows gets zeros and the
+// campaign's cap.
 func (r *Reads) Cashback(ctx context.Context, user domain.UserID) (domain.CashbackView, error) {
-	lookup := cache.Unavailable // no cache: nothing to fill
-	if r.cache != nil {
-		var v domain.CashbackView
-		if v, lookup = r.cache.Cashback(ctx, user); lookup == cache.Hit {
-			return v, nil
-		}
-	}
-	started := time.Now()
 	t, err := store.Today(ctx, r.pool, campaignID, user)
 	if err != nil {
 		return domain.CashbackView{}, err
 	}
-	v := cashbackView(t)
-	if r.cache != nil && lookup == cache.Miss {
-		r.cache.SetCashback(ctx, user, v, t.ResetsAt.Sub(t.Now), started)
-	}
-	return v, nil
+	return cashbackView(t), nil
 }
 
 func cashbackView(t store.TodayRow) domain.CashbackView {

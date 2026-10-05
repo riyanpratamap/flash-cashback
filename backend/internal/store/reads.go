@@ -40,7 +40,6 @@ func GetCampaign(ctx context.Context, pool *pgxpool.Pool, id string) (Campaign, 
 // TodayRow is the user's balance and today's user-day row.
 type TodayRow struct {
 	Day         time.Time
-	Now         time.Time // fc_now() of the same statement
 	ResetsAt    time.Time
 	Balance     int64
 	CampaignCap int64
@@ -54,14 +53,14 @@ func Today(ctx context.Context, pool *pgxpool.Pool, campaignID string, user doma
 		row            TodayRow
 		earned, dayCap *int64 // NULL when the user has no row for the day
 	)
-	err := pool.QueryRow(ctx, `WITH d AS (SELECT fc_now() AS now, fc_campaign_day(fc_now()) AS day)
-		SELECT d.day, d.now, fc_day_resets_at(d.day),
+	err := pool.QueryRow(ctx, `WITH d AS (SELECT fc_campaign_day(fc_now()) AS day)
+		SELECT d.day, fc_day_resets_at(d.day),
 		       COALESCE((SELECT balance FROM cashback_balances WHERE user_id = $2), 0),
 		       u.earned, u.daily_cap, c.daily_cap
 		FROM d CROSS JOIN campaigns c
 		LEFT JOIN user_daily_earnings u ON u.campaign_id = c.id AND u.user_id = $2 AND u.day = d.day
 		WHERE c.id = $1`, campaignID, string(user)).Scan(
-		&row.Day, &row.Now, &row.ResetsAt, &row.Balance, &earned, &dayCap, &row.CampaignCap)
+		&row.Day, &row.ResetsAt, &row.Balance, &earned, &dayCap, &row.CampaignCap)
 	if err != nil {
 		return TodayRow{}, fmt.Errorf("read today: %w", err)
 	}

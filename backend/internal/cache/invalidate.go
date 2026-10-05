@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-
-	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
 )
 
 // Cache keys (tech-spec §6).
@@ -17,9 +15,6 @@ const (
 	// CampaignKey holds the GET /campaign body.
 	CampaignKey = keyPrefix + "campaign"
 )
-
-// CashbackKey is the key of one user's GET /me/cashback body.
-func CashbackKey(u domain.UserID) string { return keyPrefix + "cashback:" + string(u) }
 
 // deleteAllCap bounds DeleteAll: a SCAN walk takes more than one round trip.
 const deleteAllCap = 2 * time.Second
@@ -55,7 +50,8 @@ func (i *Invalidator) Delete(ctx context.Context, keys ...string) {
 }
 
 // DeleteAll removes every fc:v1:* key. Only demo-reset uses it: the truncate
-// makes every user's cashback body stale, not only the three demo users'.
+// leaves no cache key describing the truncated state (older builds also left
+// cashback keys).
 func (i *Invalidator) DeleteAll(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), deleteAllCap)
 	defer cancel()

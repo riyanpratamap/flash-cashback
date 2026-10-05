@@ -19,9 +19,11 @@ import (
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
 
-// Tech-spec §6: a write deletes the keys of the views it changes, after
-// COMMIT. These tests plant a value under each key, run the write, and look
-// at which keys remain. The read side is tested in cache_reads_test.go.
+// Tech-spec §6 (D53): a payment that takes the last of the budget deletes
+// fc:v1:campaign after COMMIT; nothing else does. These tests plant a value
+// under each key, run the write, and look at which keys remain. The cashback
+// keys are legacy ones, left by an older build: no write touches them. The
+// read side is tested in cache_reads_test.go.
 
 func plantKeys(t *testing.T, keys ...string) {
 	t.Helper()
@@ -51,44 +53,47 @@ func wantKeys(t *testing.T, label string, present map[string]bool) {
 	}
 }
 
-var (
-	cashbackA = cache.CashbackKey("user_a")
-	cashbackB = cache.CashbackKey("user_b")
+// Keys an older build left behind (D53): nothing reads, writes, or deletes
+// them any more except demo-reset's DeleteAll.
+const (
+	cashbackA = "fc:v1:cashback:user_a"
+	cashbackB = "fc:v1:cashback:user_b"
 )
 
 func payHeaders(user, key string) map[string]string {
 	return map[string]string{"X-User-ID": user, "Idempotency-Key": key}
 }
 
-func TestPayDeletesOnlyThatUsersCashbackKey(t *testing.T) {
+func TestPayDeletesNoKeyWhileTheBudgetLasts(t *testing.T) {
 	reset(t, 10_000_000)
 	plantKeys(t, cashbackA, cashbackB, cache.CampaignKey)
 	if r := pay(t, "user_a", 100000); r.status != http.StatusCreated {
 		t.Fatal(r.raw)
 	}
-	wantKeys(t, "after a payment", map[string]bool{cashbackA: false, cashbackB: true, cache.CampaignKey: true})
+	wantKeys(t, "after a payment", map[string]bool{cashbackA: true, cashbackB: true, cache.CampaignKey: true})
 	assertReconciled(t)
 }
 
-func TestPayThatTakesTheLastOfTheBudgetDeletesCampaignKey(t *testing.T) {
+func TestPayThatTakesTheLastOfTheBudgetDeletesOnlyTheCampaignKey(t *testing.T) {
 	reset(t, 5000)
 	plantKeys(t, cashbackA, cache.CampaignKey)
 	r := pay(t, "user_a", 100000)
 	if r.status != http.StatusCreated || r.res.Cashback.Awarded != 5000 {
 		t.Fatal(r.raw)
 	}
-	wantKeys(t, "budget exhausted", map[string]bool{cashbackA: false, cache.CampaignKey: false})
+	wantKeys(t, "budget exhausted", map[string]bool{cashbackA: true, cache.CampaignKey: false})
 	assertReconciled(t)
 }
 
-func TestPayWithNoAwardStillDeletesCashbackKeyOnly(t *testing.T) {
+func TestPayWithNoAwardDeletesNoKey(t *testing.T) {
 	reset(t, 10_000_000)
 	plantKeys(t, cashbackA, cache.CampaignKey)
 	r := pay(t, "user_a", 19999)
 	if r.status != http.StatusCreated || r.res.Cashback.Reason != domain.ReasonBelowMinimum {
 		t.Fatal(r.raw)
 	}
-	wantKeys(t, "below minimum", map[string]bool{cashbackA: false, cache.CampaignKey: true})
+	wantKeys(t, "below minimum", map[string]bool{cashbackA: true, cache.CampaignKey: true})
+	assertReconciled(t)
 }
 
 func TestPayReplayAndConflictDeleteNothing(t *testing.T) {
@@ -116,8 +121,8 @@ func TestPayReplayAndConflictDeleteNothing(t *testing.T) {
 // cancelled, the commit still happens (InTx detaches), and the delete must
 // still run (KP). The hook cancels after the step-5 read.
 func TestPayDeleteSurvivesCancelledRequestContext(t *testing.T) {
-	reset(t, 10_000_000)
-	plantKeys(t, cashbackA)
+	reset(t, 5000)
+	plantKeys(t, cache.CampaignKey)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	svc := service.NewPayments(store.TxRunner{Pool: pool, LockTimeoutMS: 2000, StatementTimeoutMS: 5000,
@@ -133,45 +138,45 @@ func TestPayDeleteSurvivesCancelledRequestContext(t *testing.T) {
 	if ctx.Err() == nil {
 		t.Fatal("the hook did not cancel the request context")
 	}
-	wantKeys(t, "cancelled mid-transaction", map[string]bool{cashbackA: false})
+	wantKeys(t, "cancelled mid-transaction", map[string]bool{cache.CampaignKey: false})
 }
 
-func TestRedeemDeletesCashbackKeyOnlyWhenItCommits(t *testing.T) {
+func TestRedeemDeletesNoKey(t *testing.T) {
 	reset(t, 10_000_000)
 	fund(t, "user_a", 5000)
 	h := payRouter()
+	all := map[string]bool{cashbackA: true, cashbackB: true, cache.CampaignKey: true}
 
 	plantKeys(t, cashbackA, cashbackB, cache.CampaignKey)
 	if r := redeem(t, "user_a", 6000); r.status != http.StatusUnprocessableEntity {
 		t.Fatalf("over balance = %d: %s", r.status, r.raw)
 	}
-	wantKeys(t, "422", map[string]bool{cashbackA: true})
+	wantKeys(t, "422", all)
 
 	key := uuid.NewString()
 	first, err := doRedeem(h, payHeaders("user_a", key), `{"amount":2000}`)
 	if err != nil || first.status != http.StatusCreated {
 		t.Fatalf("redeem = %+v, %v", first, err)
 	}
-	wantKeys(t, "201", map[string]bool{cashbackA: false, cashbackB: true, cache.CampaignKey: true})
+	wantKeys(t, "201", all)
 
-	plantKeys(t, cashbackA)
 	replay, err := doRedeem(h, payHeaders("user_a", key), `{"amount":2000}`)
 	if err != nil || replay.status != http.StatusOK || replay.replayed != "true" {
 		t.Fatalf("replay = %+v, %v", replay, err)
 	}
-	wantKeys(t, "replay", map[string]bool{cashbackA: true})
+	wantKeys(t, "replay", all)
 	conflict, err := doRedeem(h, payHeaders("user_a", key), `{"amount":1000}`)
 	if err != nil || conflict.status != http.StatusConflict {
 		t.Fatalf("conflict = %+v, %v", conflict, err)
 	}
-	wantKeys(t, "key reuse 409", map[string]bool{cashbackA: true})
+	wantKeys(t, "key reuse 409", all)
 
 	setCampaignSQL(t, `UPDATE campaigns SET redemptions_paused = true`)
-	plantKeys(t, cashbackA)
+	plantKeys(t, cache.CampaignKey)
 	if r := redeem(t, "user_a", 1000); r.status != http.StatusConflict {
 		t.Fatalf("paused = %d: %s", r.status, r.raw)
 	}
-	wantKeys(t, "paused 409", map[string]bool{cashbackA: true})
+	wantKeys(t, "paused 409", all)
 	assertReconciled(t)
 }
 
@@ -205,9 +210,9 @@ func TestWritesSucceedWithRedisAtAClosedPort(t *testing.T) {
 // A failed delete is a warning with the keys, never the Redis address.
 func TestFailedDeleteWarnsWithoutTheAddress(t *testing.T) {
 	var logs bytes.Buffer
-	deadInvalidatorLog(t, &logs).Delete(context.Background(), cashbackA)
+	deadInvalidatorLog(t, &logs).Delete(context.Background(), cache.CampaignKey)
 	out := logs.String()
-	if !strings.Contains(out, `"level":"WARN"`) || !strings.Contains(out, "cache delete failed") || !strings.Contains(out, cashbackA) {
+	if !strings.Contains(out, `"level":"WARN"`) || !strings.Contains(out, "cache delete failed") || !strings.Contains(out, cache.CampaignKey) {
 		t.Errorf("log = %q, want a warning naming the key", out)
 	}
 	if strings.Contains(out, "127.0.0.1") || strings.Contains(out, "refused") {
@@ -227,10 +232,10 @@ func failCommitOn(t *testing.T, table string) {
 		DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fc_test_fail_commit()`)
 }
 
-// Tech-spec §6: when COMMIT fails the outcome is unknown, so the cashback key
-// is deleted (safe either way). The campaign key is not: Exhausted is unknown.
-func TestPayDeletesCashbackKeyWhenCommitOutcomeUnknown(t *testing.T) {
-	reset(t, 10_000_000)
+// Tech-spec §6: when COMMIT fails the outcome is unknown, so nothing is
+// deleted: Exhausted is unknown, and no other key depends on the write (D53).
+func TestPayDeletesNothingWhenCommitOutcomeUnknown(t *testing.T) {
+	reset(t, 5000)
 	plantKeys(t, cashbackA, cashbackB, cache.CampaignKey)
 	failCommitOn(t, "payments")
 	svc := service.NewPayments(store.TxRunner{Pool: pool, LockTimeoutMS: 2000, StatementTimeoutMS: 5000}, testInvalidator(), nil)
@@ -239,19 +244,19 @@ func TestPayDeletesCashbackKeyWhenCommitOutcomeUnknown(t *testing.T) {
 	if !errors.Is(err, store.ErrUnknownOutcome) {
 		t.Fatalf("Pay err = %v, want ErrUnknownOutcome", err)
 	}
-	wantKeys(t, "unknown outcome", map[string]bool{cashbackA: false, cashbackB: true, cache.CampaignKey: true})
+	wantKeys(t, "unknown outcome", map[string]bool{cashbackA: true, cashbackB: true, cache.CampaignKey: true})
 }
 
-func TestRedeemDeletesCashbackKeyWhenCommitOutcomeUnknown(t *testing.T) {
+func TestRedeemDeletesNothingWhenCommitOutcomeUnknown(t *testing.T) {
 	reset(t, 10_000_000)
 	fund(t, "user_a", 5000)
 	plantKeys(t, cashbackA, cashbackB, cache.CampaignKey)
 	failCommitOn(t, "redemptions")
-	svc := service.NewRedemptions(store.TxRunner{Pool: pool, LockTimeoutMS: 2000, StatementTimeoutMS: 5000}, testInvalidator(), nil)
+	svc := service.NewRedemptions(store.TxRunner{Pool: pool, LockTimeoutMS: 2000, StatementTimeoutMS: 5000}, nil)
 	_, _, err := svc.Redeem(context.Background(), domain.MoneyCommand{
 		UserID: "user_a", Key: uuid.New(), Amount: 2000, Hash: domain.RequestHash(2000), RequestID: "r1"})
 	if !errors.Is(err, store.ErrUnknownOutcome) {
 		t.Fatalf("Redeem err = %v, want ErrUnknownOutcome", err)
 	}
-	wantKeys(t, "unknown outcome", map[string]bool{cashbackA: false, cashbackB: true, cache.CampaignKey: true})
+	wantKeys(t, "unknown outcome", map[string]bool{cashbackA: true, cashbackB: true, cache.CampaignKey: true})
 }

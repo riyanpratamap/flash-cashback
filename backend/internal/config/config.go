@@ -17,7 +17,6 @@ type Config struct {
 	RedisAddr        string
 	RedisTimeout     time.Duration
 	CacheCampaignTTL time.Duration
-	CacheCashbackTTL time.Duration
 	// CacheReads is false only when CACHE_READS is "off" (D51, AC-76).
 	CacheReads bool
 	// LockTimeout and StatementTimeout are whole milliseconds: they are
@@ -47,7 +46,6 @@ func Load(getenv func(string) string) (Config, error) {
 		RedisAddr:        l.str("REDIS_ADDR", "redis:6379"),
 		RedisTimeout:     l.duration("REDIS_TIMEOUT", 50*time.Millisecond, false),
 		CacheCampaignTTL: l.duration("CACHE_CAMPAIGN_TTL", 5*time.Second, false),
-		CacheCashbackTTL: l.duration("CACHE_CASHBACK_TTL", 60*time.Second, false),
 		CacheReads:       l.onOff("CACHE_READS", true),
 		LockTimeout:      l.duration("LOCK_TIMEOUT", 2*time.Second, true),
 		StatementTimeout: l.duration("STATEMENT_TIMEOUT", 5*time.Second, true),

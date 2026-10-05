@@ -24,17 +24,18 @@ import (
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
 
-// Tech-spec §6, the read side: GET /campaign and GET /me/cashback through a
-// ReadCache on the test Redis. The writes in these tests go through payRouter,
-// whose invalidator deletes the same keys. The routers in the other files pass
-// no cache, so they keep testing PostgreSQL's answers.
+// Tech-spec §6, the read side (D53): GET /campaign through a ReadCache on the
+// test Redis; GET /me/cashback is never cached. The writes in these tests go
+// through the real services, whose invalidator deletes the campaign key. The
+// routers in the other files pass no cache, so they keep testing PostgreSQL's
+// answers.
 
 var quietLog = slog.New(slog.NewJSONHandler(io.Discard, nil))
 
 func readCfg(on bool, addr string, timeout time.Duration) config.Config {
 	return config.Config{
 		RedisAddr: addr, RedisTimeout: timeout, CacheReads: on,
-		CacheCampaignTTL: 5 * time.Second, CacheCashbackTTL: 60 * time.Second,
+		CacheCampaignTTL: 5 * time.Second,
 	}
 }
 
@@ -56,7 +57,7 @@ func cachedRouter(rc *cache.ReadCache, inv *cache.Invalidator) http.Handler {
 		Reads:        reads,
 		History:      reads,
 		Payments:     service.NewPayments(tx, inv, log),
-		Redemptions:  service.NewRedemptions(tx, inv, log),
+		Redemptions:  service.NewRedemptions(tx, log),
 	})
 }
 
@@ -118,34 +119,28 @@ func setKey(t *testing.T, key, value string) {
 	}
 }
 
-// A planted valid body is served: the read goes to the cache first.
-func TestReadsServeAValidCachedBody(t *testing.T) {
+// A planted valid campaign body is served: the read goes to the cache first.
+func TestReadsServeAValidCachedCampaignBody(t *testing.T) {
 	reset(t, 10_000_000)
 	h := cachedRouter(testReadCache(), testInvalidator())
 	setKey(t, cache.CampaignKey, plantedCampaign)
-	setKey(t, cashbackA, plantedCashback(777))
 	if got := campaignOf(t, mustGet(t, h, campaignPath, "user_a")); got.Name != "From the cache" {
 		t.Errorf("campaign = %+v, want the cached body", got)
 	}
-	if got := cashbackOf(t, mustGet(t, h, cashbackPath, "user_a")); got.Balance != 777 {
-		t.Errorf("cashback = %+v, want the cached body", got)
-	}
 }
 
-// A miss fills the key with the TTLs of §6.
-func TestReadMissFillsTheKeyWithItsTTL(t *testing.T) {
+// A campaign miss fills the key with the TTL of §6; a cashback read writes
+// no key (D53).
+func TestCampaignMissFillsTheKeyWithItsTTL(t *testing.T) {
 	reset(t, 10_000_000)
 	h := cachedRouter(testReadCache(), testInvalidator())
 	mustGet(t, h, campaignPath, "user_a")
 	mustGet(t, h, cashbackPath, "user_a")
-	ctx := context.Background()
-	if ttl := rdb.PTTL(ctx, cache.CampaignKey).Val(); ttl <= 0 || ttl > 5*time.Second {
+	if ttl := rdb.PTTL(context.Background(), cache.CampaignKey).Val(); ttl <= 0 || ttl > 5*time.Second {
 		t.Errorf("campaign TTL = %v, want in (0, 5s]", ttl)
 	}
-	// The real clock: the campaign day can end within a minute only in the
-	// last minute of the day, which the AC-46 test covers.
-	if ttl := rdb.PTTL(ctx, cashbackA).Val(); ttl <= 0 || ttl > 60*time.Second {
-		t.Errorf("cashback TTL = %v, want in (0, 60s]", ttl)
+	if keys := redisKeys(t); len(keys) != 1 || keys[0] != cache.CampaignKey {
+		t.Errorf("keys = %v, want only %s", keys, cache.CampaignKey)
 	}
 }
 
@@ -165,12 +160,13 @@ func TestReadErrorsAreNeverCached(t *testing.T) {
 	}
 }
 
-// AC-42: a warm cache never hides a committed change.
+// AC-42: a warm campaign cache never hides a committed change, and
+// GET /me/cashback reads PostgreSQL every time: no cashback key is written.
 func TestWarmCacheFollowsWritesAC42(t *testing.T) {
 	reset(t, 10_000_000)
 	h := cachedRouter(testReadCache(), testInvalidator())
-	if got := cashbackOf(t, mustGet(t, h, cashbackPath, "user_a")); got.Balance != 0 || !keyExists(t, cashbackA) {
-		t.Fatalf("warm read = %+v, key present %v", got, keyExists(t, cashbackA))
+	if got := cashbackOf(t, mustGet(t, h, cashbackPath, "user_a")); got.Balance != 0 {
+		t.Fatalf("first read = %+v", got)
 	}
 	if r := pay(t, "user_a", 100000); r.status != http.StatusCreated {
 		t.Fatal(r.raw)
@@ -184,6 +180,9 @@ func TestWarmCacheFollowsWritesAC42(t *testing.T) {
 	if got := cashbackOf(t, mustGet(t, h, cashbackPath, "user_a")); got.Balance != 4000 {
 		t.Fatalf("after the redemption balance = %d, want 4000", got.Balance)
 	}
+	if keys := redisKeys(t); len(keys) != 0 {
+		t.Fatalf("keys after cashback reads = %v, want none", keys)
+	}
 	if got := campaignOf(t, mustGet(t, h, campaignPath, "user_a")); got.Status != domain.CampaignActive {
 		t.Fatalf("campaign = %+v", got)
 	}
@@ -193,6 +192,24 @@ func TestWarmCacheFollowsWritesAC42(t *testing.T) {
 	mustAdmin(t, "pause-awards", "--by", "owner")
 	if got := campaignOf(t, mustGet(t, h, campaignPath, "user_a")); got.Status != domain.CampaignPaused {
 		t.Fatalf("after pause-awards status = %s, want PAUSED", got.Status)
+	}
+	mustAdmin(t, "resume-awards", "--by", "owner")
+	assertReconciled(t)
+}
+
+// AC-42, the last of the budget: the payment deletes the warm campaign key
+// and the next read shows ENDED.
+func TestWarmCampaignShowsEndedAfterTheLastOfTheBudgetAC42(t *testing.T) {
+	reset(t, 5000)
+	h := cachedRouter(testReadCache(), testInvalidator())
+	if got := campaignOf(t, mustGet(t, h, campaignPath, "user_a")); got.Status != domain.CampaignActive || !keyExists(t, cache.CampaignKey) {
+		t.Fatalf("campaign = %+v, key warm %v", got, keyExists(t, cache.CampaignKey))
+	}
+	if r := pay(t, "user_a", 100000); r.status != http.StatusCreated || r.res.Cashback.Awarded != 5000 {
+		t.Fatal(r.raw)
+	}
+	if got := campaignOf(t, mustGet(t, h, campaignPath, "user_a")); got.Status != domain.CampaignEnded {
+		t.Fatalf("after the last of the budget status = %s, want ENDED", got.Status)
 	}
 	assertReconciled(t)
 }
@@ -254,38 +271,21 @@ func TestStalledRedisCostsAReadItsDeadlineAC44(t *testing.T) {
 	}
 }
 
-// AC-45: a value that is not a cashback body is a miss: the answer is
+// AC-45: a value that is not a campaign body is a miss: the answer is
 // PostgreSQL's and the key is replaced by the good body.
-func TestInvalidCachedValueIsAMissAC45(t *testing.T) {
-	cases := []struct{ name, value string }{
-		{"not json", "stale"},
-		{"empty", ""},
-		{"wrong type", `{"balance":"18000","today":{}}`},
-		{"unknown field", strings.Replace(plantedCashback(999999), `"balance"`, `"budget":1,"balance"`, 1)},
-		{"negative balance", plantedCashback(-5)},
-		{"bad date", strings.Replace(plantedCashback(999999), "2026-01-02\"", "soon\"", 1)},
-		{"two values", plantedCashback(999999) + plantedCashback(999999)},
-		{"json null", "null"},
-		{"missing earned and remaining", `{"balance":999999,"today":{"date":"2026-01-02","resets_at":"2026-01-02T17:00:00Z"}}`},
-		{"missing balance", `{"today":{"date":"2026-01-02","earned":0,"remaining":50000,"resets_at":"2026-01-02T17:00:00Z"}}`},
-		{"missing today", `{"balance":999999}`},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			reset(t, 10_000_000)
-			fund(t, "user_a", 18000)
-			h := cachedRouter(testReadCache(), testInvalidator())
-			setKey(t, cashbackA, tc.value)
-			got := cashbackOf(t, mustGet(t, h, cashbackPath, "user_a"))
-			if got.Balance != 18000 {
-				t.Fatalf("balance = %d, want 18000 from PostgreSQL", got.Balance)
-			}
-			stored, err := rdb.Get(context.Background(), cashbackA).Result()
-			if err != nil || cashbackOf(t, stored).Balance != 18000 {
-				t.Errorf("key after the read = %q, %v; want the good body", stored, err)
-			}
-		})
-	}
+func TestInvalidCachedCampaignIsAMissAC45(t *testing.T) {
+	t.Run("not json", func(t *testing.T) {
+		reset(t, 10_000_000)
+		h := cachedRouter(testReadCache(), testInvalidator())
+		setKey(t, cache.CampaignKey, "stale")
+		if got := campaignOf(t, mustGet(t, h, campaignPath, "user_a")); got.Name == "From the cache" || got.Rules.DailyCap != 50000 {
+			t.Fatalf("campaign = %+v, want PostgreSQL's answer", got)
+		}
+		stored, err := rdb.Get(context.Background(), cache.CampaignKey).Result()
+		if err != nil || campaignOf(t, stored).Rules.DailyCap != 50000 {
+			t.Errorf("key after the read = %q, %v; want the good body", stored, err)
+		}
+	})
 	t.Run("campaign missing rules", func(t *testing.T) {
 		reset(t, 10_000_000)
 		h := cachedRouter(testReadCache(), testInvalidator())
@@ -304,16 +304,16 @@ func TestInvalidCachedValueIsAMissAC45(t *testing.T) {
 	})
 }
 
-// AC-45 (second half): a stale balance of 999999 is shown (that staleness is
-// accepted, D06) but a redemption reads PostgreSQL: 20000 against a real
-// 18000 is 422 (INV-11).
-func TestStaleCachedBalanceNeverDecidesARedemptionAC45(t *testing.T) {
+// AC-45 (second half): a cashback key left by an older build (balance 999999)
+// is never read: GET /me/cashback shows PostgreSQL's 18000, and a redemption
+// of 20000 is 422 (INV-11).
+func TestStaleCashbackKeyIsNeverReadAC45(t *testing.T) {
 	reset(t, 10_000_000)
 	fund(t, "user_a", 18000)
 	h := cachedRouter(testReadCache(), testInvalidator())
 	setKey(t, cashbackA, plantedCashback(999999))
-	if got := cashbackOf(t, mustGet(t, h, cashbackPath, "user_a")); got.Balance != 999999 {
-		t.Fatalf("shown balance = %d, want the cached 999999", got.Balance)
+	if got := cashbackOf(t, mustGet(t, h, cashbackPath, "user_a")); got.Balance != 18000 {
+		t.Fatalf("shown balance = %d, want PostgreSQL's 18000", got.Balance)
 	}
 	r := redeem(t, "user_a", 20000)
 	if r.status != http.StatusUnprocessableEntity {
@@ -325,29 +325,10 @@ func TestStaleCachedBalanceNeverDecidesARedemptionAC45(t *testing.T) {
 	assertReconciled(t)
 }
 
-// AC-46: the entry never outlives the campaign day.
-func TestCashbackTTLEndsWithTheCampaignDayAC46(t *testing.T) {
-	reset(t, 10_000_000)
-	h := cachedRouter(testReadCache(), testInvalidator())
-	mustSetNow(t, "2026-01-02T23:59:30+07:00")
-	mustGet(t, h, cashbackPath, "user_a")
-	ttl := rdb.PTTL(context.Background(), cashbackA).Val()
-	if ttl <= 20*time.Second || ttl > 30*time.Second {
-		t.Fatalf("TTL at 23:59:30 WIB = %v, want in (20s, 30s]", ttl)
-	}
-
-	reset(t, 10_000_000)
-	mustSetNow(t, "2026-01-02T23:59:59.5+07:00")
-	mustGet(t, h, cashbackPath, "user_a")
-	if keyExists(t, cashbackA) {
-		t.Errorf("a body with half a second left was cached, TTL %v", rdb.PTTL(context.Background(), cashbackA).Val())
-	}
-}
-
-// AC-76: with CACHE_READS=off nothing is read or written; the deletes after
-// commit still run.
+// AC-76: with CACHE_READS=off the campaign key is neither read nor written;
+// the delete after the last-of-budget commit still runs.
 func TestCacheReadsOffAC76(t *testing.T) {
-	reset(t, 10_000_000)
+	reset(t, 5000)
 	rc := cache.NewReadCache(rdb, readCfg(false, "", testRedisTimeout), quietLog)
 	h := cachedRouter(rc, testInvalidator())
 	mustGet(t, h, campaignPath, "user_a")
@@ -356,16 +337,17 @@ func TestCacheReadsOffAC76(t *testing.T) {
 		t.Fatalf("keys with the cache off = %v, want none", keys)
 	}
 	// A planted body is not served either.
-	setKey(t, cashbackA, plantedCashback(777))
-	if got := cashbackOf(t, mustGet(t, h, cashbackPath, "user_a")); got.Balance != 0 {
-		t.Fatalf("balance = %d, want PostgreSQL's 0", got.Balance)
+	setKey(t, cache.CampaignKey, plantedCampaign)
+	if got := campaignOf(t, mustGet(t, h, campaignPath, "user_a")); got.Name == "From the cache" {
+		t.Fatalf("campaign = %+v, want PostgreSQL's answer", got)
 	}
 	if r := pay(t, "user_a", 100000); r.status != http.StatusCreated {
 		t.Fatal(r.raw)
 	}
-	if keyExists(t, cashbackA) {
-		t.Error("a payment did not delete the key set by hand")
+	if keyExists(t, cache.CampaignKey) {
+		t.Error("the last-of-budget payment did not delete the key set by hand")
 	}
+	assertReconciled(t)
 }
 
 // Failures log once per 10 s per operation, with the key and no address.

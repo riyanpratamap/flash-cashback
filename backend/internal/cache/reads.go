@@ -20,15 +20,14 @@ import (
 // (tech-spec §6: at most one per 10 s per operation).
 const warnEvery = 10 * time.Second
 
-// ReadCache is the read side of the cache (tech-spec §6): GET /campaign and
-// GET /me/cashback bodies. It is a separate type from Invalidator, and only
-// service.Reads holds it: no money path reads the cache (INV-11). Every Redis
+// ReadCache is the read side of the cache (tech-spec §6): the GET /campaign
+// body only (D53: GET /me/cashback is never cached). It is a separate type
+// from Invalidator, and only service.Reads holds it: no money path reads the cache (INV-11). Every Redis
 // error, timeout, or invalid value is a miss; nothing here returns an error.
 type ReadCache struct {
 	c           *redis.Client
 	timeout     time.Duration
 	campaignTTL time.Duration
-	cashbackTTL time.Duration
 	log         *slog.Logger
 	warn        *throttle
 }
@@ -44,7 +43,7 @@ func NewReadCache(c *redis.Client, cfg config.Config, log *slog.Logger) *ReadCac
 		log = slog.Default()
 	}
 	return &ReadCache{
-		c: c, timeout: cfg.RedisTimeout, campaignTTL: cfg.CacheCampaignTTL, cashbackTTL: cfg.CacheCashbackTTL, log: log,
+		c: c, timeout: cfg.RedisTimeout, campaignTTL: cfg.CacheCampaignTTL, log: log,
 		warn: newThrottle(warnEvery, time.Now),
 	}
 }
@@ -81,36 +80,6 @@ func (r *ReadCache) Campaign(ctx context.Context) (domain.CampaignView, Lookup) 
 // SetCampaign stores the body for the campaign TTL.
 func (r *ReadCache) SetCampaign(ctx context.Context, v domain.CampaignView) {
 	r.set(ctx, CampaignKey, v, r.campaignTTL)
-}
-
-// Cashback returns the user's cached GET /me/cashback body; the view is valid
-// only on Hit.
-func (r *ReadCache) Cashback(ctx context.Context, user domain.UserID) (domain.CashbackView, Lookup) {
-	key := CashbackKey(user)
-	b, l := r.get(ctx, key)
-	if l != Hit {
-		return domain.CashbackView{}, l
-	}
-	v, ok := decodeCashback(b)
-	if !ok {
-		r.warnOp("decode", key)
-		return domain.CashbackView{}, Miss
-	}
-	return v, Hit
-}
-
-// SetCashback stores the body for min(CACHE_CASHBACK_TTL, untilReset minus
-// the time since started), where untilReset is the database clock's time to
-// the end of the campaign day at the statement that read it and started is
-// taken before that statement: Redis counts the TTL from the SET, so the
-// entry must not outlive 00:00:00 (AC-46). A body with under a second left
-// is not stored (§6).
-func (r *ReadCache) SetCashback(ctx context.Context, user domain.UserID, v domain.CashbackView, untilReset time.Duration, started time.Time) {
-	ttl, ok := cashbackTTL(r.cashbackTTL, untilReset, time.Since(started))
-	if !ok {
-		return
-	}
-	r.set(ctx, CashbackKey(user), v, ttl)
 }
 
 // get reads key on the read deadline. A cancelled request is a silent
@@ -189,7 +158,7 @@ func strictDecode(b []byte, v any) bool {
 	return dec.Decode(&struct{}{}) == io.EOF
 }
 
-// campaignBody and cashbackBody mirror the views with pointer fields: a
+// campaignBody mirrors the view with pointer fields: a
 // cached body with a field missing is told from one holding a zero, and is a
 // miss. A partial result is never served (KP).
 type campaignBody struct {
@@ -203,16 +172,6 @@ type campaignBody struct {
 		DailyCap   *int64  `json:"daily_cap"`
 		Timezone   *string `json:"timezone"`
 	} `json:"rules"`
-}
-
-type cashbackBody struct {
-	Balance *int64 `json:"balance"`
-	Today   *struct {
-		Date      *string `json:"date"`
-		Earned    *int64  `json:"earned"`
-		Remaining *int64  `json:"remaining"`
-		ResetsAt  *string `json:"resets_at"`
-	} `json:"today"`
 }
 
 func decodeCampaign(b []byte) (domain.CampaignView, bool) {
@@ -246,45 +205,4 @@ func decodeCampaign(b []byte) (domain.CampaignView, bool) {
 		return domain.CampaignView{}, false
 	}
 	return v, true
-}
-
-func decodeCashback(b []byte) (domain.CashbackView, bool) {
-	var m cashbackBody
-	if !strictDecode(b, &m) {
-		return domain.CashbackView{}, false
-	}
-	if m.Balance == nil || m.Today == nil {
-		return domain.CashbackView{}, false
-	}
-	t := m.Today
-	if t.Date == nil || t.Earned == nil || t.Remaining == nil || t.ResetsAt == nil {
-		return domain.CashbackView{}, false
-	}
-	if *m.Balance < 0 || *t.Earned < 0 || *t.Remaining < 0 {
-		return domain.CashbackView{}, false
-	}
-	if _, err := time.Parse("2006-01-02", *t.Date); err != nil {
-		return domain.CashbackView{}, false
-	}
-	if _, err := time.Parse(time.RFC3339, *t.ResetsAt); err != nil {
-		return domain.CashbackView{}, false
-	}
-	return domain.CashbackView{
-		Balance: *m.Balance,
-		Today:   domain.TodayView{Date: *t.Date, Earned: *t.Earned, Remaining: *t.Remaining, ResetsAt: *t.ResetsAt},
-	}, true
-}
-
-// minCashbackTTL is the shortest lifetime worth a SET (§6).
-const minCashbackTTL = time.Second
-
-// cashbackTTL is min(configured, untilReset - elapsed): a cashback body never
-// outlives the campaign day it describes, counting the time spent since the
-// database clock was read. Under one second it is not cached.
-func cashbackTTL(configured, untilReset, elapsed time.Duration) (time.Duration, bool) {
-	ttl := min(configured, untilReset-elapsed)
-	if ttl < minCashbackTTL {
-		return 0, false
-	}
-	return ttl, true
 }

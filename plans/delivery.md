@@ -265,7 +265,7 @@ green on `cebfe64`.
   - Removed (D52, 2026-10-05): the owner dropped the load test ("the numbers don't prove anything"); `loadtest/`,
     the compose `k6` service and `make load-test` are deleted, `CACHE_READS` stays. This Result is kept as the one-off
     measurement.
-- [ ] **P4.6** Campaign cache only — AC-42, AC-45, AC-76 (amended), AC-46 (removed) · INV-11 · TC8, TC9 · D53 · `go` ·
+- [x] **P4.6** Campaign cache only — AC-42, AC-45, AC-76 (amended), AC-46 (removed) · INV-11 · TC8, TC9 · D53 · `go` ·
   **critical** (Pay/Redeem after-commit path)
   - Remove the cashback read cache: `ReadCache.Cashback` / `SetCashback`, `cashbackTTL`, `TodayRow.Now` if nothing else
     reads it, `CashbackKey`, `CACHE_CASHBACK_TTL` (`internal/config`, `.env.example`, `docker-compose.yml`); `Reads`
@@ -279,6 +279,29 @@ green on `cebfe64`.
     `ENDED` red; flag ignored → AC-76 red.
   - Done when: `make gate` and `make test-race` exit 0; mutations reported; compose: after a read of user_a, `KEYS
     fc:v1:*` shows only `fc:v1:campaign`; reconcile exit 0.
+  - Result: removed `ReadCache.Cashback` / `SetCashback`, `cashbackTTL`, `minCashbackTTL`, the cashback mirror and
+    decoder, `cache.CashbackKey`, `TodayRow.Now` (nothing else read it; the `now` column is gone from the `Today` CTE, and the day still comes from `fc_campaign_day(fc_now())`),
+    `CACHE_CASHBACK_TTL` (`config`, `.env.example`, `docker-compose.yml`). `Reads.Cashback` is PostgreSQL only. Pay
+    deletes `fc:v1:campaign` after COMMIT when `Exhausted` and nothing else; an unknown COMMIT outcome deletes nothing.
+    `Redemptions` has no `Invalidator` (`NewRedemptions(tx, log)`) and deletes nothing. Switch commands, `demo-reset`
+    and `CACHE_READS` (campaign only) unchanged. Tests added or amended: `TestWarmCacheFollowsWritesAC42` (no key
+    after cashback reads, `PAUSED`), `TestWarmCampaignShowsEndedAfterTheLastOfTheBudgetAC42`,
+    `TestCampaignMissFillsTheKeyWithItsTTL`, `TestInvalidCachedCampaignIsAMissAC45`,
+    `TestStaleCashbackKeyIsNeverReadAC45` (999999 planted, 18000 shown, redeem 20000 -> 422),
+    `TestCacheReadsOffAC76` (campaign only), `TestPayDeletesNoKeyWhileTheBudgetLasts`,
+    `TestPayThatTakesTheLastOfTheBudgetDeletesOnlyTheCampaignKey`, `TestPayWithNoAwardDeletesNoKey`,
+    `TestRedeemDeletesNoKey`, `TestPayDeletesNothingWhenCommitOutcomeUnknown`,
+    `TestRedeemDeletesNothingWhenCommitOutcomeUnknown`; `TestPayDeleteSurvivesCancelledRequestContext` now uses the
+    exhausted campaign key. Tests removed: `TestCashbackTTLEndsWithTheCampaignDayAC46` (AC-46),
+    `TestReadsServeAValidCachedBody` and `TestReadMissFillsTheKeyWithItsTTL` (replaced by campaign-only versions),
+    `TestInvalidCachedValueIsAMissAC45` and `TestStaleCachedBalanceNeverDecidesARedemptionAC45` (replaced),
+    `TestPayDeletesOnlyThatUsersCashbackKey`, `TestPayWithNoAwardStillDeletesCashbackKeyOnly`,
+    `TestRedeemDeletesCashbackKeyOnlyWhenItCommits`, `TestPayDeletesCashbackKeyWhenCommitOutcomeUnknown`,
+    `TestRedeemDeletesCashbackKeyWhenCommitOutcomeUnknown`, unit `TestDecodeCashback`, `TestCashbackTTL`, and the
+    `CACHE_CASHBACK_TTL` config rows. Mutations red: `Reads` reads `fc:v1:cashback:{user}` (AC-45 stale key test, 999999
+    vs 18000); Pay campaign delete removed (AC-42 `ENDED`, last-of-budget delete, cancelled-context, AC-76 delete);
+    flag ignored (AC-76, key written with the cache off). Compose: `/me/cashback` user_a 15000, `/campaign` ACTIVE,
+    `KEYS fc:v1:*` only `fc:v1:campaign`, reconcile exit 0. `make gate` exit 0; `make test-race` exit 0.
 
 **P4 gate:** `make gate`, `make test-race` → exit 0 · stack up · `docker compose exec -e FC_DEMO=1 api /app/admin
 demo-reset` → exit 0 · `docker compose stop redis`; healthz → 200, `status` ok, redis `degraded`; `GET /me/cashback`

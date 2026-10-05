@@ -53,7 +53,7 @@ func payRouterInv(tx store.TxRunner, inv *cache.Invalidator, w io.Writer) http.H
 		Reads:        service.NewReads(p, nil),
 		History:      service.NewReads(p, nil),
 		Payments:     service.NewPayments(tx, inv, log),
-		Redemptions:  service.NewRedemptions(tx, inv, log),
+		Redemptions:  service.NewRedemptions(tx, log),
 	})
 }
 

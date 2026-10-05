@@ -72,7 +72,7 @@ func serve(cfg config.Config) int {
 			Reads:        reads,
 			History:      reads,
 			Payments:     service.NewPayments(money, inv, log),
-			Redemptions:  service.NewRedemptions(money, inv, log),
+			Redemptions:  service.NewRedemptions(money, log),
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
