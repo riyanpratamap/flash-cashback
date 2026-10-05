@@ -332,17 +332,25 @@ balance 15000; Redis started → healthz redis ok; pause/resume awards and redem
     bps / 30000 / 70000 and screen 7 shows 10%, Rp30.000, Rp70.000.
   - Result: Home, History, and How it works built with RNTL tests (AC-64 states, AC-66 in UTC via a Jest global setup,
     AC-67 picker, AC-75 at 1000 bps / Rp30.000 / Rp70.000); seven mutations red and restored.
-- [ ] **P5.3** Money attempt machine and saved attempts — AC-59, AC-60, AC-61, AC-72, AC-73, AC-74 (logic) · TC21 ·
+- [x] **P5.3** Money attempt machine and saved attempts — AC-59, AC-60, AC-61, AC-72, AC-73, AC-74 (logic) · TC21 ·
   `ts` · **critical** (client idempotency)
   - `src/attempts/` per §10: ref guard, key from expo-crypto per press, save to `fc:attempts` before send, remove on
     2xx/4xx only, resend x3 ~2 s then wait, launch check (< 10 min resend with saved user; older → card data).
   - Done when: Jest (fake timers) green; **mutations:** remove the ref guard → AC-59 red; new key per send → AC-60 red;
     send before save → AC-72 red; selected user instead of saved → AC-73 red.
+  - Result: `src/attempts/` (types, store, launch, machine, AttemptProvider) wired into `_layout.tsx`; 43 new Jest
+    tests (fake timers); four mutations red and restored (ref guard, new key per send, send before save, selected user
+    instead of saved). Review fixes: after a 4xx whose removal fails twice, a `fc:attempts:resolved` marker keeps the
+    launch check from resending the key; dismiss only removes a card; a save error removes the key best-effort; ten
+    more mutations red. AC-73 "Checking opens" proved at provider level, the screen opening is asserted in P5.4.
+    Assumption (owner-accepted deviation from §10): a launch resend that ends in `waiting` stops the launch queue; the
+    remaining recent attempts become unconfirmed cards, with their keys kept.
 - [ ] **P5.4** Pay, Payment result, Checking, unconfirmed card — AC-58, AC-60, AC-61 (UI), AC-62, AC-63, AC-74 (UI) ·
   TC21 · `ts` · **critical** (Checking blocks back; "failed" never shown)
   - Done when: RNTL tests: every reason + fallback, every info-line variant, estimate Rp3.000, a 4xx shows the inline
     or generic error copy and the next press sends a new key (AC-61), back blocked, Dismiss sends nothing and shows
-    the history hint.
+    the history hint; with two recent attempts at launch, each one's result (done or rejected) is shown before the
+    next is resent (P5.3 review F5).
 - [ ] **P5.5** Redeem and confirmation — AC-65, AC-60 (redemption) · `ts` · not critical
   - Done when: RNTL tests: `INSUFFICIENT_BALANCE` refetches then shows the limit; `REDEMPTION_PAUSED` refetches the
     campaign; success shows `balance_after`.
