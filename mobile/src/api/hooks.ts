@@ -1,4 +1,4 @@
-import { type UseQueryResult, useQuery } from '@tanstack/react-query';
+import { type QueryKey, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
 
@@ -26,19 +26,21 @@ export function useHistory(limit: number) {
 /** A focus refetch skips a query updated within this window (a money answer has just refetched it). */
 export const FOCUS_FRESH_MS = 2000;
 
-type Refreshable = Pick<UseQueryResult, 'refetch' | 'isFetching' | 'dataUpdatedAt'>;
-
 /**
- * Returns `refetchAll` (pull to refresh, the retry buttons). Each time the screen regains focus, not on the first
- * focus (the queries already load on mount), it refetches the queries that are not fetching and were not updated in
- * the last FOCUS_FRESH_MS; a query in error has `dataUpdatedAt` 0, so it counts as old.
+ * Returns `refetchAll` (pull to refresh, the retry buttons): it refetches every key. Each time the screen regains focus,
+ * not on the first focus (the queries already load on mount), it refetches the keys that are not fetching and were not
+ * updated in the last FOCUS_FRESH_MS; a query that never succeeded has `dataUpdatedAt` 0, so it counts as old.
+ * The keys must be built with `queryKeys`, as the hooks do. The decision reads the live query cache, never a render's
+ * result: a result read outside render is stale, and a tracked field read there would re-render the screen on every
+ * fetch from then on.
  * An effect that survives: it synchronises with navigation focus.
  */
-export function useRefreshOnFocus(...queries: Refreshable[]) {
-  // Focus fires from navigation, not a render: it must read the latest state, not the render it was created in.
-  const latest = useRef(queries);
+export function useRefreshOnFocus(...keys: QueryKey[]) {
+  const client = useQueryClient();
+  // Focus fires from navigation, not a render: it must read the latest keys (the user can change).
+  const latest = useRef(keys);
   useEffect(() => {
-    latest.current = queries;
+    latest.current = keys;
   });
   const first = useRef(true);
   useFocusEffect(
@@ -48,10 +50,13 @@ export function useRefreshOnFocus(...queries: Refreshable[]) {
         return;
       }
       const now = Date.now();
-      for (const q of latest.current) {
-        if (!q.isFetching && now - q.dataUpdatedAt >= FOCUS_FRESH_MS) void q.refetch();
+      for (const queryKey of latest.current) {
+        const state = client.getQueryState(queryKey);
+        if (state !== undefined && state.fetchStatus !== 'fetching' && now - state.dataUpdatedAt >= FOCUS_FRESH_MS) {
+          void client.refetchQueries({ queryKey, exact: true });
+        }
       }
-    }, []),
+    }, [client]),
   );
-  return () => Promise.all(latest.current.map((q) => q.refetch()));
+  return () => Promise.all(latest.current.map((queryKey) => client.refetchQueries({ queryKey, exact: true })));
 }

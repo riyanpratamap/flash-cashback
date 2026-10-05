@@ -444,7 +444,8 @@ From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 foll
     pull refetches all three while fresh, a query in error refetches on focus). Two existing focus tests (Home, History)
     now move `Date.now` past 2 s before the focus: their data is fresh by the new rule. Mutations: `FOCUS_FRESH_MS = 0`
     -> no-duplicate red (2 expected, 3 received); age check replaced by `false` -> after-2 s and error tests red.
-    `make mobile-check` exit 0, 294 tests.
+    `make mobile-check` exit 0, 294 tests. review: F1–F7 fixed in a follow-up commit (`useRefreshOnFocus(...keys)` now reads
+    `queryClient.getQueryState` at focus).
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

@@ -4,7 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefreshOnFocus } from '@/api/hooks';
-import type { Campaign, CashbackSummary } from '@/api/queries';
+import { type Campaign, type CashbackSummary, queryKeys } from '@/api/queries';
 import { useAttemptLaunch, useAttemptActions } from '@/attempts/AttemptProvider';
 import { bannerCopy, zoneLabel } from '@/copy/codes';
 import { formatRp } from '@/money/format';
@@ -24,6 +24,7 @@ const HOLD_LINE = 'Redemption is on hold and your balance is safe.';
 
 export default function Home() {
   const router = useRouter();
+  const { user } = useUser();
   const campaign = useCampaign();
   const cashback = useCashback();
   const activity = useHistory(HOME_ACTIVITY_LIMIT);
@@ -32,7 +33,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  const refetchAll = useRefreshOnFocus(campaign, cashback, activity);
+  const refetchAll = useRefreshOnFocus(queryKeys.campaign(), queryKeys.cashback(user), queryKeys.history(user, HOME_ACTIVITY_LIMIT));
 
   const onRefresh = () => {
     setRefreshing(true);

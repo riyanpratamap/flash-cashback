@@ -30,6 +30,9 @@ beforeEach(async () => {
   push.mockReset();
   serve();
 });
+afterEach(() => {
+  jest.restoreAllMocks(); // the Date.now spy of a focus test
+});
 
 const loaded = () => screen.findByText('Rp15.000');
 
@@ -180,14 +183,13 @@ describe('Home (AC-64)', () => {
 
     // The data is fresh for FOCUS_FRESH_MS; the clock moves past it, as when the user was away.
     const now = Date.now();
-    const clock = jest.spyOn(Date, 'now').mockReturnValue(now + FOCUS_FRESH_MS + 1);
+    jest.spyOn(Date, 'now').mockReturnValue(now + FOCUS_FRESH_MS + 1);
     await act(async () => regainFocus());
     await waitFor(() => expect(fetchMock.mock.calls.length).toBe(before + 3));
 
     const after = fetchMock.mock.calls.length;
     await act(async () => screen.getByTestId('home-scroll').props.refreshControl.props.onRefresh());
     await waitFor(() => expect(fetchMock.mock.calls.length).toBe(after + 3));
-    clock.mockRestore();
   });
 });
 

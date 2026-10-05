@@ -15,6 +15,9 @@ beforeEach(async () => {
   await resetStorage();
   serve();
 });
+afterEach(() => {
+  jest.restoreAllMocks(); // the Date.now spy of a focus test
+});
 
 const payment = (id: number, created_at: string, amount: number, awarded: number, reason: string): HistoryItem => ({
   type: 'PAYMENT',
@@ -147,9 +150,8 @@ describe('History (AC-66)', () => {
     const before = fetchMock.mock.calls.length;
     // The data is fresh for FOCUS_FRESH_MS; the clock moves past it, as when the user was away.
     const now = Date.now();
-    const clock = jest.spyOn(Date, 'now').mockReturnValue(now + FOCUS_FRESH_MS + 1);
+    jest.spyOn(Date, 'now').mockReturnValue(now + FOCUS_FRESH_MS + 1);
     await act(async () => regainFocus());
-    clock.mockRestore();
     expect(fetchMock.mock.calls.length).toBeGreaterThan(before);
   });
 });

@@ -5,6 +5,7 @@ import { Pressable, Text } from 'react-native';
 import { useAttemptActions, useAttemptLaunch, useAttemptState } from '@/attempts/AttemptProvider';
 import { posts, renderApp, resetStorage, serveMoney, type MoneyAnswer } from '@/test/fixtures';
 import Home from '@/app/index';
+import { regainFocus } from '@/test/router-mock';
 import { useCampaign } from '@/api/hooks';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -87,5 +88,19 @@ describe('Home renders during an attempt (C4)', () => {
 
     expect(homeRenders() - before).toBeLessThanOrEqual(1);
     await settle(100); // the invalidated reads finish inside act
+  });
+
+  it('still renders Home once at most for a whole payment after a focus (F2)', async () => {
+    await mountHome([]);
+    await act(async () => regainFocus()); // the focus callback runs before the press
+    await settle(0);
+    const before = homeRenders();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'pay' }));
+    await settle(0);
+    expect(screen.getByText('phase: done')).toBeTruthy();
+
+    expect(homeRenders() - before).toBeLessThanOrEqual(1);
+    await settle(100);
   });
 });
