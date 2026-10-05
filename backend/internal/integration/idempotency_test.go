@@ -62,7 +62,7 @@ func TestPayReplayAC19(t *testing.T) {
 	if after := readCounts(t); after != before {
 		t.Errorf("counts changed on replay: %+v -> %+v", before, after)
 	}
-	assertBooks(t)
+	assertReconciled(t)
 }
 
 func TestPayKeyReusedAC20(t *testing.T) {
@@ -92,7 +92,7 @@ func TestPayKeyReusedAC20(t *testing.T) {
 			if after := readCounts(t); after != before {
 				t.Errorf("counts changed on 409: %+v -> %+v", before, after)
 			}
-			assertBooks(t)
+			assertReconciled(t)
 		})
 	}
 }
@@ -113,7 +113,7 @@ func TestPayReplayAfterPauseAndEndAC19(t *testing.T) {
 		if after := readCounts(t); after != before {
 			t.Errorf("counts changed: %+v -> %+v", before, after)
 		}
-		assertBooks(t)
+		assertReconciled(t)
 	})
 	t.Run("after campaign ended", func(t *testing.T) {
 		reset(t, 10000)
@@ -133,7 +133,7 @@ func TestPayReplayAfterPauseAndEndAC19(t *testing.T) {
 		if after := readCounts(t); after != before {
 			t.Errorf("counts changed: %+v -> %+v", before, after)
 		}
-		assertBooks(t)
+		assertReconciled(t)
 	})
 }
 
@@ -151,7 +151,7 @@ func TestPayKeyIsPerUserAC21(t *testing.T) {
 	if n := queryInt(t, `SELECT count(*) FROM payments WHERE idempotency_key = $1`, key); n != 2 {
 		t.Errorf("payments for the key = %d, want 2", n)
 	}
-	assertBooks(t)
+	assertReconciled(t)
 }
 
 func TestPayRejectedKeyIsNotStoredAC22(t *testing.T) {
@@ -164,7 +164,7 @@ func TestPayRejectedKeyIsNotStoredAC22(t *testing.T) {
 	if got.status != http.StatusCreated || got.replayed != "" {
 		t.Errorf("after 422 = %d replayed=%q: %s, want 201", got.status, got.replayed, got.raw)
 	}
-	assertBooks(t)
+	assertReconciled(t)
 }
 
 // Step 5: a payment committed before the transaction takes the campaign lock
@@ -206,7 +206,7 @@ func TestPayStepFiveLookupFindsCommittedPayment(t *testing.T) {
 	if after := readCounts(t); after != before {
 		t.Errorf("counts changed: %+v -> %+v", before, after)
 	}
-	assertBooks(t)
+	assertReconciled(t)
 }
 
 // Step 2: a committed payment is answered without the campaign lock. A

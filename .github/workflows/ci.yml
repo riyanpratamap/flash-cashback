@@ -22,6 +22,14 @@ jobs:
       - uses: actions/checkout@v7
       - run: docker compose up -d --build --wait
       - run: curl -fsS localhost:8080/v1/healthz
+      - name: one payment, then reconcile
+        run: |
+          curl -fsS -X POST localhost:8080/v1/payments \
+            -H 'X-User-ID: user_a' \
+            -H "Idempotency-Key: $(cat /proc/sys/kernel/random/uuid)" \
+            -H 'Content-Type: application/json' \
+            -d '{"amount":100000}'
+          docker compose exec -T api /app/reconcile
       - name: only 8080 is published
         run: |
           published=$(docker compose config --format json \

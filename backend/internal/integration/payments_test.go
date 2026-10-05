@@ -127,29 +127,6 @@ func TestPayFirstPaymentAC01(t *testing.T) {
 	}
 }
 
-// assertBooks checks the invariants that hold after any run of payments:
-// per user the ledger sums to the balance, spent equals the awards and stays
-// within the budget, earned stays within the cap, and no balance is negative.
-func assertBooks(t *testing.T) {
-	t.Helper()
-	checks := map[string]string{
-		"ledger sum = balance": `SELECT count(*) FROM cashback_balances b
-			WHERE b.balance <> COALESCE((SELECT sum(amount) FROM ledger_entries l WHERE l.user_id = b.user_id), 0)`,
-		"spent = sum(awards)": `SELECT abs((SELECT spent FROM campaigns) -
-			COALESCE((SELECT sum(cashback_awarded) FROM payments), 0))`,
-		"spent <= budget": `SELECT count(*) FROM campaigns WHERE spent > budget`,
-		"earned <= cap":   `SELECT count(*) FROM user_daily_earnings WHERE earned > daily_cap`,
-		"balance >= 0":    `SELECT count(*) FROM cashback_balances WHERE balance < 0`,
-		"earned = day's awards": `SELECT count(*) FROM user_daily_earnings u WHERE u.earned <>
-			COALESCE((SELECT sum(cashback_awarded) FROM payments p WHERE p.user_id = u.user_id AND p.campaign_day = u.day), 0)`,
-	}
-	for name, sql := range checks {
-		if n := queryInt(t, sql); n != 0 {
-			t.Errorf("invariant %q broken: %d", name, n)
-		}
-	}
-}
-
 func campaignStatus(t *testing.T) string {
 	t.Helper()
 	_, m := getBody(t, "/v1/campaign", "user_new")
@@ -238,7 +215,7 @@ func TestPayAwardTable(t *testing.T) {
 				got.res.Payment.ID, c.award); n != 1 {
 				t.Errorf("payment row with the award missing")
 			}
-			assertBooks(t)
+			assertReconciled(t)
 		})
 	}
 }
@@ -259,7 +236,7 @@ func TestPayUserWithNoRowsAndOthersUntouched(t *testing.T) {
 	if n["balance"] != 0.0 || nt["earned"] != 0.0 || nt["remaining"] != 50000.0 {
 		t.Errorf("user_new = %v, want zeros and 50000 remaining", n)
 	}
-	assertBooks(t)
+	assertReconciled(t)
 }
 
 // storedRule reads the rule snapshot stored with a payment.
@@ -301,7 +278,7 @@ func TestPaySecondUserIsScopedAC48(t *testing.T) {
 			t.Errorf("%s stored earned = %d, want %d", user, n, want)
 		}
 	}
-	assertBooks(t)
+	assertReconciled(t)
 }
 
 func TestPayWritesMoneyLogLine(t *testing.T) {
@@ -368,7 +345,7 @@ func TestPayRuleSnapshotAC15(t *testing.T) {
 		t.Errorf("second stored = %d %d %d %d %s, want 1000 50000 50000 3000 PARTIAL_DAILY_CAP",
 			rate, minPay, dayCap, awarded, reason)
 	}
-	assertBooks(t)
+	assertReconciled(t)
 }
 
 func TestPayCapChangedMidDayAC71(t *testing.T) {
@@ -407,7 +384,7 @@ func TestPayCapChangedMidDayAC71(t *testing.T) {
 	if rem := m["today"].(map[string]any)["remaining"]; rem != 55000.0 {
 		t.Errorf("next-day remaining = %v, want 55000", rem)
 	}
-	assertBooks(t)
+	assertReconciled(t)
 }
 
 func TestPayInvalidInputWritesNothingAC17AC18(t *testing.T) {
