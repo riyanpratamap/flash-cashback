@@ -8,7 +8,7 @@ restated. Engine behaviour this design relies on is checked against [known-pitfa
 
 ```
  Expo app (host / phone) --HTTP--> api (Go, chi) --pgx--> PostgreSQL   (truth: every money read and write)
-                                       |  \------go-redis--> Redis      (read caches only, D06)
+                                       |  \------go-redis--> Redis      (read caches only, D06, D50)
  operator: docker compose exec api /app/admin | /app/reconcile  --> PostgreSQL (+ Redis key delete)
 ```
 
@@ -307,7 +307,7 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
   409 and writes nothing). The unique constraint with `ON CONFLICT DO NOTHING` is the last guard. A
   duplicate that waits past `lock_timeout` gets 503 and retries.
 
-## 6. Caches (D06, TC8, TC9)
+## 6. Caches (D06, D50, TC8, TC9)
 
 | Key                        | Value                     | TTL                                         | Deleted after                                    |
 | -------------------------- | ------------------------- | ------------------------------------------- | ------------------------------------------------ |
@@ -322,6 +322,9 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
 - Deletes happen after commit only, on a detached context (KP). If a delete fails, the TTL bounds the staleness. A
   COMMIT whose outcome is unknown (§4.4) also deletes, since it may have committed and a delete is always safe.
 - No money path reads the cache; the write services do not hold a cache client for reads (INV-11).
+- `CACHE_READS` (D51): `on` by default; `off` makes `Reads` skip every cache GET and SET and answer from PostgreSQL
+  (AC-76). Deletes after commit run in both modes. It exists so the load test measures one image both ways; it is not
+  a Redis health switch (a down Redis is already a miss).
 - Known window: a reader that read PostgreSQL before a commit can SET the old value after the delete; it lives until
   the TTL (KP). Accepted by D06.
 
@@ -367,6 +370,7 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
 | `REDIS_TIMEOUT`       | `50ms`                                                        | api, admin         |
 | `CACHE_CAMPAIGN_TTL`  | `5s`                                                          | api                |
 | `CACHE_CASHBACK_TTL`  | `60s`                                                         | api                |
+| `CACHE_READS`         | `on` (`on` or `off`; anything else rejected at start)         | api                |
 | `LOCK_TIMEOUT`        | `2s`                                                          | api                |
 | `STATEMENT_TIMEOUT`   | `5s`                                                          | api                |
 | `CAMPAIGN_BUDGET`     | `10000000` (read at the first seed only)                      | api                |
@@ -396,7 +400,23 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
   This is the one, demo-only exception to INV-06 (append-only; `TRUNCATE` fires no row trigger) and to trust condition
   10 (spent goes back to 0): it refuses without `FC_DEMO=1`, which compose does not set, and is never run in
   production (Assumption).
-- **Load test:** none (D08).
+- **Load test (D51, AC-77):** k6 from the pinned `grafana/k6` image, a compose service `k6` under the `loadtest`
+  profile (so `up` never starts it), scripts in `loadtest/` mounted read-only, target `http://api:8080`.
+  `make load-test` (stack already up): for each mode `on`, then `off`: recreate `api` with `CACHE_READS=<mode>` and
+  wait healthy, run `demo-reset` with `FC_DEMO=1`, run the three scenarios, run reconcile (exit 0 or the target fails).
+  Scenarios, each a `constant-arrival-rate` executor with the same rate and duration in both modes:
+  1. `campaign`: `GET /v1/campaign`, one demo user;
+  2. `cashback`: `GET /v1/me/cashback` spread over users `lt_0001`…`lt_0200` (one cache key each, so hits and misses
+     both occur within the 60 s TTL);
+  3. `mixed`: scenario 1 and 2 reads at the same rate, plus `POST /v1/payments` of 100000 from users `lt_p001`… with a
+     fresh `Idempotency-Key` per request. Reported: payment p95 and the count of 503 `SERVICE_BUSY`, since this is
+     D06's claim (cached reads leave PostgreSQL connections, `DB_MAX_CONNS` 20, to the money transactions).
+  Thresholds fail the run on any read 5xx, or a payment 5xx other than 503; 503s are counted, not failed. Each run's
+  k6 summary is written to `loadtest/results/<mode>-<scenario>.json` (git-ignored), and the target prints one table:
+  scenario · mode · p50 · p95 · p99 · req/s · errors (· 503s for mixed). Rates and durations are set in the scripts
+  and tuned once so the `off` mode is busy but not failing (Assumption). Payments use their own users so the demo
+  users' state is untouched; `demo-reset` before each mode makes the two runs start equal. The owner copies the table
+  and the machine it ran on into the README.
 
 ## 10. Mobile app (`mobile/`, D32–D37)
 
@@ -457,6 +477,7 @@ GET queries retry once; the attempt machine is the only retry for POSTs.
 | cache        | Redis stopped (client at a closed port), Redis stalled (`CLIENT PAUSE 500 ALL`), a bad cached value, freshness after writes |
 | mobile       | Jest + RNTL (D34): fetch and AsyncStorage stubbed; every screen state; the retry path asserts the same key is resent; the double press; day grouping with `TZ=UTC`; D48: the attempt is stored before fetch is called and removed on 2xx/4xx only (AC-72), "killed during checking → relaunch → same key" by remounting the app over the saved store with another user selected and asserting key and `X-User-ID` (AC-73), an 11-minute-old attempt sends nothing until Check now (AC-74) |
 | system       | CI compose smoke: `up --wait`, healthz, one payment by curl, reconcile exits 0                              |
+| load         | `make load-test` (§9, D51): k6 scenarios, cache on vs off, reconcile after each mode; local only, not a CI gate |
 
 Concurrency tests run under `make test-race` (`-race -count=20`). Each uses a start barrier, a pool larger than the
 callers, collects errors and asserts in the test goroutine, rolls back any lock holder in cleanup (KP), asserts errors
@@ -501,6 +522,7 @@ Reconcile (INV-01–09) runs after both.
 | Waiting transactions hold pool connections; 20 waiters starve reads   | Separate pools for reads and writes; admission limit                  |
 | No rate limit; `X-User-ID` is trusted (TC14–16)                       | Verified identity, then per-user rate limits (D06 revisit)            |
 | A cache can be stale up to its TTL after a racing read (§6)           | Versioned keys or write-through after commit                          |
+| Load-test numbers come from one machine with the API, PostgreSQL, Redis, and k6 on one Docker host (D51) | Run k6 from a separate host against a production-sized stack |
 | Midnight rush: a full cap before and after 00:00 WIB (D04)            | Rolling window or abuse signals                                       |
 | Payout is a stub (TC13); awards on unsettled payments (TC18)          | Outbox, pending status, settlement events                             |
 | One campaign, rules fixed at seed (TC12)                              | Campaign versions with effective-from times                           |

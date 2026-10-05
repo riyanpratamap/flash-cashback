@@ -240,6 +240,7 @@ backend/     Go module: cmd/ (api, admin, reconcile), internal/, migrations/
 mobile/      React Native app (TypeScript)
 docs/        brief, decisions, contract, wireframe, spec
 plans/       delivery plan, learnings, review reports
+loadtest/    k6 scripts for `make load-test` (D51)
 scripts/     agent stop check
 ```
 
@@ -290,6 +291,7 @@ Run from the repo root. The `make` targets are created in P0; until then the tab
 | Mobile checks     | `make mobile-check` (lint, typecheck, tests in `mobile/`)                |
 | Mobile app        | `cd mobile && npm ci && npx expo start` (or the command DECISIONS records) |
 | Reconcile         | `docker compose exec api /app/reconcile`                                 |
+| Load test         | `make load-test` (stack up; k6 in Docker, cache on vs off, D51)          |
 
 Clean-clone check (P0 gate and again before submission; run `docker compose down` first):
 

@@ -244,7 +244,7 @@ There is no rate limit (D06). A 4xx creates no row, so its idempotency key is no
 | Budget settings | Configuration seeds the campaign row on first boot only, defaulting to Rp10.000.000, so the ended state can be reached with a small budget on a fresh database. After that the row is the truth: a restart or a changed setting never resets it |
 | Switch commands | Pause and resume awards; pause and resume redemptions (D05). Each writes the flag on the campaign row and a structured log line (who, when, which switch) |
 
-There is no load-test command (D08).
+A load-test command, `make load-test`, measures the read caches on and off (D51); it is local tooling, not an endpoint.
 
 ## Library picks
 
