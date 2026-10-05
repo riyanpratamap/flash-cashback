@@ -51,17 +51,5 @@ services:
       redis:
         condition: service_healthy
 
-  # Load test (D51): only under `--profile loadtest`, so `up` never starts it.
-  # No depends_on, so `run` never recreates api.
-  k6:
-    image: grafana/k6:2.3.0
-    profiles: [loadtest]
-    user: "${LOADTEST_UID:-12345}:${LOADTEST_GID:-12345}"
-    environment:
-      BASE_URL: http://api:8080
-    volumes:
-      - ./loadtest:/scripts:ro
-      - ./loadtest/results:/results
-
 volumes:
   pgdata:

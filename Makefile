@@ -2,7 +2,7 @@
 TEST_COMPOSE := docker compose -f docker-compose.test.yml
 INTEGRATION  := -tags integration -race -p 1
 
-.PHONY: fmt fmt-check vet lint test test-integration test-race gate mobile-check load-test
+.PHONY: fmt fmt-check vet lint test test-integration test-race gate mobile-check
 
 fmt:
 	cd backend && gofmt -w .
@@ -35,7 +35,3 @@ gate: fmt-check vet lint test test-integration
 mobile-check:
 	@if [ ! -f mobile/package.json ]; then echo "mobile/ not created"; exit 0; fi; \
 	cd mobile && npm run lint && npm run typecheck && npm test
-
-# Stack must be up. Both cache modes, k6 in Docker (D51).
-load-test:
-	LOADTEST_UID=$$(id -u) LOADTEST_GID=$$(id -g) loadtest/run.sh
