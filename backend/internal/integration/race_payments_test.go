@@ -460,7 +460,8 @@ func TestRacePayClientDisconnectAC70(t *testing.T) {
 	if n := queryInt(t, `SELECT count(*) FROM ledger_entries`); n != 1 {
 		t.Errorf("ledger entries = %d, want 1", n)
 	}
-	if n := queryInt(t, `SELECT balance FROM cashback_balances WHERE user_id = 'user_a'`); n != 5000 {
+	// No row means no award: 0, so a red run still reaches reconcile.
+	if n := queryInt(t, `SELECT COALESCE((SELECT balance FROM cashback_balances WHERE user_id = 'user_a'), 0)`); n != 5000 {
 		t.Errorf("balance = %d, want 5000", n)
 	}
 
