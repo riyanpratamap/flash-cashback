@@ -19,6 +19,7 @@ type Deps struct {
 	Payments    Payer
 	Redemptions Redeemer
 	History     HistoryReader
+	Reads       Reader
 }
 
 // NewRouter builds the router with every route under /v1. A money route is
@@ -30,6 +31,10 @@ func NewRouter(d Deps) http.Handler {
 	r.MethodNotAllowed(methodNotAllowed)
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/healthz", getHealth(d))
+		if d.Reads != nil {
+			r.Get("/campaign", d.getCampaign)
+			r.Get("/me/cashback", d.getCashback)
+		}
 		if d.Payments != nil {
 			r.Post("/payments", d.postMoney(d.Payments.Pay))
 		}

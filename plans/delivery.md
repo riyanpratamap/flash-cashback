@@ -94,12 +94,13 @@ The owner accepted this evidence; the subagent proof moves to P6.2.
   - Done when: `make test` exits 0 with domain tables for every AC-17/18 value, and `httptest` through the real router
     with service fakes for the user → key → body order, panic → fixed 500 with no stack, `request_id` = `X-Request-ID`.
   - Result: `make test` and `make gate` exit 0; domain tables cover every AC-17/18 value, `httptest` through `NewRouter` covers check order, 404/405, panic → fixed 500, request ID echo, access log; google/uuid v1.6.0 pinned; mutations red: key before user, no 36-char/canonical check, no `recoverer`, amount decoded into an `int64` struct field.
-- [ ] **P1.3** Store reads, `GET /campaign`, `GET /me/cashback` — AC-16, AC-41 (flag rows), AC-48, AC-49 (these two) ·
+- [x] **P1.3** Store reads, `GET /campaign`, `GET /me/cashback` — AC-16, AC-41 (flag rows), AC-48, AC-49 (these two) ·
   INV-10 · TC22 · `go` · not critical
   - `internal/store` pool, `campaigns.Get`, `balances.Today` (one query, day from `fc_campaign_day(fc_now())`);
     `service.Reads`; handlers.
   - Done when: integration tests: user_new gives 0 / 0 / 50000, WIB date, next 00:00+07:00; AC-41 rows 1, 2, 5; no
     response key matches `budget|spent`.
+  - Result: `make gate` exit 0; `store.GetCampaign`/`store.Today` (one query, `fc_campaign_day(fc_now())`), `service.Reads`, `GET /v1/campaign` and `GET /v1/me/cashback`, views in `internal/domain`; integration: user_new 0/0/50000 with WIB date and next 00:00+07:00 at 16:59:59Z and 17:00:00Z, AC-41 rows 1/2/5, no `budget|spent` key (active, paused), `/campaign` body equal for budgets 2000 and 9000000; mutations red: redemption flag ignored, `now()` instead of `fc_now()`, `Budget` field added to the view. Owner: no state seeded by SQL beyond flags and budget; spent rows, ended status, cross-user scoping (AC-48) and its mutations moved to P2.2 / P3.3.
 
 **P1 gate:** `make gate` → exit 0 · `docker compose up -d --build --wait` · `curl -fsS -H 'X-User-ID: user_a'
 localhost:8080/v1/me/cashback` → balance 0 · `curl -s localhost:8080/v1/campaign` (no user) → 400 `MISSING_USER` ·
@@ -118,6 +119,10 @@ localhost:8080/v1/me/cashback` → balance 0 · `curl -s localhost:8080/v1/campa
     (§7). AC-12 sets `awards_paused` by SQL until P4.1.
   - Done when: integration tests for each AC and the boundary list (Rp19.999 / 20.000 / 20.001, exact cap, last of
     budget, both short incl. the tie, no rows, ended); **mutation (AC-71):** `Award` uses the campaign cap → 500.
+  - Carried from P1.3: `GET /campaign` `ENDED` (incl. ended wins over paused) and no `budget|spent` key with spent
+    partial and equal, built by payments; `GET /me/cashback` for user_a after payments vs user_new (AC-48 reads);
+    **mutations:** `spent` ignored in `Status`; balance subquery and user-day join in `store.Today` unscoped;
+    `TodayRemaining` without the user-day row.
 - [ ] **P2.3** Payment idempotency — AC-19–22 (payment parts) · INV-05 · TC3 · `go` · **critical**
   - Fast replay, in-lock lookup (step 5), `ON CONFLICT … DO NOTHING RETURNING` no row → rollback + replay, 409 on
     hash mismatch, `Idempotent-Replayed: true`, body rebuilt from the stored row.
@@ -163,6 +168,7 @@ true` · `docker compose exec api /app/reconcile; echo exit=$?` → exit=0 · `d
   INV-10 · TC12, TC22 · `go` · not critical
   - `history.Newest`: `UNION ALL`, `LIMIT` per branch, `created_at DESC, id DESC`.
   - Done when: integration tests; AC-49 compares `GET /campaign` at budget left 2000 and 9000000 byte for byte.
+  - Carried from P1.3: AC-48 cross-user for `GET /me/cashback` after a redemption (user_b sees none of user_a's).
 
 **P3 gate:** P2 gate commands, plus curl `POST /v1/redemptions` 1000 as user_a → 201 with `balance_after` · `GET
 /v1/me/history` lists both, newest first · reconcile → exit=0.

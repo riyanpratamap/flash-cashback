@@ -16,6 +16,7 @@ import (
 	"github.com/riyanpratamap/flash-cashback/backend/internal/cache"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/config"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/httpapi"
+	"github.com/riyanpratamap/flash-cashback/backend/internal/service"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
 
@@ -64,6 +65,7 @@ func serve(cfg config.Config) int {
 			PingPostgres: func(ctx context.Context) error { return store.Ping(ctx, pool) },
 			PingRedis:    func(ctx context.Context) error { return cache.Ping(ctx, rc) },
 			Log:          log,
+			Reads:        service.NewReads(pool),
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
