@@ -544,6 +544,16 @@ From `/change` (2026-10-06, after C14): AC-66a amended; wireframe screen 6; api-
     refetch key and `today.date` for the day labels kept. Test asserts no "Cashback balance" and no Rp18.000 while
     "TODAY, 3 OCT" renders: red on the header, then green; header put back turns it red. `make mobile-check` exit 0.
 
+From `/change` (2026-10-06, after C15): AC-62 amended; wireframe screen 3.
+
+- [ ] **C16** Payment result cashback as an inline pill — AC-62 · `ts` · not critical
+  - Replace the Cashback card with one centred pill per the wireframe table: "+Rp{award} cashback" (positive on
+    positive tint), " · {chip}" on partials, "No cashback · {chip}" at Rp0 (muted on track); "How it works" link
+    under it where the reason calls for it; amount alone for an unknown code or rules not loaded. Drop the unused
+    `text` from `ReasonCopy`.
+  - Done when: the Payment result test asserts each reason's pill text, no "Cashback earned", no reason sentence,
+    and the link only where offered, red on an assertion then green; `make mobile-check` exits 0.
+
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
 
