@@ -416,9 +416,11 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
 | `src/attempts/`                        | the money-attempt state machine below; the saved-attempt store and the launch check (D48) |
 
 Value homes: campaign, balance, today, and history live only in the TanStack Query cache (D33), refetched on focus and
-pull; the amount input lives in the screen; the current attempt (kind, user, amount, key, last response) lives in
-`AttemptProvider`, held in a ref so a refetch or re-render cannot touch it (KP), and is mirrored in AsyncStorage under
-`fc:attempts` as a list of `{user_id, kind, amount, key, created_at}` keyed by `key` (D48), so a kill loses nothing.
+pull (a focus refetch skips a query that is fetching or was updated in the last 2 s: after a money answer the
+invalidation has just refetched it); the amount input lives in the screen; the current attempt (kind, user, amount,
+key, last response) lives in `AttemptProvider`, held in a ref so a refetch or re-render cannot touch it (KP), and is
+mirrored in AsyncStorage under `fc:attempts` as a list of `{user_id, kind, amount, key, created_at}` keyed by `key`
+(D48), so a kill loses nothing.
 Each request of an attempt sends the attempt's saved `user_id` as `X-User-ID`, never the selected demo user. Day labels
 come from the date part of `created_at`, never `new Date` (KP).
 
