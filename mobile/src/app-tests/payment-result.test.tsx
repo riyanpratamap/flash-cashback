@@ -120,10 +120,10 @@ describe('Payment result, each reason (AC-62)', () => {
     ['AWARDED', 5000, '+Rp5.000 cashback', false],
     ['PARTIAL_DAILY_CAP', 3000, '+Rp3.000 cashback · Daily limit reached', true],
     ['PARTIAL_BUDGET', 1200, '+Rp1.200 cashback · Last of the cashback', true],
-    ['DAILY_CAP_REACHED', 0, 'No cashback · Daily limit reached', true],
-    ['BELOW_MINIMUM', 0, 'No cashback · Below minimum', true],
-    ['CAMPAIGN_ENDED', 0, 'No cashback · Campaign ended', true],
-    ['CAMPAIGN_PAUSED', 0, 'No cashback · Unavailable', true],
+    ['DAILY_CAP_REACHED', 0, 'No cashback · Daily limit reached', false],
+    ['BELOW_MINIMUM', 0, 'No cashback · Below minimum', false],
+    ['CAMPAIGN_ENDED', 0, 'No cashback · Campaign ended', false],
+    ['CAMPAIGN_PAUSED', 0, 'No cashback · Unavailable', false],
   ])('%s', async (reason, awarded, pill, howItWorks) => {
     await pay({ awarded, reason });
     expect(screen.getByText('Payment successful')).toBeTruthy();
@@ -133,22 +133,28 @@ describe('Payment result, each reason (AC-62)', () => {
     expect(screen.queryByRole('link', { name: 'How it works' }) !== null).toBe(howItWorks);
   });
 
-  it('an unknown code shows the amount alone in the pill, with the link', async () => {
+  it('an unknown code shows the amount alone in the pill, with no link', async () => {
     await pay({ awarded: 700, reason: 'BRAND_NEW_REASON' });
     expect(screen.getByText('+Rp700 cashback')).toBeTruthy();
     expect(screen.queryByText('See How it works for the cashback rules.')).toBeNull();
-    expect(screen.getByRole('link', { name: 'How it works' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'How it works' })).toBeNull();
   });
 
-  it('an unknown code at Rp0 shows "No cashback" alone', async () => {
+  it('an unknown code at Rp0 shows "No cashback" alone, with no link', async () => {
     await pay({ awarded: 0, reason: 'BRAND_NEW_REASON' });
     expect(screen.getByText('No cashback')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'How it works' })).toBeNull();
   });
 
   it('the How it works link opens the rules', async () => {
-    await pay({ awarded: 0, reason: 'BELOW_MINIMUM' });
+    await pay({ awarded: 3000, reason: 'PARTIAL_DAILY_CAP' });
     await fireEvent.press(screen.getByRole('link', { name: 'How it works' }));
     expect(push).toHaveBeenCalledWith('/how-it-works');
+  });
+
+  it('the How it works link sits centred under the pill', async () => {
+    await pay({ awarded: 3000, reason: 'PARTIAL_DAILY_CAP' });
+    expect(screen.getByRole('link', { name: 'How it works' })).toHaveStyle({ alignSelf: 'center' });
   });
 
   it('a body it cannot read still shows the payment as successful, with the amount sent', async () => {

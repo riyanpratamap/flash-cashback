@@ -574,6 +574,20 @@ From `/change` (2026-10-06, after C16): AC-65a amended; wireframe screen 5.
     gained an optional `centred` prop (`flexGrow: 1`, `justifyContent: 'center'`), used only by this view. Tests: red
     on 3 tests, then green; balance row shown on a replay turns the replay test red. `make mobile-check` exit 0.
 
+From `/change` (2026-10-06, after C17): AC-62 amended; wireframe screen 3.
+
+- [x] **C18** No "How it works" on a Rp0 payment result — AC-62 · `ts` · not critical
+  - The link under the cashback pill shows on `PARTIAL_DAILY_CAP` and `PARTIAL_BUDGET` only; never on `AWARDED`,
+    never at Rp0 (an unknown code included).
+  - Done when: the Payment result test asserts the link on both partials and its absence on `AWARDED`, every Rp0
+    reason, and an unknown code, red on an assertion then green; `make mobile-check` exits 0.
+  - Result: `reasonCopy` in `codes.ts` now returns `howItWorks: true` for the two partials only (false for `AWARDED`,
+    the four Rp0 reasons and the unknown default); only `payment-result.tsx` reads the flag. Tests: red on 11
+    assertions in `payment-result.test.tsx` and `codes.test.ts`, then green; `BELOW_MINIMUM` flipped back to true
+    turns its test red. Owner request: the link is centred under the pill via a new optional `centred` prop on
+    `LinkText` (Home keeps the left default); its test was red on `alignSelf: "flex-start"`, then green.
+    `make mobile-check` exit 0, 314 tests.
+
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
 

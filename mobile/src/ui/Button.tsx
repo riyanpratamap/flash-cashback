@@ -45,13 +45,20 @@ export function LinkText({
   label,
   onPress,
   size = 'subhead',
+  centred = false,
 }: {
   label: string;
   onPress: () => void;
   size?: 'subhead' | 'caption';
+  centred?: boolean;
 }) {
   return (
-    <Pressable accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={styles.link}>
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={centred ? [styles.link, styles.linkCentred] : styles.link}
+    >
       <AppText variant={size} tone="link">
         {label}
       </AppText>
@@ -70,4 +77,5 @@ const styles = StyleSheet.create({
   secondaryPressed: { backgroundColor: colors.primaryTintPressed },
   disabled: { backgroundColor: colors.track },
   link: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  linkCentred: { alignSelf: 'center' },
 });

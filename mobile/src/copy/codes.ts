@@ -36,15 +36,15 @@ export function reasonCopy(reason: string): ReasonCopy {
     case 'PARTIAL_BUDGET':
       return { chip: 'Last of the cashback', howItWorks: true };
     case 'DAILY_CAP_REACHED':
-      return { chip: 'Daily limit reached', howItWorks: true };
+      return { chip: 'Daily limit reached', howItWorks: false };
     case 'BELOW_MINIMUM':
-      return { chip: 'Below minimum', howItWorks: true };
+      return { chip: 'Below minimum', howItWorks: false };
     case 'CAMPAIGN_ENDED':
-      return { chip: 'Campaign ended', howItWorks: true };
+      return { chip: 'Campaign ended', howItWorks: false };
     case 'CAMPAIGN_PAUSED':
-      return { chip: 'Unavailable', howItWorks: true };
+      return { chip: 'Unavailable', howItWorks: false };
     default:
-      return { chip: null, howItWorks: true };
+      return { chip: null, howItWorks: false };
   }
 }
 

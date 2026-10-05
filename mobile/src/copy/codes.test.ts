@@ -8,16 +8,16 @@ describe('reasonCopy (screen 3)', () => {
     ['AWARDED', null, false],
     ['PARTIAL_DAILY_CAP', 'Daily limit reached', true],
     ['PARTIAL_BUDGET', 'Last of the cashback', true],
-    ['DAILY_CAP_REACHED', 'Daily limit reached', true],
-    ['BELOW_MINIMUM', 'Below minimum', true],
-    ['CAMPAIGN_ENDED', 'Campaign ended', true],
-    ['CAMPAIGN_PAUSED', 'Unavailable', true],
+    ['DAILY_CAP_REACHED', 'Daily limit reached', false],
+    ['BELOW_MINIMUM', 'Below minimum', false],
+    ['CAMPAIGN_ENDED', 'Campaign ended', false],
+    ['CAMPAIGN_PAUSED', 'Unavailable', false],
   ])('%s', (reason, chip, howItWorks) => {
     expect(reasonCopy(reason)).toEqual({ chip, howItWorks });
   });
 
-  it('an unknown reason has no chip, offers the link, and never throws (D20)', () => {
-    expect(reasonCopy('SOMETHING_NEW')).toEqual({ chip: null, howItWorks: true });
+  it('an unknown reason has no chip, offers no link, and never throws (D20)', () => {
+    expect(reasonCopy('SOMETHING_NEW')).toEqual({ chip: null, howItWorks: false });
   });
 });
 

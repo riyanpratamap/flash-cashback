@@ -75,7 +75,7 @@ export default function PaymentResult() {
                 {pillText(result.awarded, copy)}
               </AppText>
             </View>
-            {copy?.howItWorks ? <LinkText label="How it works" onPress={() => router.push('/how-it-works')} /> : null}
+            {copy?.howItWorks ? <LinkText label="How it works" centred onPress={() => router.push('/how-it-works')} /> : null}
           </View>
         )}
       </ScrollView>
