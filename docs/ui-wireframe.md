@@ -28,7 +28,7 @@ Worked example used throughout: **User A**, balance Rp15.000, earned today Rp47.
 | 3   | Payment result           | Make a payment, Checking           | the `POST /payments` response                       |
 | 4   | Checking                 | a payment or redemption with an unknown outcome | retries of the same request          |
 | 5   | Redeem cashback          | Home                               | `GET /me/cashback`, `POST /redemptions`             |
-| 6   | Cashback history         | Home "See all"                     | `GET /me/history`, `GET /me/cashback`               |
+| 6   | Transaction history      | Home "See all"                     | `GET /me/history`, `GET /me/cashback`               |
 | 7   | How Flash Cashback works | "How it works" links               | campaign rules                                      |
 
 States covered inside those screens: loading, load error, campaign ended, awards paused, redemptions paused, a Rp0
@@ -58,8 +58,10 @@ Rp15.000                                  [ Redeem ]
 +--------------------------------------------------+
 
 Recent activity                            See all
-Redeemed to main account                 −Rp42.000
-Payment Rp500.000                        +Rp25.000
+Cashback redeemed                        +Rp42.000
+To main account
+Payment                                 −Rp500.000
++Rp25.000 cashback
 ```
 
 - **User switcher:** marked `DEMO`, stands in for login. It sets `X-User-ID`, reloads the screen, and the choice is
@@ -79,7 +81,8 @@ Payment Rp500.000                        +Rp25.000
   banner drops ", and you can still redeem your balance".
 - **Earned today:** earned, cap, a progress bar, and what is left, then "Resets at 00:00 WIB." (D04). At 0 left:
   "You've reached today's limit. Resets at 00:00 WIB."
-- **Recent activity:** the two newest items. Empty: "No activity yet."
+- **Recent activity:** the two newest items, in the History row format (screen 6) without the time. Empty: "No
+  activity yet."
 - **Refresh:** on open, on return from another screen, and on pull to refresh.
 - **Load error:** "Couldn't load your cashback. Your balance is safe. Check your connection and try again." with Try
   again. If only recent activity fails, the rest renders and that section says so.
@@ -248,29 +251,33 @@ Up to Rp18.000                        ( Redeem all )
 - **`REDEMPTION_PAUSED`** (the switch went off after the screen loaded): the campaign is refetched, and the screen
   shows the paused state above.
 
-## 6. Cashback history
+## 6. Transaction history
 
 ```
-<  Cashback history
+<  Transaction history
 
-[ Current balance                        Rp18.000 ]
+[ Cashback balance                       Rp18.000 ]
 
 TODAY, 3 OCT
-Payment Rp100.000                         +Rp5.000
-14:32
-Payment Rp15.000                               Rp0
-13:05 · Below minimum
-Redeemed to main account                 −Rp42.000
-11:20
+Payment                                 −Rp100.000
+14:32 · +Rp5.000 cashback
+Payment                                  −Rp15.000
+13:05 · No cashback · Below minimum
+Cashback redeemed                        +Rp42.000
+To main account · 11:20
 
 YESTERDAY, 2 OCT
-Payment Rp200.000                        +Rp10.000
-19:45
+Payment                                 −Rp200.000
+19:45 · +Rp10.000 cashback
 ```
 
-- The header is the current balance, not a running balance per row.
-- Rows show the title, the amount, and the time. A payment that earned less than the full 5% also shows its reason.
-  Rp0 payments are listed. Redemptions are neutral with `−`.
+- Every payment (Rp0 ones included) and every redemption: a transaction list, not only cashback.
+- The header is the cashback balance, not a running balance per row and not a sum of the right column.
+- The right column is the money the transaction moved: a payment is `−` its amount, a redemption is `+` its amount
+  (sent to the main account) in the positive colour.
+- Title: "Payment" or "Cashback redeemed". Subtitle of a payment: the time, then "+Rp{awarded} cashback", or "No
+  cashback" when it earned Rp0, then the reason chip when the payment earned less than the full 5%. Subtitle of a
+  redemption: "To main account", then the time.
 - Grouped by day, from the date in `created_at` as sent by the API, never converted to the device's time zone.
 - Empty: "No activity yet. Make a payment to start earning cashback." Error: "Couldn't load your history." with Try
   again.
