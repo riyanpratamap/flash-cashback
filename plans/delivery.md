@@ -106,6 +106,10 @@ The owner accepted this evidence; the subagent proof moves to P6.2.
 localhost:8080/v1/me/cashback` → balance 0 · `curl -s localhost:8080/v1/campaign` (no user) → 400 `MISSING_USER` ·
 `docker compose down`.
 
+**P1 gate result (2026-10-05):** all steps pass. `make gate` exit 0; `up -d --build --wait` exit 0; `GET
+/me/cashback` as user_a → balance 0, earned 0, remaining 50000, WIB date and next 00:00+07:00; `GET /campaign` with
+no user → 400 `MISSING_USER`; `down` exit 0.
+
 ## P2 — Payment award, idempotency, reconciliation, concurrency
 
 - [ ] **P2.1** Money transaction helper — AC-27, AC-55 (mapping) · TC3 · `go` · **critical** (locking)
