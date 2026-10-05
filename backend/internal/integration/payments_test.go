@@ -46,6 +46,7 @@ func payRouterTx(tx store.TxRunner, w io.Writer) http.Handler {
 		Log:          log,
 		Reads:        service.NewReads(p),
 		Payments:     service.NewPayments(tx, log),
+		Redemptions:  service.NewRedemptions(tx, log),
 	})
 }
 

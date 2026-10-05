@@ -174,11 +174,12 @@ reconcile exit 0 (INV-01–09 ok); `down` exit 0; CI run 37265718476 `gate` and 
 
 ## P3 — Redemption and history
 
-- [ ] **P3.1** `Redemptions.Redeem` and `POST /redemptions` — AC-29–32, AC-34, AC-35, AC-16 (redeem), AC-21 (redeem
+- [x] **P3.1** `Redemptions.Redeem` and `POST /redemptions` — AC-29–32, AC-34, AC-35, AC-16 (redeem), AC-21 (redeem
   with K), AC-48 (redeem), AC-17/18 (no row) · INV-01, 04–06, 09 · TC3, TC4, TC13 (stub) · `go` · **critical**
   - §4.2 in the D46 order; replay incl. stored `balance_after`; payout stub; money log line (§7, `op` redeem). AC-32
     sets the flag by SQL until P4.1.
   - Done when: integration tests + reconcile; **mutation:** balance check before the paused check → AC-32 red.
+  - Result: `store.Redeem` (§4.2 steps 4-10, D46 order: balance `FOR UPDATE`, step-5 key lookup, plain campaign read, paused before balance, debit, insert `ON CONFLICT DO NOTHING`, ledger `REDEMPTION`), `store.FindRedemption`, `service.Redemptions.Redeem` (fast replay while paused too, stored `balance_after` on replay, payout stub per TC13, money log `op` redeem after COMMIT), `POST /v1/redemptions` 201 / 200 + `Idempotent-Replayed: true` / 422 `INSUFFICIENT_BALANCE` / 409 `REDEMPTION_PAUSED`, wired in `cmd/api`; `ErrReplay` is shared by both operations. Integration tests for AC-16, 17/18, 21, 29-32, 34, 35, 48, a direct step-5 `store.Redeem` in `InTx`, and the log line, state built by payments (SQL only for the flag and the reseeded budget), each ending in `assertReconciled`; `seedBooks` now holds one real redemption (user_d). No cache delete (P4.3), no race tests (P3.2). Mutations red: balance check before paused check (AC-32, 422 instead of 409), paused check removed (AC-32, a 201 and a changed balance), hash compare skipped (AC-35, 200 instead of 409), replay with the current balance (AC-35, balance_after 5000 not 0), step-5 lookup removed (direct test, `ErrInsufficientBalance`); httpapi 409 to 422 and dropped replay header, red.
 - [ ] **P3.2** Race: redemptions — AC-33, AC-69, AC-28 · INV-01, 04, 05 · TC3, TC4, TC5 · `go` · **critical**
   - **Mutations:** AC-33: balance read without `FOR UPDATE`; then also drop `balances_nonneg`. AC-69: drop
     `redemptions_user_key_unique` and the step-5 lookup. AC-28: award locks the campaign `FOR UPDATE` → `40P01`.

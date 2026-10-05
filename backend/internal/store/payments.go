@@ -21,9 +21,10 @@ type PayInput struct {
 	Amount     int64
 }
 
-// ErrReplay: the key already has a payment. Pay returns it with
-// PayOutcome.Replay set so InTx rolls back whatever this attempt wrote.
-var ErrReplay = errors.New("store: payment already recorded for this key")
+// ErrReplay: the key already has a payment or a redemption. Pay and Redeem
+// return it with the outcome's Replay set so InTx rolls back whatever this
+// attempt wrote; the outcome type tells which operation it was.
+var ErrReplay = errors.New("store: key already recorded")
 
 // StoredPayment is a committed payment row, enough to rebuild its response.
 type StoredPayment struct {

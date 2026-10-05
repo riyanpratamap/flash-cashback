@@ -55,3 +55,27 @@ type AwardView struct {
 	Awarded int64  `json:"awarded"`
 	Reason  Reason `json:"reason"`
 }
+
+// Redemption status and destination: the only values the schema allows a
+// completed redemption (the payout is a stub, TC13).
+const (
+	RedemptionCompleted    = "COMPLETED"
+	DestinationMainAccount = "MAIN_ACCOUNT"
+)
+
+// RedemptionResult is the body of POST /redemptions. BalanceAfter is stored
+// with the redemption, so a replay returns the original value.
+type RedemptionResult struct {
+	Redemption   RedemptionView `json:"redemption"`
+	BalanceAfter int64          `json:"balance_after"`
+}
+
+// RedemptionView is the redemption itself.
+type RedemptionView struct {
+	ID          int64  `json:"id"`
+	Reference   string `json:"reference"`
+	Amount      int64  `json:"amount"`
+	Status      string `json:"status"`
+	Destination string `json:"destination"`
+	CreatedAt   string `json:"created_at"`
+}

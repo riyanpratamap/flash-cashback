@@ -23,6 +23,8 @@ const (
 	codeMethodNotAllowed = "METHOD_NOT_ALLOWED"
 	codeInternal         = "INTERNAL_ERROR"
 	codeServiceBusy      = "SERVICE_BUSY"
+	codeInsufficient     = "INSUFFICIENT_BALANCE"
+	codeRedemptionPaused = "REDEMPTION_PAUSED"
 )
 
 // Messages are fixed text per code: for logs, never for users, and never a
@@ -38,6 +40,8 @@ var messages = map[string]string{
 	codeNotFound:         "no such route",
 	codeMethodNotAllowed: "method not allowed",
 	codeInternal:         "internal error",
+	codeInsufficient:     "amount is above the cashback balance",
+	codeRedemptionPaused: "redemptions are paused",
 	codeServiceBusy:      "A lock wait timed out; nothing was committed; retry with the same key",
 }
 
@@ -69,6 +73,10 @@ func mapError(err error) (int, string) {
 		return http.StatusUnprocessableEntity, codeInvalidAmount
 	case errors.Is(err, domain.ErrIdempotencyKeyReused):
 		return http.StatusConflict, codeKeyReused
+	case errors.Is(err, domain.ErrInsufficientBalance):
+		return http.StatusUnprocessableEntity, codeInsufficient
+	case errors.Is(err, domain.ErrRedemptionPaused):
+		return http.StatusConflict, codeRedemptionPaused
 	case errors.Is(err, store.ErrBusy):
 		return http.StatusServiceUnavailable, codeServiceBusy
 	default: // includes store.ErrInvariant and store.ErrUnknownOutcome

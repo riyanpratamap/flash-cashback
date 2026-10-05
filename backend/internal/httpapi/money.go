@@ -16,7 +16,7 @@ type Payer interface {
 
 // Redeemer is what POST /redemptions needs (P3.1).
 type Redeemer interface {
-	Redeem(ctx context.Context, cmd domain.MoneyCommand) error
+	Redeem(ctx context.Context, cmd domain.MoneyCommand) (res domain.RedemptionResult, replayed bool, err error)
 }
 
 // HistoryReader is what GET /me/history needs (P3.3).
@@ -76,18 +76,24 @@ func (d Deps) postPayment(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, res)
 }
 
-// postRedemption calls the service; success is rendered in P3.1: until then a
-// call that returns nil answers 201 with no body.
+// postRedemption answers 201 with the contract body, or 200 with
+// Idempotent-Replayed: true when the key already had a redemption.
 func (d Deps) postRedemption(w http.ResponseWriter, r *http.Request) {
 	cmd, ok := d.parseMoney(w, r)
 	if !ok {
 		return
 	}
-	if err := d.Redemptions.Redeem(r.Context(), cmd); err != nil {
+	res, replayed, err := d.Redemptions.Redeem(r.Context(), cmd)
+	if err != nil {
 		d.writeFailure(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
+	if replayed {
+		w.Header().Set("Idempotent-Replayed", "true")
+		writeJSON(w, http.StatusOK, res)
+		return
+	}
+	writeJSON(w, http.StatusCreated, res)
 }
 
 // getHistory validates user, then limit, then calls the reader; success is

@@ -143,8 +143,8 @@ func disableTrigger(t *testing.T, table, trigger string) {
 	})
 }
 
-// seedBooks builds a clean state through the service: user_a pays 100000 and
-// 19999 (a zero award), user_c pays 100000.
+// seedBooks builds a clean state through the services: user_a pays 100000 and
+// 19999 (a zero award), user_c pays 100000, user_d pays 100000 and redeems 2000.
 func seedBooks(t *testing.T) {
 	t.Helper()
 	reset(t, 10_000_000)
@@ -152,10 +152,13 @@ func seedBooks(t *testing.T) {
 	for _, p := range []struct {
 		user   string
 		amount int64
-	}{{"user_a", 100000}, {"user_c", 100000}, {"user_a", 19999}} {
+	}{{"user_a", 100000}, {"user_c", 100000}, {"user_a", 19999}, {"user_d", 100000}} {
 		if r := pay(t, p.user, p.amount); r.status != 201 {
 			t.Fatalf("seed payment %+v = %d: %s", p, r.status, r.raw)
 		}
+	}
+	if r := redeem(t, "user_d", 2000); r.status != 201 || r.res.BalanceAfter != 3000 {
+		t.Fatalf("seed redemption = %d: %s", r.status, r.raw)
 	}
 }
 
@@ -170,8 +173,9 @@ func insertPaymentCopy(t *testing.T, award int64, reason string, dayOffset int) 
 		award, reason, dayOffset)
 }
 
-// insertRedemption inserts a redemption row by SQL (redemptions arrive in
-// P3.1) and returns its id. An empty key means a new one.
+// insertRedemption inserts a redemption row by SQL (the break tests need
+// rows the services never write) and returns its id. An empty key means a
+// new one.
 func insertRedemption(t *testing.T, user, key string, amount, balanceAfter int64, day string) int64 {
 	t.Helper()
 	var id int64
@@ -219,8 +223,8 @@ func TestReconcileCleanBooks(t *testing.T) {
 	if liab.Check != "liability" || liab.Liability == nil || liab.Budget == nil || liab.Spent == nil {
 		t.Fatalf("liability line = %+v", liab)
 	}
-	if *liab.Liability != 10000 || *liab.Budget != 10_000_000 || *liab.Spent != 10000 {
-		t.Errorf("liability %d budget %d spent %d, want 10000 10000000 10000", *liab.Liability, *liab.Budget, *liab.Spent)
+	if *liab.Liability != 13000 || *liab.Budget != 10_000_000 || *liab.Spent != 15000 {
+		t.Errorf("liability %d budget %d spent %d, want 13000 10000000 15000", *liab.Liability, *liab.Budget, *liab.Spent)
 	}
 	if sum := lines[len(lines)-1]; sum.Summary != "ok" || len(sum.Failed) != 0 {
 		t.Errorf("summary = %+v, want ok", sum)

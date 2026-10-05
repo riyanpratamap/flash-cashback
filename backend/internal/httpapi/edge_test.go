@@ -33,7 +33,9 @@ type histArgs struct {
 func (f *fakeMoney) Pay(_ context.Context, c domain.MoneyCommand) (domain.PaymentResult, bool, error) {
 	return domain.PaymentResult{}, f.replayed, f.record(c)
 }
-func (f *fakeMoney) Redeem(_ context.Context, c domain.MoneyCommand) error { return f.record(c) }
+func (f *fakeMoney) Redeem(_ context.Context, c domain.MoneyCommand) (domain.RedemptionResult, bool, error) {
+	return domain.RedemptionResult{}, f.replayed, f.record(c)
+}
 func (f *fakeMoney) record(c domain.MoneyCommand) error {
 	f.calls = append(f.calls, c)
 	if f.panicVal != nil {
