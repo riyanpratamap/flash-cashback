@@ -42,7 +42,8 @@ func (p *Redemptions) Redeem(ctx context.Context, cmd domain.MoneyCommand) (doma
 		return p.replay(stored, cmd)
 	}
 
-	in := store.RedeemInput{CampaignID: campaignID, User: cmd.UserID, Key: cmd.Key, Hash: cmd.Hash, Amount: cmd.Amount}
+	in := store.RedeemInput{CampaignID: campaignID, User: cmd.UserID, Key: cmd.Key, Hash: cmd.Hash, Amount: cmd.Amount,
+		Held: p.tx.Hooks.RedeemHeld}
 	var out store.RedeemOutcome
 	err = p.tx.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var err error

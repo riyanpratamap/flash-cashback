@@ -42,7 +42,8 @@ func (p *Payments) Pay(ctx context.Context, cmd domain.MoneyCommand) (domain.Pay
 		return p.replay(stored, cmd)
 	}
 
-	in := store.PayInput{CampaignID: campaignID, User: cmd.UserID, Key: cmd.Key, Hash: cmd.Hash, Amount: cmd.Amount}
+	in := store.PayInput{CampaignID: campaignID, User: cmd.UserID, Key: cmd.Key, Hash: cmd.Hash, Amount: cmd.Amount,
+		AfterCampaignRead: p.tx.Hooks.AfterCampaignRead}
 	var out store.PayOutcome
 	err = p.tx.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var err error

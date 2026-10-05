@@ -40,12 +40,19 @@ const (
 	sqlRaiseException   = "P0001" // fc_append_only is the only raiser in the schema
 )
 
+// Hooks are test-only pause points inside the money transactions (tech-spec §11). Nil in production.
+type Hooks struct {
+	AfterCampaignRead func() // Pay: after the locked campaign read, before the payment insert (AC-38)
+	RedeemHeld        func() // Redeem: after the flag read and the writes, before COMMIT (AC-39)
+}
+
 // TxRunner runs one money write as one transaction with server-side timeouts.
 type TxRunner struct {
 	Pool               *pgxpool.Pool
 	LockTimeoutMS      int64
 	StatementTimeoutMS int64
 	Cap                time.Duration // zero means 5 s; tests shorten it
+	Hooks              Hooks         // zero value in production
 }
 
 // InTx runs fn in a READ COMMITTED transaction and commits if fn returns nil.

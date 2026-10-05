@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/riyanpratamap/flash-cashback/backend/internal/boot"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
@@ -24,9 +25,15 @@ import (
 // queue never decides who waits (tech-spec §11).
 const raceConns = 60
 
-// racePool is a dedicated pool of raceConns connections, all dialled before
-// the race starts so connection setup does not stagger the requests.
+// racePool is a router over a warmedPool.
 func racePool(t *testing.T) http.Handler {
+	t.Helper()
+	return payRouterOn(warmedPool(t), io.Discard)
+}
+
+// warmedPool is a dedicated pool of raceConns connections, all dialled before
+// the race starts so connection setup does not stagger the requests.
+func warmedPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	ctx := context.Background()
 	p, err := boot.Connect(ctx, testURL, raceConns, 10*time.Second)
@@ -45,7 +52,7 @@ func racePool(t *testing.T) http.Handler {
 	for _, c := range conns {
 		c.Release()
 	}
-	return payRouterOn(p, io.Discard)
+	return p
 }
 
 type raceReq struct {

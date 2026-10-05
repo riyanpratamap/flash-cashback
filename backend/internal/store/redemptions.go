@@ -19,6 +19,8 @@ type RedeemInput struct {
 	Key        uuid.UUID
 	Hash       [32]byte
 	Amount     int64
+
+	Held func() // test hook, nil in production
 }
 
 // StoredRedemption is a committed redemption row, enough to rebuild its
@@ -138,6 +140,9 @@ func Redeem(ctx context.Context, tx pgx.Tx, in RedeemInput) (RedeemOutcome, erro
 	if _, err := tx.Exec(ctx, `INSERT INTO ledger_entries (user_id, kind, amount, redemption_id, balance_after, created_at)
 		VALUES ($1, 'REDEMPTION', $2, $3, $4, $5)`, string(in.User), -in.Amount, out.ID, balanceAfter, now); err != nil {
 		return RedeemOutcome{}, fmt.Errorf("insert ledger: %w", err)
+	}
+	if in.Held != nil {
+		in.Held()
 	}
 	return out, nil
 }

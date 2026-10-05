@@ -19,6 +19,8 @@ type PayInput struct {
 	Key        uuid.UUID
 	Hash       [32]byte
 	Amount     int64
+
+	AfterCampaignRead func() // test hook, nil in production
 }
 
 // ErrReplay: the key already has a payment or a redemption. Pay and Redeem
@@ -104,6 +106,10 @@ func Pay(ctx context.Context, tx pgx.Tx, in PayInput) (PayOutcome, error) {
 		return PayOutcome{}, err
 	} else if found {
 		return PayOutcome{Replay: &stored}, ErrReplay
+	}
+
+	if in.AfterCampaignRead != nil {
+		in.AfterCampaignRead()
 	}
 
 	// The row must exist before it can be locked.
