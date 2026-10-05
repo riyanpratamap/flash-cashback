@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -23,6 +24,7 @@ func readsRouter() http.Handler {
 		PingPostgres: func(context.Context) error { return nil },
 		PingRedis:    func(context.Context) error { return nil },
 		Reads:        service.NewReads(pool),
+		History:      service.NewReads(pool),
 	})
 }
 
@@ -46,15 +48,18 @@ func getBody(t *testing.T, path, user string) ([]byte, map[string]any) {
 
 func noBudgetKey(t *testing.T, v any, path string) {
 	t.Helper()
-	m, ok := v.(map[string]any)
-	if !ok {
-		return
-	}
-	for k, c := range m {
-		if budgetOrSpent.MatchString(k) {
-			t.Errorf("key %q in %s", path+k, path)
+	switch v := v.(type) {
+	case map[string]any:
+		for k, c := range v {
+			if budgetOrSpent.MatchString(k) {
+				t.Errorf("key %q in %s", path+k, path)
+			}
+			noBudgetKey(t, c, path+k+".")
 		}
-		noBudgetKey(t, c, path+k+".")
+	case []any:
+		for i, c := range v {
+			noBudgetKey(t, c, fmt.Sprintf("%s%d.", path, i))
+		}
 	}
 }
 

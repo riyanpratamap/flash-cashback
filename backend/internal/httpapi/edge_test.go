@@ -43,9 +43,9 @@ func (f *fakeMoney) record(c domain.MoneyCommand) error {
 	}
 	return f.err
 }
-func (f *fakeMoney) History(_ context.Context, u domain.UserID, limit int) error {
+func (f *fakeMoney) History(_ context.Context, u domain.UserID, limit int) (domain.HistoryView, error) {
 	f.histCall = append(f.histCall, histArgs{u, limit})
-	return f.err
+	return domain.HistoryView{}, f.err
 }
 
 type rig struct {

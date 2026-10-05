@@ -19,9 +19,9 @@ type Redeemer interface {
 	Redeem(ctx context.Context, cmd domain.MoneyCommand) (res domain.RedemptionResult, replayed bool, err error)
 }
 
-// HistoryReader is what GET /me/history needs (P3.3).
+// HistoryReader is what GET /me/history needs.
 type HistoryReader interface {
-	History(ctx context.Context, user domain.UserID, limit int) error
+	History(ctx context.Context, user domain.UserID, limit int) (domain.HistoryView, error)
 }
 
 const maxBodyBytes = 1024
@@ -96,8 +96,7 @@ func (d Deps) postRedemption(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, res)
 }
 
-// getHistory validates user, then limit, then calls the reader; success is
-// rendered in P3.3.
+// getHistory validates user, then limit, then calls the reader.
 func (d Deps) getHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := domain.ParseUserID(r.Header.Values("X-User-ID"))
 	if err != nil {
@@ -124,9 +123,10 @@ func (d Deps) getHistory(w http.ResponseWriter, r *http.Request) {
 		d.writeFailure(w, r, err)
 		return
 	}
-	if err := d.History.History(r.Context(), user, limit); err != nil {
+	view, err := d.History.History(r.Context(), user, limit)
+	if err != nil {
 		d.writeFailure(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	writeJSON(w, http.StatusOK, view)
 }

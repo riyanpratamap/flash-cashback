@@ -59,3 +59,36 @@ func (r *Reads) Cashback(ctx context.Context, user domain.UserID) (domain.Cashba
 		},
 	}, nil
 }
+
+// History returns the user's newest payments and redemptions, newest first.
+// A user with no rows gets an empty list, not null.
+func (r *Reads) History(ctx context.Context, user domain.UserID, limit int) (domain.HistoryView, error) {
+	rows, err := store.Newest(ctx, r.pool, user, limit)
+	if err != nil {
+		return domain.HistoryView{}, err
+	}
+	items := make([]domain.HistoryItem, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, historyItem(row))
+	}
+	return domain.HistoryView{Items: items}, nil
+}
+
+func historyItem(row store.HistoryRow) domain.HistoryItem {
+	item := domain.HistoryItem{
+		Type: row.Type, ID: row.ID, Amount: row.Amount, Status: row.Status,
+		CreatedAt: domain.FormatTime(row.CreatedAt),
+	}
+	if row.Type == domain.HistoryPayment {
+		item.Reference = domain.Reference(domain.RefPayment, row.Day, row.ID)
+		if row.CashbackAwarded != nil && row.CashbackReason != nil {
+			item.Cashback = &domain.AwardView{Awarded: *row.CashbackAwarded, Reason: domain.Reason(*row.CashbackReason)}
+		}
+		return item
+	}
+	item.Reference = domain.Reference(domain.RefRedemption, row.Day, row.ID)
+	if row.Destination != nil {
+		item.Destination = *row.Destination
+	}
+	return item
+}

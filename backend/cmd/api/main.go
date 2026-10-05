@@ -60,13 +60,15 @@ func serve(cfg config.Config) int {
 	defer rc.Close()
 
 	money := store.TxRunner{Pool: pool, LockTimeoutMS: cfg.LockTimeoutMS(), StatementTimeoutMS: cfg.StatementTimeoutMS()}
+	reads := service.NewReads(pool)
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.Deps{
 			PingPostgres: func(ctx context.Context) error { return store.Ping(ctx, pool) },
 			PingRedis:    func(ctx context.Context) error { return cache.Ping(ctx, rc) },
 			Log:          log,
-			Reads:        service.NewReads(pool),
+			Reads:        reads,
+			History:      reads,
 			Payments:     service.NewPayments(money, log),
 			Redemptions:  service.NewRedemptions(money, log),
 		}),

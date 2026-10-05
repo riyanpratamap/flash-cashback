@@ -79,3 +79,27 @@ type RedemptionView struct {
 	Destination string `json:"destination"`
 	CreatedAt   string `json:"created_at"`
 }
+
+// History item types.
+const (
+	HistoryPayment    = "PAYMENT"
+	HistoryRedemption = "REDEMPTION"
+)
+
+// HistoryView is the body of GET /me/history.
+type HistoryView struct {
+	Items []HistoryItem `json:"items"`
+}
+
+// HistoryItem is one payment or redemption row. Cashback is set on payments
+// only and Destination on redemptions only.
+type HistoryItem struct {
+	Type        string     `json:"type"`
+	ID          int64      `json:"id"`
+	Reference   string     `json:"reference"`
+	Amount      int64      `json:"amount"`
+	Status      string     `json:"status"`
+	Destination string     `json:"destination,omitempty"`
+	CreatedAt   string     `json:"created_at"`
+	Cashback    *AwardView `json:"cashback,omitempty"`
+}

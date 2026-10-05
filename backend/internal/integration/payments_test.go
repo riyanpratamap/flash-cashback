@@ -45,6 +45,7 @@ func payRouterTx(tx store.TxRunner, w io.Writer) http.Handler {
 		PingRedis:    func(context.Context) error { return nil },
 		Log:          log,
 		Reads:        service.NewReads(p),
+		History:      service.NewReads(p),
 		Payments:     service.NewPayments(tx, log),
 		Redemptions:  service.NewRedemptions(tx, log),
 	})
@@ -366,6 +367,12 @@ func TestPayRuleSnapshotAC15(t *testing.T) {
 	if rate != 1000 || minPay != 50000 || dayCap != 50000 || awarded != 3000 || reason != "PARTIAL_DAILY_CAP" {
 		t.Errorf("second stored = %d %d %d %d %s, want 1000 50000 50000 3000 PARTIAL_DAILY_CAP",
 			rate, minPay, dayCap, awarded, reason)
+	}
+	// AC-15 (history): the list shows the first payment as it was decided.
+	h := historyOf(t, "user_a", "")
+	if len(h.Items) != 2 || h.Items[1].ID != first.res.Payment.ID || h.Items[1].Cashback == nil ||
+		*h.Items[1].Cashback != (domain.AwardView{Awarded: 47000, Reason: domain.ReasonAwarded}) {
+		t.Errorf("history = %+v, want the first payment last with 47000 AWARDED", h.Items)
 	}
 	assertReconciled(t)
 }
