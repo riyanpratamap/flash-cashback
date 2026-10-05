@@ -375,6 +375,14 @@ balance 15000; Redis started → healthz redis ok; pause/resume awards and redem
 start`; the owner walks screens 1–7 as user_a (pay, result, redeem, history) on a simulator or Expo Go · reconcile →
 exit=0 · CI `gate`, `smoke`, `mobile` green.
 
+**P5 gate result (2026-10-06):** all steps pass. `make mobile-check` exit 0 (274 tests); `make gate` exit 0; `up -d
+--build --wait` exit 0; `demo-reset` exit 0; the app runs on the iOS simulator (Expo Go) and the owner walked screens
+1–7 (pay, result, redeem, history). The first run found four bugs, each fixed with a test: route tests under
+`src/app` were bundled as routes (moved to `src/app-tests`, `Href` typing); headerless screens under the status bar
+(`SafeAreaView`); back buttons carried the previous title (`headerBackButtonDisplayMode: 'minimal'`); a screen opened
+by deep link had no back (`initialRouteName: 'index'`). Reconcile exit 0 (INV-01–09 ok, liability 52600); CI run
+37313144327 `gate`, `smoke`, `mobile` green on `e7a39c4`.
+
 ## P6 — Hardening, README, submission
 
 - [ ] **P6.1** README — all trust conditions · `go`, `ts` · not critical
