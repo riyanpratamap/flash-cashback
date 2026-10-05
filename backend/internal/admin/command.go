@@ -1,5 +1,5 @@
 // Package admin is the operator command line: the four switch commands
-// (tech-spec §4.3).
+// (tech-spec §4.3) and demo-reset (§9).
 package admin
 
 import (
@@ -9,10 +9,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/riyanpratamap/flash-cashback/backend/internal/boot"
+	"github.com/riyanpratamap/flash-cashback/backend/internal/cache"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/service"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
@@ -39,6 +41,11 @@ type Options struct {
 	DatabaseURL   string
 	LockTimeoutMS int64
 	ConnectWait   time.Duration
+	// Cache deletes the campaign key after a switch commit and every key in
+	// demo-reset.
+	Cache *cache.Invalidator
+	// Demo allows demo-reset (FC_DEMO=1).
+	Demo bool
 }
 
 // request is a parsed, valid command line.
@@ -46,12 +53,20 @@ type request struct {
 	sw       domain.Switch
 	paused   bool
 	operator string
+	demo     bool // demo-reset: no switch, no operator
 }
 
-// parse reads "<command> --by <operator>". Anything else is an error.
+// parse reads "<command> --by <operator>" or "demo-reset". Anything else is
+// an error.
 func parse(args []string) (request, error) {
 	if len(args) == 0 {
 		return request{}, errors.New("missing command")
+	}
+	if args[0] == demoCommand {
+		if len(args) > 1 {
+			return request{}, errors.New("demo-reset takes no arguments")
+		}
+		return request{demo: true}, nil
 	}
 	sw, paused, err := domain.ParseSwitchCommand(args[0])
 	if err != nil {
@@ -85,7 +100,10 @@ type actionLine struct {
 	At       string `json:"at"`
 }
 
-const usage = "usage: admin pause-awards|resume-awards|pause-redemptions|resume-redemptions --by <operator>"
+const (
+	demoCommand = "demo-reset"
+	usage       = "usage: admin pause-awards|resume-awards|pause-redemptions|resume-redemptions --by <operator> | admin demo-reset"
+)
 
 // failureMessage is the fixed stderr text for a failed Set. The driver text
 // may carry SQL, so it is never passed through.
@@ -110,6 +128,10 @@ func Command(ctx context.Context, args []string, opts Options, stdout, stderr io
 		_, _ = fmt.Fprintf(stderr, "admin: %v\n%s\n", err, usage) // stderr is the last resort
 		return exitUsage
 	}
+	if req.demo && !opts.Demo {
+		_, _ = fmt.Fprintln(stderr, "admin: demo-reset refuses unless FC_DEMO=1") // stderr is the last resort
+		return exitUsage
+	}
 	lockMS := opts.LockTimeoutMS
 	if lockMS == 0 {
 		lockMS = defaultLockTimeoutMS
@@ -121,9 +143,11 @@ func Command(ctx context.Context, args []string, opts Options, stdout, stderr io
 	}
 	defer pool.Close()
 
-	sws := service.NewSwitches(store.TxRunner{
-		Pool: pool, LockTimeoutMS: lockMS, StatementTimeoutMS: statementTimeoutMS, Cap: txCap,
-	})
+	tx := store.TxRunner{Pool: pool, LockTimeoutMS: lockMS, StatementTimeoutMS: statementTimeoutMS, Cap: txCap}
+	if req.demo {
+		return demoReset(ctx, tx, opts, stdout, stderr)
+	}
+	sws := service.NewSwitches(tx)
 	ch, err := sws.Set(ctx, req.sw, req.paused, req.operator)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, failureMessage(err)) // as above
@@ -140,5 +164,46 @@ func Command(ctx context.Context, args []string, opts Options, stdout, stderr io
 	if _, err := fmt.Fprintf(stdout, "%s\n", line); err != nil {
 		return exitFailed
 	}
+	// After the line, whether or not the value changed (§4.3). A Redis
+	// failure is logged by the invalidator and does not fail the command.
+	opts.Cache.Delete(ctx, cache.CampaignKey)
 	return exitOK
+}
+
+// demoReset runs demo-reset (AC-57) and prints its one line. The services
+// log nothing here: the operator's terminal gets the line and any warning.
+func demoReset(ctx context.Context, tx store.TxRunner, opts Options, stdout, stderr io.Writer) int {
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	demo := service.NewDemo(tx, service.NewPayments(tx, opts.Cache, quiet), service.NewRedemptions(tx, opts.Cache, quiet), opts.Cache)
+	res, err := demo.Reset(ctx)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, demoFailureMessage(err)) // stderr is the last resort
+		return exitFailed
+	}
+	if res.CacheErr != nil {
+		_, _ = fmt.Fprintln(stderr, "admin: warning: the cache keys were not deleted; they expire on their own") // as above
+	}
+	line, err := json.Marshal(struct {
+		Event string `json:"event"`
+		At    string `json:"at"`
+	}{"demo_reset", res.At})
+	if err != nil {
+		return exitFailed
+	}
+	if _, err := fmt.Fprintf(stdout, "%s\n", line); err != nil {
+		return exitFailed
+	}
+	return exitOK
+}
+
+// demoFailureMessage is fixed text: a driver error may carry SQL.
+func demoFailureMessage(err error) string {
+	switch {
+	case errors.Is(err, service.ErrDemoStateNotReached):
+		return "admin: demo state not reached (is the budget below 97000?); run demo-reset again"
+	case errors.Is(err, store.ErrBusy):
+		return "admin: busy, retry"
+	default:
+		return "admin: demo-reset failed; run demo-reset again"
+	}
 }

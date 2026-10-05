@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -188,9 +187,7 @@ func TestNoBudgetFigureInAnyResponseAC49(t *testing.T) {
 			mustSetNow(t, "2026-10-03T07:00:00Z")
 			fund(t, "user_a", 5000)
 			if sql != "" {
-				if _, err := pool.Exec(context.Background(), sql); err != nil {
-					t.Fatal(err)
-				}
+				setCampaignSQL(t, sql)
 			}
 			bodies := map[string]string{
 				"POST /payments":    pay(t, "user_a", 100000).raw,

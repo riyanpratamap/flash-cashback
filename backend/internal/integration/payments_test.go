@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/riyanpratamap/flash-cashback/backend/internal/cache"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/httpapi"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/service"
@@ -38,6 +39,11 @@ func payRouterOn(p *pgxpool.Pool, w io.Writer) http.Handler {
 // payRouterTx is payRouter over the given runner (its pool also serves the
 // reads), logging to w. Tests that need other timeouts build the runner.
 func payRouterTx(tx store.TxRunner, w io.Writer) http.Handler {
+	return payRouterInv(tx, testInvalidator(), w)
+}
+
+// payRouterInv is payRouterTx with the given invalidator.
+func payRouterInv(tx store.TxRunner, inv *cache.Invalidator, w io.Writer) http.Handler {
 	p := tx.Pool
 	log := slog.New(slog.NewJSONHandler(w, nil))
 	return httpapi.NewRouter(httpapi.Deps{
@@ -46,8 +52,8 @@ func payRouterTx(tx store.TxRunner, w io.Writer) http.Handler {
 		Log:          log,
 		Reads:        service.NewReads(p),
 		History:      service.NewReads(p),
-		Payments:     service.NewPayments(tx, log),
-		Redemptions:  service.NewRedemptions(tx, log),
+		Payments:     service.NewPayments(tx, inv, log),
+		Redemptions:  service.NewRedemptions(tx, inv, log),
 	})
 }
 
@@ -346,10 +352,7 @@ func TestPayRuleSnapshotAC15(t *testing.T) {
 	if first.status != http.StatusCreated {
 		t.Fatal(first.raw)
 	}
-	if _, err := pool.Exec(context.Background(),
-		`UPDATE campaigns SET rate_bps = 1000, min_payment = 50000, daily_cap = 70000`); err != nil {
-		t.Fatal(err)
-	}
+	setCampaignSQL(t, `UPDATE campaigns SET rate_bps = 1000, min_payment = 50000, daily_cap = 70000`)
 	// The first payment keeps the rule it was decided under.
 	rate, minPay, dayCap, awarded, reason := storedRule(t, first.res.Payment.ID)
 	if rate != 500 || minPay != 20000 || dayCap != 50000 || awarded != 47000 || reason != "AWARDED" {
@@ -381,9 +384,7 @@ func TestPayCapChangedMidDayAC71(t *testing.T) {
 	if r := pay(t, "user_a", 940000); r.status != http.StatusCreated {
 		t.Fatal(r.raw)
 	}
-	if _, err := pool.Exec(context.Background(), `UPDATE campaigns SET daily_cap = 60000`); err != nil {
-		t.Fatal(err)
-	}
+	setCampaignSQL(t, `UPDATE campaigns SET daily_cap = 60000`)
 	got := pay(t, "user_a", 100000)
 	if got.status != http.StatusCreated {
 		t.Fatalf("status = %d: %s", got.status, got.raw)

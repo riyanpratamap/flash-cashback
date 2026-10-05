@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/riyanpratamap/flash-cashback/backend/internal/cache"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
@@ -16,16 +17,17 @@ import (
 // Payments is the payment use case.
 type Payments struct {
 	tx  store.TxRunner
+	inv *cache.Invalidator
 	log *slog.Logger
 }
 
-// NewPayments builds Payments on the money transaction runner. A nil logger
-// uses the default one.
-func NewPayments(tx store.TxRunner, log *slog.Logger) *Payments {
+// NewPayments builds Payments on the money transaction runner and the cache
+// invalidator it calls after COMMIT. A nil logger uses the default one.
+func NewPayments(tx store.TxRunner, inv *cache.Invalidator, log *slog.Logger) *Payments {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Payments{tx: tx, log: log}
+	return &Payments{tx: tx, inv: inv, log: log}
 }
 
 // Pay decides one payment in one transaction and logs the outcome. The
@@ -53,9 +55,20 @@ func (p *Payments) Pay(ctx context.Context, cmd domain.MoneyCommand) (domain.Pay
 	if errors.Is(err, store.ErrReplay) && out.Replay != nil {
 		return p.replay(*out.Replay, cmd)
 	}
+	if errors.Is(err, store.ErrUnknownOutcome) {
+		// The commit may have landed: delete the cashback key, which is safe
+		// either way. Not the campaign key: Exhausted is unknown (§6).
+		p.inv.Delete(ctx, cache.CashbackKey(cmd.UserID))
+	}
 	if err != nil {
 		return domain.PaymentResult{}, false, err
 	}
+	// After COMMIT, on a context of its own (§4.1 step 10, §6).
+	keys := []string{cache.CashbackKey(cmd.UserID)}
+	if out.Exhausted {
+		keys = append(keys, cache.CampaignKey)
+	}
+	p.inv.Delete(ctx, keys...)
 	p.logMoney(cmd, out.ID, out.Awarded, out.Reason, false)
 	return result(out.ID, out.Day, out.CreatedAt, cmd.Amount, out.Awarded, out.Reason), false, nil
 }

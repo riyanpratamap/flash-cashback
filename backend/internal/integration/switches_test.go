@@ -16,14 +16,24 @@ import (
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
 )
 
+// adminOptions are the command's settings against the test database and Redis.
+func adminOptions(lockMS int64) admin.Options {
+	return admin.Options{DatabaseURL: testURL, LockTimeoutMS: lockMS, ConnectWait: 10 * time.Second, Cache: testInvalidator()}
+}
+
 // runAdmin runs the real command entry point against the test database and
 // returns its exit code, stdout and stderr. A zero lockMS uses the command's
 // own 5 s.
 func runAdmin(t *testing.T, lockMS int64, args ...string) (int, string, string) {
 	t.Helper()
+	return runAdminWith(t, adminOptions(lockMS), args...)
+}
+
+// runAdminWith is runAdmin with the given options.
+func runAdminWith(t *testing.T, opts admin.Options, args ...string) (int, string, string) {
+	t.Helper()
 	var out, errOut bytes.Buffer
-	code := admin.Command(context.Background(), args,
-		admin.Options{DatabaseURL: testURL, LockTimeoutMS: lockMS, ConnectWait: 10 * time.Second}, &out, &errOut)
+	code := admin.Command(context.Background(), args, opts, &out, &errOut)
 	return code, out.String(), errOut.String()
 }
 
@@ -82,7 +92,7 @@ func TestSwitchCommandLineAC40(t *testing.T) {
 		t.Run(c.cmd, func(t *testing.T) {
 			reset(t, 10_000_000)
 			if c.start != "" {
-				execSQL(t, c.start)
+				setCampaignSQL(t, c.start)
 			}
 			first := mustAdmin(t, c.cmd, "--by", "riyan")
 			at, ok := first["at"].(string)

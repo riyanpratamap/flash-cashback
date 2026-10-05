@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
+	"github.com/riyanpratamap/flash-cashback/backend/internal/service"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
 
@@ -54,6 +55,38 @@ func TestParse(t *testing.T) {
 				t.Errorf("parse(%v) accepted", args)
 			}
 		})
+	}
+}
+
+func TestParseDemoReset(t *testing.T) {
+	got, err := parse([]string{"demo-reset"})
+	if err != nil || !got.demo {
+		t.Errorf("parse(demo-reset) = %+v, %v; want the demo request", got, err)
+	}
+	for name, args := range map[string][]string{
+		"by flag":        {"demo-reset", "--by", "owner"},
+		"extra argument": {"demo-reset", "now"},
+		"unknown flag":   {"demo-reset", "--force"},
+	} {
+		t.Run("usage error: "+name, func(t *testing.T) {
+			if _, err := parse(args); err == nil {
+				t.Errorf("parse(%v) accepted", args)
+			}
+		})
+	}
+}
+
+// Without the demo flag demo-reset refuses with exit 2 before any connection.
+func TestDemoResetRefusesBeforeConnecting(t *testing.T) {
+	var out, errOut bytes.Buffer
+	opts := Options{DatabaseURL: "postgres://nobody:secret@127.0.0.1:1/none", ConnectWait: time.Minute}
+	start := time.Now()
+	code := Command(context.Background(), []string{"demo-reset"}, opts, &out, &errOut)
+	if code != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), "FC_DEMO=1") || strings.Contains(errOut.String(), "secret") {
+		t.Errorf("exit %d, stdout %q, stderr %q", code, out.String(), errOut.String())
+	}
+	if time.Since(start) > time.Second {
+		t.Error("the refusal waited for a connection")
 	}
 }
 
@@ -112,6 +145,27 @@ func TestFailureMessage(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := failureMessage(c.err); got != c.want {
+				t.Errorf("message = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// F6: a deadlock (40P01) reaches the operator as "busy, retry", also when the
+// service wrapped it; a state that was not reached says to run it again.
+func TestDemoFailureMessage(t *testing.T) {
+	driver := errors.New(`ERROR: relation "campaigns" does not exist (SQLSTATE 42P01)`)
+	deadlock := fmt.Errorf("demo payment for user_a: %w", fmt.Errorf("%w: %w", store.ErrBusy, store.ErrDeadlock))
+	for name, c := range map[string]struct {
+		err  error
+		want string
+	}{
+		"deadlock":    {deadlock, "admin: busy, retry"},
+		"not reached": {fmt.Errorf("%w: payment", service.ErrDemoStateNotReached), "admin: demo state not reached (is the budget below 97000?); run demo-reset again"},
+		"other":       {driver, "admin: demo-reset failed; run demo-reset again"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := demoFailureMessage(c.err); got != c.want {
 				t.Errorf("message = %q, want %q", got, c.want)
 			}
 		})

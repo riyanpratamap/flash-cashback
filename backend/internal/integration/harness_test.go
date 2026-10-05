@@ -7,6 +7,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"strings"
@@ -14,16 +16,24 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/riyanpratamap/flash-cashback/backend/internal/boot"
+	"github.com/riyanpratamap/flash-cashback/backend/internal/cache"
+	"github.com/riyanpratamap/flash-cashback/backend/internal/config"
 )
 
 const defaultTestDatabaseURL = "postgres://flash:flash@localhost:55432/flash?sslmode=disable"
 
 var (
 	pool    *pgxpool.Pool
+	rdb     *redis.Client // the test Redis; reset empties it
 	testURL string
 )
+
+// testRedisTimeout is the invalidator's deadline in tests: longer than the
+// production 50 ms so a loaded machine does not turn a delete into a flake.
+const testRedisTimeout = 500 * time.Millisecond
 
 func TestMain(m *testing.M) {
 	os.Exit(run(m))
@@ -42,6 +52,9 @@ func run(m *testing.M) int {
 		return 1
 	}
 	defer pool.Close()
+	// The production client options, with a longer timeout (testRedisTimeout).
+	rdb = cache.NewClient(config.Config{RedisAddr: testRedisAddr(), RedisTimeout: testRedisTimeout})
+	defer rdb.Close()
 	if err := boot.Run(ctx, pool, 10_000_000); err != nil {
 		fmt.Fprintln(os.Stderr, "integration: boot:", err)
 		return 1
@@ -49,11 +62,44 @@ func run(m *testing.M) int {
 	return m.Run()
 }
 
-// reset empties every table, restores the real clock, and reseeds the
-// campaign with the given budget and spent 0.
+// testInvalidator deletes keys on the test Redis.
+func testInvalidator() *cache.Invalidator {
+	return cache.NewInvalidator(rdb, testRedisTimeout, slog.New(slog.NewJSONHandler(io.Discard, nil)))
+}
+
+// deadInvalidator points at a closed port: every delete fails.
+func deadInvalidator(t *testing.T) *cache.Invalidator {
+	t.Helper()
+	return deadInvalidatorLog(t, io.Discard)
+}
+
+// deadInvalidatorLog is deadInvalidator logging to w.
+func deadInvalidatorLog(t *testing.T, w io.Writer) *cache.Invalidator {
+	t.Helper()
+	c := redis.NewClient(&redis.Options{Addr: closedPort, MaxRetries: -1, DialTimeout: testRedisTimeout})
+	t.Cleanup(func() { _ = c.Close() })
+	return cache.NewInvalidator(c, testRedisTimeout, slog.New(slog.NewJSONHandler(w, nil)))
+}
+
+// setCampaignSQL changes the campaign row by SQL and deletes the cached
+// campaign body, as a switch command or an exhausting award would. Tests that
+// set flags or the budget this way would otherwise leave a stale body.
+func setCampaignSQL(t *testing.T, sql string, args ...any) {
+	t.Helper()
+	execSQL(t, sql, args...)
+	if err := rdb.Del(context.Background(), cache.CampaignKey).Err(); err != nil {
+		t.Fatalf("delete campaign key: %v", err)
+	}
+}
+
+// reset empties every table and the test Redis, restores the real clock, and
+// reseeds the campaign with the given budget and spent 0.
 func reset(t *testing.T, budget int64) {
 	t.Helper()
 	ctx := context.Background()
+	if err := rdb.FlushDB(ctx).Err(); err != nil {
+		t.Fatalf("reset flush redis: %v", err)
+	}
 	_, err := pool.Exec(ctx, `TRUNCATE campaigns, user_daily_earnings, payments, redemptions,
 		cashback_balances, ledger_entries RESTART IDENTITY CASCADE`)
 	if err != nil {

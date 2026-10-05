@@ -102,9 +102,7 @@ func TestPayReplayAfterPauseAndEndAC19(t *testing.T) {
 		reset(t, 10_000_000)
 		key := uuid.NewString()
 		first := payKey(t, "user_a", key, 100000)
-		if _, err := pool.Exec(context.Background(), `UPDATE campaigns SET awards_paused = true`); err != nil {
-			t.Fatal(err)
-		}
+		setCampaignSQL(t, `UPDATE campaigns SET awards_paused = true`)
 		before := readCounts(t)
 		got := payKey(t, "user_a", key, 100000)
 		if got.status != http.StatusOK || got.replayed != "true" || got.raw != first.raw || got.res.Cashback.Awarded != 5000 {

@@ -77,6 +77,9 @@ type PayOutcome struct {
 	CreatedAt time.Time
 	Awarded   int64
 	Reason    domain.Reason
+	// Exhausted: this award took the last of the budget (spent + awarded =
+	// budget), from the locked read, so the cached campaign body is stale.
+	Exhausted bool
 }
 
 // Pay decides and records one payment inside tx (tech-spec §4.1 steps 4 and
@@ -153,7 +156,8 @@ func Pay(ctx context.Context, tx pgx.Tx, in PayInput) (PayOutcome, error) {
 		}
 	}
 
-	out := PayOutcome{Day: day, CreatedAt: now, Awarded: awarded, Reason: reason}
+	out := PayOutcome{Day: day, CreatedAt: now, Awarded: awarded, Reason: reason,
+		Exhausted: awarded > 0 && spent+awarded == budget}
 	err = tx.QueryRow(ctx, `INSERT INTO payments (campaign_id, user_id, idempotency_key, request_hash, amount,
 			status, cashback_awarded, cashback_reason, rate_bps, min_payment, daily_cap, campaign_day, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)

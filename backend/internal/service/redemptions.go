@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/riyanpratamap/flash-cashback/backend/internal/cache"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
@@ -16,16 +17,17 @@ import (
 // Redemptions is the redemption use case.
 type Redemptions struct {
 	tx  store.TxRunner
+	inv *cache.Invalidator
 	log *slog.Logger
 }
 
-// NewRedemptions builds Redemptions on the money transaction runner. A nil
-// logger uses the default one.
-func NewRedemptions(tx store.TxRunner, log *slog.Logger) *Redemptions {
+// NewRedemptions builds Redemptions on the money transaction runner and the
+// cache invalidator it calls after COMMIT. A nil logger uses the default one.
+func NewRedemptions(tx store.TxRunner, inv *cache.Invalidator, log *slog.Logger) *Redemptions {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Redemptions{tx: tx, log: log}
+	return &Redemptions{tx: tx, inv: inv, log: log}
 }
 
 // Redeem moves cashback out of the balance in one transaction and logs the
@@ -53,9 +55,15 @@ func (p *Redemptions) Redeem(ctx context.Context, cmd domain.MoneyCommand) (doma
 	if errors.Is(err, store.ErrReplay) && out.Replay != nil {
 		return p.replay(*out.Replay, cmd)
 	}
+	if errors.Is(err, store.ErrUnknownOutcome) {
+		// The commit may have landed: a delete is safe either way (§6).
+		p.inv.Delete(ctx, cache.CashbackKey(cmd.UserID))
+	}
 	if err != nil {
 		return domain.RedemptionResult{}, false, err
 	}
+	// After COMMIT, on a context of its own (§4.2 step 12, §6).
+	p.inv.Delete(ctx, cache.CashbackKey(cmd.UserID))
 	payout(cmd)
 	p.logMoney(cmd, out.ID, cmd.Amount, false)
 	return redemptionResult(out.ID, out.Day, out.CreatedAt, cmd.Amount, out.BalanceAfter), false, nil

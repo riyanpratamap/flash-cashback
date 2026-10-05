@@ -59,6 +59,7 @@ func serve(cfg config.Config) int {
 	rc := cache.NewClient(cfg)
 	defer rc.Close()
 
+	inv := cache.NewInvalidator(rc, cfg.RedisTimeout, log)
 	money := store.TxRunner{Pool: pool, LockTimeoutMS: cfg.LockTimeoutMS(), StatementTimeoutMS: cfg.StatementTimeoutMS()}
 	reads := service.NewReads(pool)
 	srv := &http.Server{
@@ -69,8 +70,8 @@ func serve(cfg config.Config) int {
 			Log:          log,
 			Reads:        reads,
 			History:      reads,
-			Payments:     service.NewPayments(money, log),
-			Redemptions:  service.NewRedemptions(money, log),
+			Payments:     service.NewPayments(money, inv, log),
+			Redemptions:  service.NewRedemptions(money, inv, log),
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

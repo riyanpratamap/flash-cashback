@@ -130,9 +130,7 @@ func TestReadsNeverExposeBudget(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			reset(t, 10_000_000)
 			if sql != "" {
-				if _, err := pool.Exec(context.Background(), sql); err != nil {
-					t.Fatal(err)
-				}
+				setCampaignSQL(t, sql)
 			}
 			for _, path := range []string{"/v1/campaign", "/v1/me/cashback"} {
 				_, m := getBody(t, path, "user_new")
