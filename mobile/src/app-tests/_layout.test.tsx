@@ -1,7 +1,7 @@
 import { render, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import RootLayout from '../app/_layout';
+import RootLayout, * as layout from '../app/_layout';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -51,5 +51,9 @@ describe('root layout screen options (AC-60)', () => {
     await render(<RootLayout />);
     await waitFor(() => expect(mockScreens['redeem']).toBeDefined());
     expect(mockStackOptions).toMatchObject({ headerBackButtonDisplayMode: 'minimal' });
+  });
+
+  it('a screen opened directly (deep link) still has Home beneath it, so back always works', () => {
+    expect(layout.unstable_settings).toEqual({ initialRouteName: 'index' });
   });
 });

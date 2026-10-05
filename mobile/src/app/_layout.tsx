@@ -8,6 +8,9 @@ import { AttemptProvider } from '@/attempts/AttemptProvider';
 import { CHECKING_SCREEN_OPTIONS } from '@/attempts/blockBack';
 import { UserProvider } from '@/user/UserProvider';
 
+/** A screen opened directly (a deep link) gets Home beneath it, so its back button always has somewhere to go. */
+export const unstable_settings = { initialRouteName: 'index' };
+
 export default function RootLayout() {
   const [queryClient] = useState(createQueryClient);
   return (
