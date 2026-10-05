@@ -222,9 +222,9 @@ Up to Rp18.000                        ( Redeem all )
   - the success mark centred;
   - "Redemption successful";
   - the amount in display size, tabular;
-  - "Sent to your main account" in subhead muted;
-  - a muted caption, centred: the reference, then "Cashback balance Rp{balance_after}" only when the answer was a
-    fresh 201 (a replay shows no balance); no details card and no "Sent to" row;
+  - one details card on a white surface, rows split by a hairline separator, label muted on the left, value on the
+    right: Sent to · Main account; Reference; and Cashback balance · Rp{balance_after} only when the answer was a
+    fresh 201 (a replay shows no balance); no separate "Sent to your main account" line;
   - when the body cannot be parsed: the mark, "Your redemption went through.", and "Check your balance on the home
     screen.";
   - the footer: Done only, returning Home.
@@ -234,9 +234,14 @@ Up to Rp18.000                        ( Redeem all )
                         ( ✓ )
                 Redemption successful
                       Rp18.000
-              Sent to your main account
-                 RDM-20261003-000003
-                 Cashback balance Rp0
+
+  +--------------------------------------------------+
+  | Sent to                             Main account |
+  |--------------------------------------------------|
+  | Reference                    RDM-20261003-000003 |
+  |--------------------------------------------------|
+  | Cashback balance                             Rp0 |
+  +--------------------------------------------------+
 
   [                    Done                          ]
   ```
