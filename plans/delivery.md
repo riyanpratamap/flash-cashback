@@ -533,6 +533,14 @@ From `/change` (2026-10-06, after C13): AC-66a, AC-66b amended; wireframe screen
     red on assertions then green; the caption always rendered turns the Home Rp0 test red (empty Text). `make
     mobile-check` exit 0.
 
+From `/change` (2026-10-06, after C14): AC-66a amended; wireframe screen 6; api-contract consumer row.
+
+- [ ] **C15** History without the balance header — AC-66a · `ts` · not critical
+  - Remove the "Cashback balance" header from History; keep `useCashback` for `today.date` (the TODAY / YESTERDAY
+    labels) and its refetch on focus.
+  - Done when: the History test asserts no "Cashback balance" and no balance amount while the TODAY label still
+    renders, red on an assertion then green; `make mobile-check` exits 0.
+
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
 
