@@ -326,10 +326,12 @@ balance 15000; Redis started → healthz redis ok; pause/resume awards and redem
   - Done when: `make mobile-check` exits 0 (formatter, classification, base URL, user kept after remount); a
     deliberate lint error makes the stop check exit 2.
   - Result: `make mobile-check` (74 tests), `make gate` exit 0; expo-doctor 21/21; stop check exit 2 on a lint error, 0 after; Expo SDK 57 (expo 57.0.26, create-expo-app 5.0.0), react-native 0.86.3, TypeScript 6.0.3, jest-expo 57.0.5, RNTL 14.0.1, @types/jest 29.5.14 (expo's pin), eslint 9.39.5; CI job `mobile` added; the template's `src/app` kept as the router root.
-- [ ] **P5.2** Read screens: Home, History, How it works — AC-64, AC-66, AC-67 (picker), AC-75 · US-6 · `ts` · not
+- [x] **P5.2** Read screens: Home, History, How it works — AC-64, AC-66, AC-67 (picker), AC-75 · US-6 · `ts` · not
   critical
   - Done when: RNTL tests (awaited) cover every AC-64 state; AC-66 runs with `TZ=UTC`; AC-75 serves `rules` as 1000
     bps / 30000 / 70000 and screen 7 shows 10%, Rp30.000, Rp70.000.
+  - Result: Home, History, and How it works built with RNTL tests (AC-64 states, AC-66 in UTC via a Jest global setup,
+    AC-67 picker, AC-75 at 1000 bps / Rp30.000 / Rp70.000); seven mutations red and restored.
 - [ ] **P5.3** Money attempt machine and saved attempts — AC-59, AC-60, AC-61, AC-72, AC-73, AC-74 (logic) · TC21 ·
   `ts` · **critical** (client idempotency)
   - `src/attempts/` per §10: ref guard, key from expo-crypto per press, save to `fc:attempts` before send, remove on

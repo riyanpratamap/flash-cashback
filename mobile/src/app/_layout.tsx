@@ -10,7 +10,11 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider>
-        <Stack />
+        <Stack>
+          <Stack.Screen name="index" options={{ title: 'Flash Cashback', headerShown: false }} />
+          <Stack.Screen name="history" options={{ title: 'Cashback history' }} />
+          <Stack.Screen name="how-it-works" options={{ title: 'How Flash Cashback works' }} />
+        </Stack>
       </UserProvider>
     </QueryClientProvider>
   );
