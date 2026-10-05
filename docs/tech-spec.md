@@ -319,7 +319,8 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
 - Client: `ContextTimeoutEnabled: true` (KP), dial/read/write/pool timeouts 50 ms, `MaxRetries: -1` (in go-redis v9,
   0 means the default of 3 retries; -1 disables them), so one slow call costs at most one 50 ms deadline. Any Redis error or
   timeout is a miss; failures log `warn` at most once per 10 s per operation.
-- Deletes happen after commit only, on a detached context (KP). If a delete fails, the TTL bounds the staleness.
+- Deletes happen after commit only, on a detached context (KP). If a delete fails, the TTL bounds the staleness. A
+  COMMIT whose outcome is unknown (§4.4) also deletes, since it may have committed and a delete is always safe.
 - No money path reads the cache; the write services do not hold a cache client for reads (INV-11).
 - Known window: a reader that read PostgreSQL before a commit can SET the old value after the delete; it lives until
   the TTL (KP). Accepted by D06.
