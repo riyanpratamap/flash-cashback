@@ -1,9 +1,10 @@
 # Flash Cashback — Delivery Plan
 
 Order of work for [prd.md](../docs/prd.md) and [tech-spec.md](../docs/tech-spec.md) ("§" = tech-spec section). Phases
-follow the AGENTS.md outline as cut by D08 (read caches and CI kept, no load test). Each task lands as one commit
-carrying its code, its tests, its ticked box here, and its `plans/learnings.md` row (AGENTS rule 9). **27 tasks**,
-above the ~25 guide by owner decision: smaller reviewable tasks; merging would create two oversized tasks.
+follow the AGENTS.md outline as cut by D08 (read caches and CI kept), with the load test restored by D51. Each task lands as one commit
+carrying its code, its tests, its ticked box here, and its `plans/learnings.md` row (AGENTS rule 9). **28 tasks**,
+above the ~25 guide by owner decision: smaller reviewable tasks; merging would create two oversized tasks;
+P4.5 added by D51.
 
 **Naming (D49):** repository `github.com/riyanpratamap/flash-cashback` (the existing `origin`, cloned by the
 clean-clone check); Go module `github.com/riyanpratamap/flash-cashback/backend`, `go.mod` in `backend/`. Tools on the
@@ -233,11 +234,25 @@ green on `cebfe64`.
   - Done when: integration tests for AC-42 (warm cache, pay, redeem, pause), Redis at a closed port, `CLIENT PAUSE 500
     ALL` (read ≤ ~100 ms), invalid JSON, balance 999999 cached then redeem 20000 → 422, clock at 23:59:30 → TTL ≤ 30 s;
     **mutation:** remove the P4.3 delete in Pay → AC-42 red.
+  - Also (D51): `CACHE_READS` in `internal/config` (`on`/`off`, else rejected) and `.env.example`; `Reads` skips the
+    cache when `off` (AC-76). Test: with `off`, both GETs answer correctly and `KEYS fc:v1:*` stays empty; a Pay still
+    deletes a key set by hand; **mutation:** ignore the flag → AC-76 red. Carried from P4.3 (F8): silence go-redis's
+    own logger so a failed dial never prints the Redis address.
+- [ ] **P4.5** Load test — AC-77 · D51 · TC8 · `go` (Makefile, compose), k6 JS · not critical (no app code)
+  - `loadtest/campaign.js`, `cashback.js`, `mixed.js`, a shared `lib.js` (§9: `constant-arrival-rate`, thresholds on
+    5xx, 503 counted); compose service `k6` (`grafana/k6:<pinned>`, profile `loadtest`, `./loadtest` read-only);
+    root `docker-compose.yml` passes `CACHE_READS: ${CACHE_READS:-on}`; `make load-test` per §9 (both modes,
+    demo-reset before, reconcile after, one printed table); `loadtest/results/` in `.gitignore`.
+  - Install: none on the host; `docker pull grafana/k6:<pinned>` happens on first run.
+  - Done when: `make load-test; echo exit=$?` → exit=0 with the table printed for both modes; reconcile exit 0 after
+    each; `docker compose up -d --wait` alone does not start `k6`; `docker compose stop api` during a run makes the
+    target exit nonzero (threshold breach shown, then `start api`).
+    The numbers are recorded in this task's Result; the README copy is P6.1.
 
 **P4 gate:** `make gate`, `make test-race` → exit 0 · stack up · `docker compose exec -e FC_DEMO=1 api /app/admin
 demo-reset` → exit 0 · `docker compose stop redis`; healthz → 200, `status` ok, redis `degraded`; `GET /me/cashback`
-as user_a → 15000; `docker compose start redis` · pause/resume both switches with `--by` · reconcile → exit=0 · `down`
-· CI green.
+as user_a → 15000; `docker compose start redis` · pause/resume both switches with `--by` · reconcile → exit=0 · `make load-test` → exit 0 with the table ·
+`down` · CI green.
 
 ## P5 — Mobile app
 
@@ -279,7 +294,8 @@ exit=0 · CI `gate`, `smoke`, `mobile` green.
   - Sections in order: how to run (stack, curl examples, app on Expo Go Android / iOS simulator with
     `EXPO_PUBLIC_API_URL`, changing port 8080, a placeholder link `TODO(owner): screen recording` for the owner to
     fill); trust conditions (copied from DECISIONS.md, not rewritten); rules as interpreted; decisions that matter;
-    rejected options; out of scope; where it breaks (§12). Every rule line checked against its AC.
+    rejected options; out of scope; where it breaks (§12). The P4.5 load-test table and its machine go under
+    decisions that matter, next to D06/D50. Every rule line checked against its AC.
   - Done when: the owner reads it start to finish and each curl example runs as written.
 - [ ] **P6.2** Submission checks — AC-56, AC-57 · owner-run · not critical
   - `docker compose down -v`; `docker builder prune -af`; the clean-clone check with `docker compose build --no-cache`
