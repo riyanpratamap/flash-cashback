@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/httpapi"
@@ -26,14 +28,17 @@ import (
 func payRouter() http.Handler { return payRouterLog(io.Discard) }
 
 // payRouterLog is payRouter writing its logs to w.
-func payRouterLog(w io.Writer) http.Handler {
+func payRouterLog(w io.Writer) http.Handler { return payRouterOn(pool, w) }
+
+// payRouterOn is payRouter over the given pool, logging to w.
+func payRouterOn(p *pgxpool.Pool, w io.Writer) http.Handler {
 	log := slog.New(slog.NewJSONHandler(w, nil))
-	tx := store.TxRunner{Pool: pool, LockTimeoutMS: 2000, StatementTimeoutMS: 5000}
+	tx := store.TxRunner{Pool: p, LockTimeoutMS: 2000, StatementTimeoutMS: 5000}
 	return httpapi.NewRouter(httpapi.Deps{
 		PingPostgres: func(context.Context) error { return nil },
 		PingRedis:    func(context.Context) error { return nil },
 		Log:          log,
-		Reads:        service.NewReads(pool),
+		Reads:        service.NewReads(p),
 		Payments:     service.NewPayments(tx, log),
 	})
 }
@@ -48,19 +53,29 @@ type payReply struct {
 // postPayment sends one POST /payments with the given headers and body.
 func postPayment(t *testing.T, headers map[string]string, body string) payReply {
 	t.Helper()
+	out, err := doPayment(payRouter(), headers, body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// doPayment sends one POST /payments through h. It never touches a testing.T,
+// so goroutines can call it; a body it cannot decode comes back as an error.
+func doPayment(h http.Handler, headers map[string]string, body string) (payReply, error) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/payments", strings.NewReader(body))
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
 	rec := httptest.NewRecorder()
-	payRouter().ServeHTTP(rec, req)
+	h.ServeHTTP(rec, req)
 	out := payReply{status: rec.Code, raw: rec.Body.String(), replayed: rec.Header().Get("Idempotent-Replayed")}
 	if rec.Code == http.StatusCreated || rec.Code == http.StatusOK {
 		if err := json.Unmarshal(rec.Body.Bytes(), &out.res); err != nil {
-			t.Fatalf("payment body: %v: %s", err, rec.Body)
+			return out, fmt.Errorf("payment body: %w: %s", err, rec.Body)
 		}
 	}
-	return out
+	return out, nil
 }
 
 // pay sends a payment of amount for user with a new key.
