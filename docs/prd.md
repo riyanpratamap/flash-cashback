@@ -279,7 +279,7 @@ Trust condition 11 (operator trail) is stated only (D47) and has no AC; AC-40 co
 | Stack: Go, PostgreSQL, Redis, React Native                       | AC-43, AC-53, AC-56, AC-58, AC-76               |
 | A working demo we can run                                        | AC-56, AC-57, AC-67, AC-68                      |
 | Push to GitHub                                                   | Ship stage; CI kept (D08, D31); no AC           |
-| Interview: decisions, rejected options, where it breaks          | README sections; tech-spec "Where it breaks"    |
+| Interview: decisions, rejected options, where it breaks          | `docs/design-overview.md`; tech-spec "Where it breaks" |
 
 ## Assumptions
 

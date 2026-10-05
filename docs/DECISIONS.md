@@ -188,7 +188,8 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 
 #### Trust conditions
 
-The rows marked **built** are this project's definition of production ready. The README copies this table.
+The rows marked **built** are this project's definition of production ready. `docs/design-overview.md` copies
+this table.
 
 | #   | Condition that must hold                                                | How it is guaranteed                                                                                                                                            | How it is proved                                                         | Status                                                                   |
 | --- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |

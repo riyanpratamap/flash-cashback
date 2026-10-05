@@ -21,7 +21,8 @@ promoted here.
   checks. Build test state through the real code path.
 - A mutation made by editing an applied migration file changes nothing: the test database is already migrated.
   Mutate the live test schema, and restore it the same way.
-- A summary of a rule drifts from the rule. Check every rule line in the README against its acceptance criterion.
+- A summary of a rule drifts from the rule. Check every rule line in `docs/design-overview.md`
+  against its acceptance criterion.
 
 ## Go
 

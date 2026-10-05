@@ -42,6 +42,7 @@ mostly in the Project Profile, and in `docs/`.
 | What surprised us                    | `plans/learnings.md`        |
 | Review reports                       | `plans/reviews/`            |
 | Pitfalls of the chosen tools         | `docs/known-pitfalls.md`    |
+| Reviewer summary (copies only)       | `docs/design-overview.md`   |
 
 Precedence: brief → DECISIONS → api-contract and ui-wireframe → prd → tech-spec → delivery. `DECISIONS.md` is created
 by the decision session at the start of stage 1. Each fact lives in one place: the spec cites decision IDs (`D07`) and
@@ -185,9 +186,10 @@ concurrency tests, reconciliation, the README.
 **Final checks before submission:** the clean-clone check without build caches; a full walkthrough of the app as a
 reviewer would run it, on a path that does not need a Mac; reconcile after the walkthrough.
 
-**README sections,** in this order: how to run; what has to be true before this touches real money (the trust
+**README sections:** the project description and how to run, then links to the docs. The README links
+`docs/design-overview.md`, which holds, in this order: what has to be true before this touches real money (the trust
 conditions table from decision 7, copied from `DECISIONS.md`); rules as interpreted; decisions that matter; rejected
-options; out of scope; where it breaks. The README is short and is the only file a reviewer needs to read.
+options; out of scope; where it breaks (copied from the tech spec).
 
 **Naming:** the Go module path and the repository name are given by the owner before P0.
 

@@ -128,7 +128,7 @@ A Rp0 result has exactly one reason, checked in this order: `BELOW_MINIMUM`, `CA
 `DAILY_CAP_REACHED`.
 
 Cashback is awarded at once, because payments here are simulated and settle at once. A real integration awards on
-settlement with a pending state; this simplification is stated in the README (D07, trust condition 18).
+settlement with a pending state; this simplification is stated in `docs/design-overview.md` (D07, trust condition 18).
 
 If the transaction waits too long for a lock, the response is 503 `SERVICE_BUSY`. Nothing is committed, and the app
 retries with the same key (D01).

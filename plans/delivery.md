@@ -587,6 +587,17 @@ From `/change` (2026-10-06, after C17): AC-62 amended; wireframe screen 3.
     turns its test red. Owner request: the link is centred under the pill via a new optional `centred` prop on
     `LinkText` (Home keeps the left default); its test was red on `alignSelf: "flex-start"`, then green.
     `make mobile-check` exit 0, 314 tests.
+- [x] **C19** README trimmed to description and how to run; explanation in `docs/design-overview.md` · docs · not
+  critical
+  - Owner request: the README keeps the description and how to run (stack, demo state, curl, operations, the app);
+    the six explanation sections move to `docs/design-overview.md`, linked from the README.
+  - Done when: the moved sections are unchanged; the trust table still equals `DECISIONS.md` D07; every relative link
+    resolves; AGENTS.md, DECISIONS.md, and prd.md no longer say the README holds those sections.
+  - Result: `docs/design-overview.md` = intro + README lines 91–207 of the previous commit, byte-equal (`diff` empty);
+    trust rows equal to D07 (`diff` empty); README links it under the description and first in "More detail".
+    AGENTS.md README rule and Sources of Truth row, DECISIONS.md D07 note, prd.md traceability row, the
+    api-contract.md trust condition 18 pointer, and the known-pitfalls.md rule-summary line updated.
+    Assumption: no content rewritten; docs only, so no gate beyond the diffs and link check.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
