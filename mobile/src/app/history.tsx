@@ -6,7 +6,9 @@ import { reasonCopy } from '@/copy/codes';
 import { groupByDay, timeOf } from '@/history/group';
 import { formatRp } from '@/money/format';
 import { ActivityRow } from '@/ui/ActivityRow';
+import { Card } from '@/ui/Card';
 import { LoadError } from '@/ui/LoadError';
+import { fontSize, spacing } from '@/ui/theme';
 
 export default function History() {
   const history = useHistory(HISTORY_LIMIT);
@@ -28,10 +30,10 @@ export default function History() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.header}>
+      <Card style={styles.header}>
         <Text>Current balance</Text>
         {cashback.data === undefined ? null : <Text style={styles.balance}>{formatRp(cashback.data.balance)}</Text>}
-      </View>
+      </Card>
       {history.data === undefined ? (
         history.isError ? (
           <LoadError message="Couldn't load your history." onRetry={() => void refetchAll()} />
@@ -59,8 +61,8 @@ export default function History() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 12 },
-  header: { padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#CCCCCC', gap: 4 },
-  balance: { fontSize: 22, fontWeight: '700' },
-  day: { fontSize: 13, fontWeight: '700', marginTop: 8 },
+  content: { padding: spacing.lg, gap: spacing.md },
+  header: { gap: spacing.xs },
+  balance: { fontSize: fontSize.title, fontWeight: '700' },
+  day: { fontSize: 13, fontWeight: '700', marginTop: spacing.sm },
 });

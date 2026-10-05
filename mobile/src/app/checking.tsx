@@ -6,6 +6,7 @@ import { useAttempts } from '@/attempts/AttemptProvider';
 import { blocksLeaving } from '@/attempts/blockBack';
 import { formatRp } from '@/money/format';
 import { Button } from '@/ui/Button';
+import { fontSize, spacing } from '@/ui/theme';
 
 /**
  * Screen 4: an unknown outcome. The attempt provider resends the same key; this screen only shows it. The wording
@@ -40,8 +41,8 @@ export default function Checking() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 12, alignItems: 'stretch' },
-  title: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
+  content: { padding: spacing.lg, gap: spacing.md, alignItems: 'stretch' },
+  title: { fontSize: fontSize.title, fontWeight: '700', textAlign: 'center' },
   amount: { fontSize: 28, fontWeight: '700', textAlign: 'center' },
   text: { textAlign: 'center' },
 });

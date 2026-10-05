@@ -3,7 +3,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCampaign } from '@/api/hooks';
 import { formatPercent, zoneLabel, type Rules } from '@/copy/codes';
 import { formatRp } from '@/money/format';
+import { Card } from '@/ui/Card';
 import { LoadError } from '@/ui/LoadError';
+import { fontSize, spacing } from '@/ui/theme';
 
 const EXAMPLE_PAYMENT = 100_000;
 
@@ -50,10 +52,10 @@ export default function HowItWorks() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.example}>
+      <Card style={styles.example}>
         <Text>Pay {formatRp(EXAMPLE_PAYMENT)}</Text>
         <Text style={styles.title}>earn {formatRp(exampleEarn(rules))}</Text>
-      </View>
+      </Card>
       {sections.map((section) => (
         <View key={section.title} style={styles.section}>
           <Text accessibilityRole="header" style={styles.title}>
@@ -67,8 +69,8 @@ export default function HowItWorks() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 16 },
-  example: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#CCCCCC' },
-  section: { gap: 4 },
-  title: { fontSize: 16, fontWeight: '600' },
+  content: { padding: spacing.lg, gap: spacing.lg },
+  example: { flexDirection: 'row', justifyContent: 'space-between', gap: 0 },
+  section: { gap: spacing.xs },
+  title: { fontSize: fontSize.body, fontWeight: '600' },
 });

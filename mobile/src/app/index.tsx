@@ -12,7 +12,9 @@ import { useUser } from '@/user/UserProvider';
 import { DEMO_USERS, userLabel } from '@/user/users';
 import { ActivityRow } from '@/ui/ActivityRow';
 import { Button, LinkText } from '@/ui/Button';
+import { Card } from '@/ui/Card';
 import { LoadError } from '@/ui/LoadError';
+import { colors, fontSize, radius, spacing } from '@/ui/theme';
 import { UnconfirmedCard } from '@/ui/UnconfirmedCard';
 
 const LOAD_ERROR = "Couldn't load your cashback. Your balance is safe. Check your connection and try again.";
@@ -73,7 +75,7 @@ export default function Home() {
           <Text>Loading…</Text>
         )}
         {campaign.data !== undefined && cashback.data !== undefined ? (
-          <View style={styles.card}>
+          <Card>
             <View style={styles.rowBetween}>
               <Text accessibilityRole="header" style={styles.section}>
                 Recent activity
@@ -91,7 +93,7 @@ export default function Home() {
             ) : (
               <Text>Loading…</Text>
             )}
-          </View>
+          </Card>
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -128,13 +130,13 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
 
   return (
     <>
-      <View style={styles.card}>
+      <Card>
         {banner.title === null ? null : <Text style={styles.section}>{banner.title}</Text>}
         <Text>{banner.text}</Text>
         <LinkText label="How it works" onPress={() => onNavigate('/how-it-works')} />
-      </View>
+      </Card>
 
-      <View style={styles.card}>
+      <Card>
         <View style={styles.rowBetween}>
           <View>
             <Text>Cashback balance</Text>
@@ -147,10 +149,10 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
           />
         </View>
         {redemptionPaused ? <Text>{HOLD_LINE}</Text> : null}
-      </View>
+      </Card>
 
       {ended ? null : (
-        <View style={styles.card}>
+        <Card>
           <View style={styles.rowBetween}>
             <Text style={styles.section}>Earned today</Text>
             <Text>
@@ -170,7 +172,7 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
               ? `You've reached today's limit. ${reset}`
               : `${formatRp(cashback.today.remaining)} left to earn today. ${reset}`}
           </Text>
-        </View>
+        </Card>
       )}
 
       <Button label="Make a payment" variant={ended ? 'secondary' : 'primary'} onPress={() => onNavigate('/pay')} />
@@ -180,14 +182,13 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: 16, gap: 12 },
+  content: { padding: spacing.lg, gap: spacing.md },
   heading: { fontSize: 24, fontWeight: '700' },
-  switcher: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  demo: { fontSize: 12, fontWeight: '700', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  card: { padding: 16, gap: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CCCCCC' },
+  switcher: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  demo: { fontSize: fontSize.caption, fontWeight: '700', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.sm },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  section: { fontSize: 16, fontWeight: '600' },
-  amount: { fontSize: 22, fontWeight: '700' },
-  track: { height: 8, borderRadius: 4, backgroundColor: '#E5E5E5', overflow: 'hidden' },
-  fill: { height: 8, backgroundColor: '#208AEF' },
+  section: { fontSize: fontSize.body, fontWeight: '600' },
+  amount: { fontSize: fontSize.title, fontWeight: '700' },
+  track: { height: 8, borderRadius: radius.sm, backgroundColor: colors.track, overflow: 'hidden' },
+  fill: { height: 8, backgroundColor: colors.primary },
 });

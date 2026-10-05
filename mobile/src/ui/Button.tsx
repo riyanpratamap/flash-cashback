@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { colors, fontSize, radius, spacing } from '@/ui/theme';
 
 type ButtonProps = {
   label: string;
@@ -32,12 +33,12 @@ export function LinkText({ label, onPress }: { label: string; onPress: () => voi
 }
 
 const styles = StyleSheet.create({
-  base: { minHeight: 44, minWidth: 44, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  primary: { backgroundColor: '#208AEF' },
-  secondary: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#208AEF' },
+  base: { minHeight: 44, minWidth: 44, paddingHorizontal: spacing.lg, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  primary: { backgroundColor: colors.primary },
+  secondary: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.primary },
   disabled: { opacity: 0.4 },
-  text: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
-  secondaryText: { color: '#208AEF' },
+  text: { color: colors.white, fontWeight: '600', fontSize: fontSize.body },
+  secondaryText: { color: colors.primary },
   link: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
-  linkText: { color: '#208AEF', fontSize: 14, textDecorationLine: 'underline' },
+  linkText: { color: colors.primary, fontSize: 14, textDecorationLine: 'underline' },
 });

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/ui/Button';
+import { colors, fontSize, radius, spacing } from '@/ui/theme';
 
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
@@ -12,6 +13,6 @@ export function LoadError({ message, onRetry }: { message: string; onRetry: () =
 }
 
 const styles = StyleSheet.create({
-  box: { padding: 16, gap: 12, borderRadius: 8, borderWidth: 1, borderColor: '#999999' },
-  text: { fontSize: 16 },
+  box: { padding: spacing.lg, gap: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.inputBorder },
+  text: { fontSize: fontSize.body },
 });

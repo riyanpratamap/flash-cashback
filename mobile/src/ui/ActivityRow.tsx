@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { HistoryItem } from '@/api/queries';
 import { formatRp, formatSigned } from '@/money/format';
+import { colors, fontSize, spacing } from '@/ui/theme';
 
 /** The title and amount of a history item (docs/ui-wireframe.md screens 1 and 6). Rp0 has no sign; redemptions use −. */
 export function activityLine(item: HistoryItem): { title: string; amount: string } {
@@ -25,9 +26,9 @@ export function ActivityRow({ item, detail }: { item: HistoryItem; detail?: stri
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm },
   left: { flex: 1 },
-  title: { fontSize: 16 },
-  detail: { fontSize: 13, color: '#555555' },
-  amount: { fontSize: 16, fontWeight: '600' },
+  title: { fontSize: fontSize.body },
+  detail: { fontSize: 13, color: colors.mutedText },
+  amount: { fontSize: fontSize.body, fontWeight: '600' },
 });

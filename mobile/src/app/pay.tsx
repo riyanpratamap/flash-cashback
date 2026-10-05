@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useCampaign, useCashback } from '@/api/hooks';
 import { useAttempts } from '@/attempts/AttemptProvider';
 import { errorCopy, MAX_AMOUNT } from '@/copy/codes';
 import { payInfoLine } from '@/copy/payInfo';
 import { formatAsTyped, formatRp, parseDigits } from '@/money/format';
+import { AmountInput } from '@/ui/AmountInput';
 import { Button } from '@/ui/Button';
+import { spacing } from '@/ui/theme';
 
 /** Quick amounts of the wireframe (screen 2). They are conveniences, not rules. */
 const CHIPS = [20_000, 50_000, 100_000] as const;
@@ -51,14 +53,7 @@ export default function Pay() {
 
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text>Amount (IDR)</Text>
-      <TextInput
-        accessibilityLabel="Amount (IDR)"
-        style={styles.input}
-        keyboardType="number-pad"
-        value={text}
-        onChangeText={(next) => setText(formatAsTyped(next))}
-      />
+      <AmountInput label="Amount (IDR)" value={text} onChangeText={(next) => setText(formatAsTyped(next))} />
       {error === null ? null : <Text accessibilityRole="alert">{error}</Text>}
       {rules === undefined ? null : <Text>Payments under {formatRp(rules.min_payment)} earn no cashback.</Text>}
       <View style={styles.chips}>
@@ -79,7 +74,6 @@ export default function Pay() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 12 },
-  input: { borderWidth: 1, borderColor: '#999999', borderRadius: 8, padding: 12, fontSize: 20 },
-  chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  content: { padding: spacing.lg, gap: spacing.md },
+  chips: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
 });

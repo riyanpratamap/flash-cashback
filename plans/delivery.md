@@ -416,10 +416,11 @@ From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 foll
     `queries.ts`, `attempts/store.ts`; `MONTHS` exported once from `copy/stamp.ts`; every import in `src/` uses `@/`.
   - Done when: `make mobile-check` exits 0 with no test changed.
   - Result: `make mobile-check` exit 0, 24 suites / 274 tests, no test changed beyond import lines; `jest.mock` and `requireActual` paths moved to `@/` too (Jest resolves it).
-- [ ] **C2** Theme tokens and UI primitives · `ts` · not critical
+- [x] **C2** Theme tokens and UI primitives · `ts` · not critical
   - `src/ui/theme.ts` (colours, spacing, radius), `src/ui/Card.tsx`, `src/ui/AmountInput.tsx`, used by every screen
     and `UnconfirmedCard`, `Button`, `ActivityRow`, `LoadError`.
   - Done when: `make mobile-check` exits 0 with no test changed.
+  - Result: `make mobile-check` exit 0, 24 suites / 274 tests, no test changed; `theme.ts`, `Card`, `AmountInput` added and used by all screens and the four `ui` components; formatting stays in the screens.
 - [ ] **C3** `useAmountForm(kind)` for Pay and Redeem · `ts` · critical (press path)
   - Owns amount text, launch-rejection prefill, acknowledge on leave, `inFlight`, the rejection matching the amount.
   - Done when: hook tests (prefill, no overwrite after typing, acknowledge on unmount) red then green; mutation

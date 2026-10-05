@@ -4,6 +4,8 @@ import type { SavedAttempt } from '@/attempts/types';
 import { formatDeviceStamp } from '@/copy/stamp';
 import { formatRp } from '@/money/format';
 import { Button } from '@/ui/Button';
+import { Card } from '@/ui/Card';
+import { spacing } from '@/ui/theme';
 
 type Props = { attempt: SavedAttempt; onCheckNow: () => void; onDismiss: () => void };
 
@@ -11,7 +13,7 @@ type Props = { attempt: SavedAttempt; onCheckNow: () => void; onDismiss: () => v
 export function UnconfirmedCard({ attempt, onCheckNow, onDismiss }: Props) {
   const noun = attempt.kind === 'payment' ? 'payment' : 'redemption';
   return (
-    <View style={styles.card}>
+    <Card>
       <Text>
         {`A ${noun} of ${formatRp(attempt.amount)} from ${formatDeviceStamp(attempt.created_at)} wasn't confirmed.`}
       </Text>
@@ -19,11 +21,10 @@ export function UnconfirmedCard({ attempt, onCheckNow, onDismiss }: Props) {
         <Button label="Check now" onPress={onCheckNow} />
         <Button label="Dismiss" variant="secondary" onPress={onDismiss} />
       </View>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 16, gap: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CCCCCC' },
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  row: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
 });

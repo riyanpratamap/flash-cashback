@@ -1,14 +1,16 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useCampaign, useCashback } from '@/api/hooks';
 import { parseRedemptionResult } from '@/api/redemptions';
 import { useAttempts } from '@/attempts/AttemptProvider';
 import { errorCopy } from '@/copy/codes';
 import { formatAsTyped, formatRp, parseDigits } from '@/money/format';
+import { AmountInput } from '@/ui/AmountInput';
 import { Button } from '@/ui/Button';
 import { LoadError } from '@/ui/LoadError';
+import { spacing } from '@/ui/theme';
 
 const PAUSED_LINE = errorCopy('REDEMPTION_PAUSED', {});
 
@@ -89,11 +91,8 @@ export default function Redeem() {
         <Text>Available to redeem</Text>
         <Text style={styles.strong}>{formatRp(balance)}</Text>
       </View>
-      <Text>Amount to redeem (IDR)</Text>
-      <TextInput
-        accessibilityLabel="Amount to redeem (IDR)"
-        style={styles.input}
-        keyboardType="number-pad"
+      <AmountInput
+        label="Amount to redeem (IDR)"
         value={text}
         onChangeText={(next) => setText(formatAsTyped(next))}
       />
@@ -123,9 +122,8 @@ export default function Redeem() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 12 },
+  content: { padding: spacing.lg, gap: spacing.md },
   title: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
   strong: { fontWeight: '700' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  input: { borderWidth: 1, borderColor: '#999999', borderRadius: 8, padding: 12, fontSize: 20 },
 });

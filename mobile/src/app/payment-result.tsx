@@ -10,6 +10,8 @@ import { reasonCopy, zoneLabel } from '@/copy/codes';
 import { formatStamp } from '@/copy/stamp';
 import { formatRp, formatSigned } from '@/money/format';
 import { Button, LinkText } from '@/ui/Button';
+import { Card } from '@/ui/Card';
+import { fontSize, radius, spacing } from '@/ui/theme';
 
 /** Screen 3. The payment always shows as successful; the cashback is a separate card (wireframe). */
 export default function PaymentResult() {
@@ -49,7 +51,7 @@ export default function PaymentResult() {
           </Text>
         )}
         {result === null ? null : (
-          <View style={styles.card}>
+          <Card>
             <View style={styles.row}>
               <Text style={styles.section}>Cashback earned</Text>
               <Text style={styles.section}>{formatSigned(result.awarded, 'earned')}</Text>
@@ -61,7 +63,7 @@ export default function PaymentResult() {
                 {copy.howItWorks ? <LinkText label="How it works" onPress={() => router.push('/how-it-works')} /> : null}
               </>
             )}
-          </View>
+          </Card>
         )}
         <Button label="Done" onPress={done} />
         <Button label="Make another payment" variant="secondary" onPress={another} />
@@ -72,11 +74,10 @@ export default function PaymentResult() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: 16, gap: 12, alignItems: 'stretch' },
-  title: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
+  content: { padding: spacing.lg, gap: spacing.md, alignItems: 'stretch' },
+  title: { fontSize: fontSize.title, fontWeight: '700', textAlign: 'center' },
   amount: { fontSize: 28, fontWeight: '700', textAlign: 'center' },
-  card: { padding: 16, gap: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CCCCCC' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
-  section: { fontSize: 16, fontWeight: '600' },
-  chip: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, fontSize: 12 },
+  section: { fontSize: fontSize.body, fontWeight: '600' },
+  chip: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 2, fontSize: fontSize.caption },
 });
