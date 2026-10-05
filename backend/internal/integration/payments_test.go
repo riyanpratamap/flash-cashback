@@ -32,8 +32,14 @@ func payRouterLog(w io.Writer) http.Handler { return payRouterOn(pool, w) }
 
 // payRouterOn is payRouter over the given pool, logging to w.
 func payRouterOn(p *pgxpool.Pool, w io.Writer) http.Handler {
+	return payRouterTx(store.TxRunner{Pool: p, LockTimeoutMS: 2000, StatementTimeoutMS: 5000}, w)
+}
+
+// payRouterTx is payRouter over the given runner (its pool also serves the
+// reads), logging to w. Tests that need other timeouts build the runner.
+func payRouterTx(tx store.TxRunner, w io.Writer) http.Handler {
+	p := tx.Pool
 	log := slog.New(slog.NewJSONHandler(w, nil))
-	tx := store.TxRunner{Pool: p, LockTimeoutMS: 2000, StatementTimeoutMS: 5000}
 	return httpapi.NewRouter(httpapi.Deps{
 		PingPostgres: func(context.Context) error { return nil },
 		PingRedis:    func(context.Context) error { return nil },

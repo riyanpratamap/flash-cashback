@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/riyanpratamap/flash-cashback/backend/internal/boot"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
+	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
 
 // raceConns is larger than the callers of any race test here, so the pool
@@ -47,6 +50,7 @@ func racePool(t *testing.T) http.Handler {
 
 type raceReq struct {
 	user   string
+	key    string // empty: a new UUID per request
 	amount int64
 }
 
@@ -67,8 +71,12 @@ func payAllAtOnce(h http.Handler, reqs []raceReq) []raceResult {
 		go func() {
 			defer wg.Done()
 			<-start
+			key := r.key
+			if key == "" {
+				key = uuid.NewString()
+			}
 			out[i].reply, out[i].err = doPayment(h, map[string]string{
-				"X-User-ID": r.user, "Idempotency-Key": uuid.NewString(),
+				"X-User-ID": r.user, "Idempotency-Key": key,
 			}, `{"amount":`+itoa(r.amount)+`}`)
 		}()
 	}
@@ -135,7 +143,7 @@ func TestRacePayBudgetDrainAC25(t *testing.T) {
 
 	reqs := make([]raceReq, 50)
 	for i := range reqs {
-		reqs[i] = raceReq{fmt.Sprintf("user_%02d", i), 100000}
+		reqs[i] = raceReq{user: fmt.Sprintf("user_%02d", i), amount: 100000}
 	}
 	res := payAllAtOnce(h, reqs)
 
@@ -165,7 +173,7 @@ func TestRacePayDailyCapAC26(t *testing.T) {
 
 	reqs := make([]raceReq, 30)
 	for i := range reqs {
-		reqs[i] = raceReq{"user_a", 120000}
+		reqs[i] = raceReq{user: "user_a", amount: 120000}
 	}
 	res := payAllAtOnce(h, reqs)
 
@@ -186,6 +194,290 @@ func TestRacePayDailyCapAC26(t *testing.T) {
 	}
 	if n := queryInt(t, `SELECT count(*) FROM payments`); n != 30 {
 		t.Errorf("payments = %d, want 30", n)
+	}
+	assertReconciled(t)
+}
+
+// AC-23: 20 requests with one key and one body, at once. One creates the
+// payment; the other nineteen replay it, byte for byte.
+func TestRacePaySameKeyAC23(t *testing.T) {
+	reset(t, 10_000_000)
+	mustSetNow(t, "2026-10-03T07:32:00Z")
+	h := racePool(t)
+
+	key := uuid.NewString()
+	reqs := make([]raceReq, 20)
+	for i := range reqs {
+		reqs[i] = raceReq{user: "user_a", key: key, amount: 100000}
+	}
+	res := payAllAtOnce(h, reqs)
+
+	created, createdRaw := 0, ""
+	for i, r := range res {
+		switch {
+		case r.err != nil:
+			t.Errorf("request %d: %v", i, r.err)
+		case r.reply.status == http.StatusCreated:
+			created++
+			createdRaw = r.reply.raw
+		}
+	}
+	if created != 1 {
+		t.Errorf("%d requests answered 201, want 1", created)
+	}
+	bad := 0
+	for i, r := range res {
+		if r.err != nil || r.reply.status == http.StatusCreated {
+			continue
+		}
+		if r.reply.status != http.StatusOK || r.reply.replayed != "true" || r.reply.raw != createdRaw {
+			bad++
+			if bad <= 3 {
+				t.Errorf("request %d: status %d replayed=%q: %s, want 200 true %s",
+					i, r.reply.status, r.reply.replayed, r.reply.raw, createdRaw)
+			}
+		}
+	}
+	if n := queryInt(t, `SELECT count(*) FROM payments`); n != 1 {
+		t.Errorf("payments = %d, want 1", n)
+	}
+	if n := queryInt(t, `SELECT count(*) FROM ledger_entries`); n != 1 {
+		t.Errorf("ledger entries = %d, want 1", n)
+	}
+	if n := queryInt(t, `SELECT balance FROM cashback_balances WHERE user_id = 'user_a'`); n != 5000 {
+		t.Errorf("balance = %d, want 5000", n)
+	}
+	if n := queryInt(t, `SELECT spent FROM campaigns`); n != 5000 {
+		t.Errorf("spent = %d, want 5000", n)
+	}
+	assertReconciled(t)
+}
+
+// AC-24: 20 requests with one key and two different bodies, at once. The
+// body that wins decides the payment; the other body is a reused key.
+func TestRacePaySameKeyTwoBodiesAC24(t *testing.T) {
+	reset(t, 10_000_000)
+	mustSetNow(t, "2026-10-03T07:32:00Z")
+	h := racePool(t)
+
+	key := uuid.NewString()
+	reqs := make([]raceReq, 20)
+	for i := range reqs {
+		amount := int64(100000)
+		if i%2 == 1 {
+			amount = 50000
+		}
+		reqs[i] = raceReq{user: "user_a", key: key, amount: amount}
+	}
+	res := payAllAtOnce(h, reqs)
+
+	created, winAmount, winRaw := 0, int64(0), ""
+	for i, r := range res {
+		switch {
+		case r.err != nil:
+			t.Errorf("request %d: %v", i, r.err)
+		case r.reply.status == http.StatusCreated:
+			created++
+			winAmount, winRaw = reqs[i].amount, r.reply.raw
+		}
+	}
+	if created != 1 {
+		t.Errorf("%d requests answered 201, want 1", created)
+	}
+	bad := 0
+	for i, r := range res {
+		if r.err != nil || r.reply.status == http.StatusCreated {
+			continue
+		}
+		var ok bool
+		if reqs[i].amount == winAmount {
+			ok = r.reply.status == http.StatusOK && r.reply.replayed == "true" && r.reply.raw == winRaw
+		} else {
+			ok = r.reply.status == http.StatusConflict && r.reply.replayed != "true" &&
+				strings.Contains(r.reply.raw, "IDEMPOTENCY_KEY_REUSED")
+		}
+		if !ok {
+			bad++
+			if bad <= 3 {
+				t.Errorf("request %d (amount %d, winner %d): status %d replayed=%q: %s",
+					i, reqs[i].amount, winAmount, r.reply.status, r.reply.replayed, r.reply.raw)
+			}
+		}
+	}
+	want := winAmount * 5 / 100
+	if n := queryInt(t, `SELECT count(*) FROM payments`); n != 1 {
+		t.Errorf("payments = %d, want 1", n)
+	}
+	if n := queryInt(t, `SELECT count(*) FROM ledger_entries`); n != 1 {
+		t.Errorf("ledger entries = %d, want 1", n)
+	}
+	if n := queryInt(t, `SELECT balance FROM cashback_balances WHERE user_id = 'user_a'`); n != want {
+		t.Errorf("balance = %d, want %d", n, want)
+	}
+	assertReconciled(t)
+}
+
+// holdCampaignLock opens a transaction that holds the campaign row lock. The
+// returned release rolls it back once, whoever calls it first (pgx.Tx is not
+// safe for concurrent use, so the Once guards the timer and the cleanup). pid
+// is the holder's backend pid, read before any timer can touch the holder.
+func holdCampaignLock(t *testing.T) (release func(), pid int64) {
+	t.Helper()
+	ctx := context.Background()
+	holder, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		_ = holder.Rollback(ctx)
+		t.Fatal(err)
+	}
+	var once sync.Once
+	release = func() { once.Do(func() { _ = holder.Rollback(ctx) }) }
+	t.Cleanup(release)
+	if _, err := holder.Exec(ctx,
+		`SELECT 1 FROM campaigns WHERE id = 'flash-cashback' FOR NO KEY UPDATE`); err != nil {
+		t.Fatal(err)
+	}
+	return release, pid
+}
+
+// AC-27: a payment that waits longer than the lock timeout answers 503
+// SERVICE_BUSY quickly and writes nothing; the same key then succeeds.
+func TestRacePayLockTimeoutAC27(t *testing.T) {
+	reset(t, 10_000_000)
+	mustSetNow(t, "2026-10-03T07:32:00Z")
+	h := payRouterTx(store.TxRunner{Pool: pool, LockTimeoutMS: 300, StatementTimeoutMS: 5000}, io.Discard)
+	before := readCounts(t)
+
+	release, _ := holdCampaignLock(t)
+	// The hold ends with the response, or after 2 s if the lock timeout is
+	// broken, so a mutation shows as a slow answer rather than a hang.
+	timer := time.AfterFunc(2*time.Second, release)
+	defer timer.Stop()
+
+	key := uuid.NewString()
+	headers := map[string]string{"X-User-ID": "user_a", "Idempotency-Key": key}
+	start := time.Now()
+	got, err := doPayment(h, headers, `{"amount":100000}`)
+	elapsed := time.Since(start)
+	release()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.status != http.StatusServiceUnavailable || !strings.Contains(got.raw, "SERVICE_BUSY") {
+		t.Errorf("status %d: %s, want 503 SERVICE_BUSY", got.status, got.raw)
+	}
+	if elapsed > time.Second {
+		t.Errorf("answered after %v, want under 1s (lock timeout 300ms)", elapsed)
+	}
+	if after := readCounts(t); after != before {
+		t.Errorf("counts changed: %+v -> %+v", before, after)
+	}
+
+	again := payKey(t, "user_a", key, 100000)
+	if again.status != http.StatusCreated || again.replayed == "true" {
+		t.Errorf("retry = %d replayed=%q: %s, want 201 not replayed", again.status, again.replayed, again.raw)
+	}
+	assertReconciled(t)
+}
+
+// waitFor polls cond every 10 ms until it holds or limit passes.
+func waitFor(limit time.Duration, cond func() bool) bool {
+	deadline := time.Now().Add(limit)
+	for time.Now().Before(deadline) {
+		if cond() {
+			return true
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return cond()
+}
+
+func countInt(sql string, args ...any) (int64, error) {
+	var n int64
+	err := pool.QueryRow(context.Background(), sql, args...).Scan(&n)
+	return n, err
+}
+
+// AC-70: the client hangs up while its payment waits for the campaign lock.
+// The payment still commits, and the resend with the same key replays it.
+func TestRacePayClientDisconnectAC70(t *testing.T) {
+	reset(t, 10_000_000)
+	mustSetNow(t, "2026-10-03T07:32:00Z")
+	srv := httptest.NewServer(payRouter())
+	t.Cleanup(srv.Close)
+
+	release, holderPid := holdCampaignLock(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	key := uuid.NewString()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, srv.URL+"/v1/payments",
+			strings.NewReader(`{"amount":100000}`))
+		if err != nil {
+			return
+		}
+		req.Header.Set("X-User-ID", "user_a")
+		req.Header.Set("Idempotency-Key", key)
+		req.Header.Set("Content-Type", "application/json")
+		if resp, err := http.DefaultClient.Do(req); err == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	var pollErr error
+	waiting := waitFor(5*time.Second, func() bool {
+		n, err := countInt(`SELECT count(*) FROM pg_stat_activity
+			WHERE backend_type = 'client backend' AND $1::int = ANY(pg_blocking_pids(pid))`, holderPid)
+		pollErr = err
+		return err == nil && n > 0
+	})
+	if !waiting {
+		release()
+		cancel()
+		<-done
+		if pollErr != nil {
+			t.Fatalf("poll query failed: %v", pollErr)
+		}
+		t.Fatal("the payment never waited on the campaign lock")
+	}
+	cancel()
+	<-done
+	time.Sleep(500 * time.Millisecond) // let the server see the disconnect
+	release()
+
+	waitFor(5*time.Second, func() bool {
+		n, err := countInt(`SELECT count(*) FROM payments`)
+		return err == nil && n == 1
+	})
+	if n := queryInt(t, `SELECT count(*) FROM payments`); n != 1 {
+		t.Errorf("payments = %d, want 1 after the client hung up", n)
+	}
+	if n := queryInt(t, `SELECT count(*) FROM ledger_entries`); n != 1 {
+		t.Errorf("ledger entries = %d, want 1", n)
+	}
+	if n := queryInt(t, `SELECT balance FROM cashback_balances WHERE user_id = 'user_a'`); n != 5000 {
+		t.Errorf("balance = %d, want 5000", n)
+	}
+
+	got := payKey(t, "user_a", key, 100000)
+	if got.status != http.StatusOK || got.replayed != "true" {
+		t.Errorf("resend = %d replayed=%q: %s, want 200 true", got.status, got.replayed, got.raw)
+	}
+	if got.status == http.StatusOK {
+		stored := queryInt(t, `SELECT min(id) FROM payments`)
+		r := got.res
+		if r.Payment.ID != stored || r.Payment.Amount != 100000 || r.Cashback.Awarded != 5000 ||
+			r.Cashback.Reason != domain.ReasonAwarded {
+			t.Errorf("resend body = %s, want payment %d, amount 100000, awarded 5000 AWARDED", got.raw, stored)
+		}
+	}
+	if n := queryInt(t, `SELECT count(*) FROM payments`); n != 1 {
+		t.Errorf("payments = %d after the resend, want 1", n)
 	}
 	assertReconciled(t)
 }
