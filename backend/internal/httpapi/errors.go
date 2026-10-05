@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
+	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
 
 // Error codes of the contract's Errors table.
@@ -20,6 +21,7 @@ const (
 	codeNotFound         = "NOT_FOUND"
 	codeMethodNotAllowed = "METHOD_NOT_ALLOWED"
 	codeInternal         = "INTERNAL_ERROR"
+	codeServiceBusy      = "SERVICE_BUSY"
 )
 
 // Messages are fixed text per code: for logs, never for users, and never a
@@ -34,6 +36,7 @@ var messages = map[string]string{
 	codeNotFound:         "no such route",
 	codeMethodNotAllowed: "method not allowed",
 	codeInternal:         "internal error",
+	codeServiceBusy:      "A lock wait timed out; nothing was committed; retry with the same key",
 }
 
 type errorBody struct {
@@ -62,7 +65,9 @@ func mapError(err error) (int, string) {
 		return http.StatusBadRequest, codeMalformed
 	case errors.Is(err, domain.ErrInvalidAmount):
 		return http.StatusUnprocessableEntity, codeInvalidAmount
-	default:
+	case errors.Is(err, store.ErrBusy):
+		return http.StatusServiceUnavailable, codeServiceBusy
+	default: // includes store.ErrInvariant and store.ErrUnknownOutcome
 		return http.StatusInternalServerError, codeInternal
 	}
 }
@@ -71,7 +76,12 @@ func mapError(err error) (int, string) {
 // logged once, by type only: driver text may carry SQL or values.
 func (d Deps) writeFailure(w http.ResponseWriter, r *http.Request, err error) {
 	status, code := mapError(err)
-	if status == http.StatusInternalServerError {
+	switch {
+	case errors.Is(err, store.ErrDeadlock): // 503 to the client, but a lock-order bug to us
+		d.logger().Error("request failed", "event", "deadlock", "request_id", requestIDFrom(r.Context()), "error_type", fmt.Sprintf("%T", err))
+	case errors.Is(err, store.ErrInvariant):
+		d.logger().Error("request failed", "event", "invariant_violation", "request_id", requestIDFrom(r.Context()), "error_type", fmt.Sprintf("%T", err))
+	case status == http.StatusInternalServerError:
 		d.logger().Error("request failed", "request_id", requestIDFrom(r.Context()), "error_type", fmt.Sprintf("%T", err))
 	}
 	writeError(w, r, status, code)

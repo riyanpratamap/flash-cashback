@@ -112,11 +112,16 @@ no user → 400 `MISSING_USER`; `down` exit 0.
 
 ## P2 — Payment award, idempotency, reconciliation, concurrency
 
-- [ ] **P2.1** Money transaction helper — AC-27, AC-55 (mapping) · TC3 · `go` · **critical** (locking)
+- [x] **P2.1** Money transaction helper — AC-27, AC-55 (mapping) · TC3 · `go` · **critical** (locking)
   - `store.InTx` (§4, §4.4): `context.WithoutCancel` + 5 s, `SET LOCAL` timeouts from validated ints, deferred
     rollback ignoring only "tx closed", SQLSTATE → busy (`55P03`, `57014`, `40P01`, deadline before COMMIT) /
     invariant (`23514`, `23505`, append-only raise) / unknown (COMMIT error); mapper: busy → 503 `SERVICE_BUSY`, else 500.
   - Done when: integration tests force each SQLSTATE and show a cancelled parent context does not cancel the tx.
+  - Result: `store.TxRunner.InTx` plus `SERVICE_BUSY` mapping; integration tests force 55P03, 57014, 40P01, cap
+    deadline, 23514, 23505, append-only and a COMMIT error; cancelled parent and PG-down proved; 4 mutations red: dropped `WithoutCancel` (cancelled-parent test), dropped `SET LOCAL lock_timeout`
+    (lock-timeout test, red only after its "gave up within 2 s" assertion), COMMIT errors classified by SQLSTATE
+    (commit-error test), `ErrBusy` mapped to 500 (mapper busy/deadlock test). The deadlock test is named
+    `TestRaceTx…`, so it runs under `make test-race`.
 - [ ] **P2.2** `Payments.Pay` and `POST /payments` — AC-01–12, AC-15, AC-71, AC-41 (spent rows), AC-17/18 (no row) ·
   INV-01–04, 06–08 · TC1, TC2, TC12 · `go` · **critical**
   - §4.1 steps 1, 3–4, 6–9 and COMMIT (cache deletes come in P4.3); lock order D44; rule snapshot; money log line
