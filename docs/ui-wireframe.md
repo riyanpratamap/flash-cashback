@@ -81,8 +81,8 @@ Earned Rp25.000 cashback
   banner drops ", and you can still redeem your balance".
 - **Earned today:** earned, cap, a progress bar, and what is left, then "Resets at 00:00 WIB." (D04). At 0 left:
   "You've reached today's limit. Resets at 00:00 WIB."
-- **Recent activity:** the two newest items, in the History row format (screen 6) without the time. Empty: "No
-  activity yet."
+- **Recent activity:** the two newest items, in the History row format (screen 6) without the time; a Rp0 payment
+  has no subtitle line. Empty: "No activity yet."
 - **Refresh:** on open, on return from another screen, and on pull to refresh.
 - **Load error:** "Couldn't load your cashback. Your balance is safe. Check your connection and try again." with Try
   again. If only recent activity fails, the rest renders and that section says so.
@@ -262,9 +262,9 @@ TODAY, 3 OCT
 Payment                                 −Rp100.000
 14:32 · Earned Rp5.000 cashback
 Payment                                  −Rp15.000
-13:05 · No cashback
+13:05
 Cashback redeemed                        +Rp42.000
-To main account · 11:20
+11:20 · To main account
 
 YESTERDAY, 2 OCT
 Payment                                 −Rp200.000
@@ -276,8 +276,8 @@ Payment                                 −Rp200.000
 - The right column is the money the transaction moved: a payment is `−` its amount, a redemption is `+` its amount
   (sent to the main account) in the positive colour.
 - Title: "Payment" or "Cashback redeemed". Subtitle of a payment: the time, then "Earned Rp{awarded} cashback" (no
-  sign), then the reason chip when the award was above Rp0 but less than the full 5%; a Rp0 payment reads "No
-  cashback" with no reason. Subtitle of a redemption: "To main account", then the time.
+  sign), then the reason chip when the award was above Rp0 but less than the full 5%; a Rp0 payment shows the time
+  only. Subtitle of a redemption: the time, then "To main account".
 - Grouped by day, from the date in `created_at` as sent by the API, never converted to the device's time zone.
 - Empty: "No activity yet. Make a payment to start earning cashback." Error: "Couldn't load your history." with Try
   again.

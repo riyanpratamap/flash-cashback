@@ -212,9 +212,10 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
 - **AC-66** With the device in UTC and an item at 2026-10-04T00:30:00+07:00, History groups it under 4 Oct; it shows at most 20 rows; row content is AC-66a.
 - **AC-66a** History (titled "Transaction history", header "Cashback balance") shows a payment of Rp100.000 that
   earned Rp5.000 as "Payment", "14:32 · Earned Rp5.000 cashback", and "−Rp100.000"; a partial award adds its reason
-  chip after the cashback; a Rp0 payment reads "No cashback" with no chip; a redemption of Rp42.000 shows "Cashback
-  redeemed", "To main account · 11:20", and "+Rp42.000".
-- **AC-66b** Home recent activity rows have the AC-66a title, amount, and subtitle without the time.
+  chip after the cashback; a Rp0 payment shows only its time, "13:05"; a redemption of Rp42.000 shows "Cashback
+  redeemed", "11:20 · To main account", and "+Rp42.000".
+- **AC-66b** Home recent activity rows have the AC-66a title, amount, and subtitle without the time; a Rp0 payment
+  has no subtitle line.
 - **AC-67** The chosen demo user sets `X-User-ID` on every request and is remembered after the app restarts.
 - **AC-68** The app calls `EXPO_PUBLIC_API_URL` when set, else `http://localhost:8080/v1`.
 - **AC-75** (US-6) How Flash Cashback works shows the rate, minimum, daily cap, and reset time from `GET /campaign`
