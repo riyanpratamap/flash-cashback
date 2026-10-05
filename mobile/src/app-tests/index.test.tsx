@@ -181,7 +181,7 @@ describe('Home (AC-64)', () => {
     expect(requestedUrls().some((u) => u.endsWith('/me/history?limit=2'))).toBe(true);
   });
 
-  it('lists a partial and a Rp0 payment with the chip only on the partial and no time', async () => {
+  it('lists a partial and a Rp0 payment with the chip only on the partial, and no caption on the Rp0', async () => {
     const pay = (id: number, amount: number, awarded: number, reason: string) => ({
       type: 'PAYMENT', id, reference: `PAY-${id}`, amount, status: 'SUCCEEDED',
       created_at: '2026-10-03T14:32:00+07:00', cashback: { awarded, reason },
@@ -190,7 +190,8 @@ describe('Home (AC-64)', () => {
     await renderApp(<Home />);
     expect(await screen.findByText('Earned Rp2.000 cashback · Daily limit reached')).toBeTruthy();
     expect(screen.getByText('−Rp60.000')).toBeTruthy();
-    expect(screen.getByText('No cashback')).toBeTruthy();
+    expect(screen.queryByText(/No cashback/)).toBeNull();
+    expect(screen.queryByText('')).toBeNull();
     expect(screen.queryByText(/Below minimum/)).toBeNull();
     expect(screen.getByText('−Rp15.000')).toBeTruthy();
   });

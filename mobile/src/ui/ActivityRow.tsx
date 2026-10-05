@@ -6,7 +6,7 @@ import { formatRp, formatSigned } from '@/money/format';
 import { AppText } from '@/ui/AppText';
 import { colors, spacing } from '@/ui/theme';
 
-type Line = { title: string; summary: string; amount: string; positive: boolean };
+type Line = { title: string; summary: string | null; amount: string; positive: boolean };
 
 /**
  * The row as a transaction (docs/ui-wireframe.md screens 1 and 6): the payment or redemption amount on the right,
@@ -19,22 +19,22 @@ export function activityLine(item: HistoryItem): Line {
   const { awarded } = item.cashback;
   return {
     title: 'Payment',
-    summary: awarded > 0 ? `Earned ${formatRp(awarded)} cashback` : 'No cashback',
+    summary: awarded > 0 ? `Earned ${formatRp(awarded)} cashback` : null,
     amount: formatSigned(item.amount, 'paid'),
     positive: false,
   };
 }
 
-/** The subtitle: payment "time · summary · chip", redemption "summary · time"; a null time or chip is left out. */
+/** The subtitle "time · summary · chip" for both types; a null part is left out, so a Rp0 payment on Home is "". */
 export function activityDetail(item: HistoryItem, time: string | null, chip: string | null): string {
   const { summary } = activityLine(item);
-  const parts = item.type === 'REDEMPTION' ? [summary, time] : [time, summary, chip];
+  const parts = [time, summary, chip];
   return parts.filter((part) => part !== null).join(' · ');
 }
 
 /**
  * The reason chip of a payment, or null when rules are not loaded, the item is a redemption, the reason has none, or
- * nothing was awarded (a Rp0 payment reads "No cashback" and gives no reason, AC-66a). History and Home share this.
+ * nothing was awarded (a Rp0 payment has no summary and gives no reason, AC-66a). History and Home share this.
  */
 export function chipOf(item: HistoryItem, rules: Campaign['rules'] | undefined): string | null {
   if (item.type !== 'PAYMENT' || rules === undefined || item.cashback.awarded === 0) return null;
@@ -43,16 +43,18 @@ export function chipOf(item: HistoryItem, rules: Campaign['rules'] | undefined):
 
 type Props = { item: HistoryItem; detail: string; last?: boolean };
 
-/** A row of a list on a white surface. A hairline separates it from the next row; `last` drops it. */
+/** A row of a list on a white surface; an empty `detail` renders no caption. A hairline separates it from the next row; `last` drops it. */
 export function ActivityRow({ item, detail, last = false }: Props) {
   const { title, amount, positive } = activityLine(item);
   return (
     <View style={[styles.row, !last && styles.separator]}>
       <View style={styles.left}>
         <AppText>{title}</AppText>
-        <AppText variant="caption" tone="muted">
-          {detail}
-        </AppText>
+        {detail !== '' && (
+          <AppText variant="caption" tone="muted">
+            {detail}
+          </AppText>
+        )}
       </View>
       <AppText variant="headline" tone={positive ? 'positive' : 'text'} tabular style={styles.amount}>
         {amount}

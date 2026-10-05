@@ -94,12 +94,13 @@ describe('History (AC-66)', () => {
     expect(screen.getByText('−Rp100.000')).toBeTruthy();
     expect(screen.getByText('14:00 · Earned Rp2.000 cashback · Daily limit reached')).toBeTruthy();
     expect(screen.getByText('−Rp60.000')).toBeTruthy();
-    expect(screen.getByText('13:05 · No cashback')).toBeTruthy();
+    expect(screen.getByText('13:05')).toBeTruthy();
+    expect(screen.queryByText(/No cashback/)).toBeNull();
     expect(screen.queryByText(/Below minimum/)).toBeNull();
     expect(screen.getByText('−Rp15.000')).toBeTruthy();
     expect(screen.getAllByText('Payment')).toHaveLength(3);
     expect(screen.getByText('Cashback redeemed')).toBeTruthy();
-    expect(screen.getByText('To main account · 11:20')).toBeTruthy();
+    expect(screen.getByText('11:20 · To main account')).toBeTruthy();
     expect(screen.getByText('+Rp42.000')).toBeTruthy();
   });
 

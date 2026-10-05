@@ -523,11 +523,15 @@ From the C12 walkthrough (2026-10-06): AC-66a amended; wireframe screens 1 and 6
 
 From `/change` (2026-10-06, after C13): AC-66a, AC-66b amended; wireframe screens 1 and 6.
 
-- [ ] **C14** No subtitle text on Rp0; redemption time first — AC-66a, AC-66b · `ts` · not critical
+- [x] **C14** No subtitle text on Rp0; redemption time first — AC-66a, AC-66b · `ts` · not critical
   - History: a Rp0 payment shows only the time; a redemption reads "11:20 · To main account". Home: a Rp0 payment
     has no subtitle line; a redemption reads "To main account".
   - Done when: History and Home tests assert both rows (and the absent "No cashback" text), red on an assertion then
     green; `make mobile-check` exits 0.
+  - Result: `activityLine` summary is null on Rp0 (no "No cashback"); `activityDetail` joins `time · summary · chip` for
+    both types (redemption now time first); `ActivityRow` renders the caption only when `detail` is not empty. Tests
+    red on assertions then green; the caption always rendered turns the Home Rp0 test red (empty Text). `make
+    mobile-check` exit 0.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
