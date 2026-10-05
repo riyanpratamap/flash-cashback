@@ -39,9 +39,10 @@ func payRouterLog(w io.Writer) http.Handler {
 }
 
 type payReply struct {
-	status int
-	raw    string
-	res    domain.PaymentResult
+	status   int
+	raw      string
+	res      domain.PaymentResult
+	replayed string // the Idempotent-Replayed header
 }
 
 // postPayment sends one POST /payments with the given headers and body.
@@ -53,8 +54,8 @@ func postPayment(t *testing.T, headers map[string]string, body string) payReply 
 	}
 	rec := httptest.NewRecorder()
 	payRouter().ServeHTTP(rec, req)
-	out := payReply{status: rec.Code, raw: rec.Body.String()}
-	if rec.Code == http.StatusCreated {
+	out := payReply{status: rec.Code, raw: rec.Body.String(), replayed: rec.Header().Get("Idempotent-Replayed")}
+	if rec.Code == http.StatusCreated || rec.Code == http.StatusOK {
 		if err := json.Unmarshal(rec.Body.Bytes(), &out.res); err != nil {
 			t.Fatalf("payment body: %v: %s", err, rec.Body)
 		}

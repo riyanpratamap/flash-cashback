@@ -11,7 +11,7 @@ import (
 
 // Payer is what POST /payments needs.
 type Payer interface {
-	Pay(ctx context.Context, cmd domain.MoneyCommand) (domain.PaymentResult, error)
+	Pay(ctx context.Context, cmd domain.MoneyCommand) (res domain.PaymentResult, replayed bool, err error)
 }
 
 // Redeemer is what POST /redemptions needs (P3.1).
@@ -56,15 +56,21 @@ func (d Deps) parseMoney(w http.ResponseWriter, r *http.Request) (domain.MoneyCo
 	}, true
 }
 
-// postPayment answers 201 with the contract body.
+// postPayment answers 201 with the contract body, or 200 with
+// Idempotent-Replayed: true when the key already had a payment.
 func (d Deps) postPayment(w http.ResponseWriter, r *http.Request) {
 	cmd, ok := d.parseMoney(w, r)
 	if !ok {
 		return
 	}
-	res, err := d.Payments.Pay(r.Context(), cmd)
+	res, replayed, err := d.Payments.Pay(r.Context(), cmd)
 	if err != nil {
 		d.writeFailure(w, r, err)
+		return
+	}
+	if replayed {
+		w.Header().Set("Idempotent-Replayed", "true")
+		writeJSON(w, http.StatusOK, res)
 		return
 	}
 	writeJSON(w, http.StatusCreated, res)

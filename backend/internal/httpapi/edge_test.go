@@ -22,6 +22,7 @@ type fakeMoney struct {
 	histCall []histArgs
 	err      error
 	panicVal any
+	replayed bool
 }
 
 type histArgs struct {
@@ -29,8 +30,8 @@ type histArgs struct {
 	limit int
 }
 
-func (f *fakeMoney) Pay(_ context.Context, c domain.MoneyCommand) (domain.PaymentResult, error) {
-	return domain.PaymentResult{}, f.record(c)
+func (f *fakeMoney) Pay(_ context.Context, c domain.MoneyCommand) (domain.PaymentResult, bool, error) {
+	return domain.PaymentResult{}, f.replayed, f.record(c)
 }
 func (f *fakeMoney) Redeem(_ context.Context, c domain.MoneyCommand) error { return f.record(c) }
 func (f *fakeMoney) record(c domain.MoneyCommand) error {

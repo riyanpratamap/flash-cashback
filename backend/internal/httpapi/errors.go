@@ -18,6 +18,7 @@ const (
 	codeInvalidKey       = "INVALID_IDEMPOTENCY_KEY"
 	codeMalformed        = "MALFORMED_REQUEST"
 	codeInvalidAmount    = "INVALID_AMOUNT"
+	codeKeyReused        = "IDEMPOTENCY_KEY_REUSED"
 	codeNotFound         = "NOT_FOUND"
 	codeMethodNotAllowed = "METHOD_NOT_ALLOWED"
 	codeInternal         = "INTERNAL_ERROR"
@@ -33,6 +34,7 @@ var messages = map[string]string{
 	codeInvalidKey:       "Idempotency-Key header is not a canonical UUID",
 	codeMalformed:        "request cannot be read",
 	codeInvalidAmount:    "amount must be a whole number from 1 to 10000000",
+	codeKeyReused:        "Idempotency-Key was already used with a different body",
 	codeNotFound:         "no such route",
 	codeMethodNotAllowed: "method not allowed",
 	codeInternal:         "internal error",
@@ -65,6 +67,8 @@ func mapError(err error) (int, string) {
 		return http.StatusBadRequest, codeMalformed
 	case errors.Is(err, domain.ErrInvalidAmount):
 		return http.StatusUnprocessableEntity, codeInvalidAmount
+	case errors.Is(err, domain.ErrIdempotencyKeyReused):
+		return http.StatusConflict, codeKeyReused
 	case errors.Is(err, store.ErrBusy):
 		return http.StatusServiceUnavailable, codeServiceBusy
 	default: // includes store.ErrInvariant and store.ErrUnknownOutcome
