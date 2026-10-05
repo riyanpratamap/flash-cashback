@@ -360,11 +360,16 @@ balance 15000; Redis started → healthz redis ok; pause/resume awards and redem
     rest into cards and runs with a new key; Pay fills in a rejection that arrives while it is open; layout options,
     disabled Pay and a non-UTC device stamp are now asserted. 6 more tests, each mutation red and restored.
     Assumption: redemption answers only return Home until P5.5 adds its screens.
-- [ ] **P5.5** Redeem and confirmation — AC-65, AC-60 (redemption) · `ts` · not critical
+- [x] **P5.5** Redeem and confirmation — AC-65, AC-60 (redemption) · `ts` · not critical
   - Done when: RNTL tests: `INSUFFICIENT_BALANCE` refetches then shows the limit; `REDEMPTION_PAUSED` refetches the
     campaign; success shows `balance_after`; a launch-resent redemption result (done or rejected) is shown and
     acknowledged on leave, and the P5.4 interim `dismissTo('/')` + `acknowledge()` in `AttemptNavigator` is removed
     (P5.4 review F4).
+  - Result: `parseRedemptionResult`, Redeem screen (form and confirmation in one route), navigator interim branch
+    removed (Redeem shown after Checking: `dismissTo` when pressed there, `replace` after a launch resend). 24 new
+    or changed Jest tests; mutations red and restored: balance refetch not awaited (stale limit), interim
+    navigator branch kept, unmount acknowledge removed, button not disabled when paused.
+    Assumption: the confirmation is on the Redeem route, not an eighth route.
 
 **P5 gate:** `make mobile-check`, `make gate` → exit 0 · stack up + demo-reset · `cd mobile && npm ci && npx expo
 start`; the owner walks screens 1–7 as user_a (pay, result, redeem, history) on a simulator or Expo Go · reconcile →

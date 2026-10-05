@@ -37,4 +37,10 @@ describe('root layout screen options (AC-60)', () => {
     await waitFor(() => expect(mockScreens['payment-result']).toBeDefined());
     expect(mockScreens['payment-result']).toMatchObject({ headerShown: false, gestureEnabled: false });
   });
+
+  it('Redeem has a header titled Redeem cashback', async () => {
+    await render(<RootLayout />);
+    await waitFor(() => expect(mockScreens['redeem']).toBeDefined());
+    expect(mockScreens['redeem']).toEqual({ title: 'Redeem cashback' });
+  });
 });

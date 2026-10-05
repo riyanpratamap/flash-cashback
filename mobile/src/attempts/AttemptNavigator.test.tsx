@@ -137,14 +137,52 @@ describe('AttemptNavigator: the attempt state drives the screens', () => {
     expect(replace).toHaveBeenCalledWith('/payment-result');
   });
 
-  it('a redemption answer leaves Checking for Home and is acknowledged (P5.5 adds its screen)', async () => {
-    serveMoney(['network', moneyOk({ redemption: { id: 3, amount: 18000 }, balance_after: 0 })]);
+  it('a redemption result found while checking opens Redeem and stays unacknowledged until the user leaves', async () => {
+    serveMoney(['network', moneyOk({ redemption: { id: 3, reference: 'R', amount: 18000 }, balance_after: 0 })]);
     await mount();
     await settle(0);
     await press('redeem');
     await settle(2000);
-    expect(dismissTo).toHaveBeenCalledWith('/');
+    expect(dismissTo).toHaveBeenCalledWith('/redeem');
+    expect(dismissTo).not.toHaveBeenCalledWith('/');
     expect(replace).not.toHaveBeenCalled();
-    expect(screen.getByText('phase: idle')).toBeTruthy();
+    expect(screen.getByText('phase: done')).toBeTruthy();
+  });
+
+  it('a redemption rejection found while checking opens Redeem and stays unacknowledged', async () => {
+    serveMoney(['network', moneyRejected(422, 'INSUFFICIENT_BALANCE')]);
+    await mount();
+    await settle(0);
+    await press('redeem');
+    await settle(2000);
+    expect(dismissTo).toHaveBeenCalledWith('/redeem');
+    expect(dismissTo).not.toHaveBeenCalledWith('/');
+    expect(screen.getByText('phase: rejected')).toBeTruthy();
+  });
+
+  it('a redemption answered straight to Redeem needs no navigation', async () => {
+    serveMoney([moneyOk({ redemption: { id: 3, reference: 'R', amount: 18000 }, balance_after: 0 })]);
+    await mount();
+    await settle(0);
+    await press('redeem');
+    await settle(0);
+    expect([push, replace, dismissTo, back].map((fn) => fn.mock.calls.length)).toEqual([0, 0, 0, 0]);
+    expect(screen.getByText('phase: done')).toBeTruthy();
+  });
+
+  it('a launch-resent redemption opens Redeem with its result (P5.5)', async () => {
+    await AsyncStorage.setItem(
+      ATTEMPTS_STORAGE_KEY,
+      JSON.stringify([
+        { user_id: 'user_a', kind: 'redemption', amount: 18000, key: 'K', created_at: new Date(NOW - 60_000).toISOString() },
+      ]),
+    );
+    serveMoney(['network', moneyOk({ redemption: { id: 3, reference: 'R', amount: 18000 }, balance_after: 0 })]);
+    await mount();
+    await settle(2000);
+    expect(push).toHaveBeenCalledWith('/checking');
+    expect(replace).toHaveBeenCalledWith('/redeem');
+    expect(dismissTo).not.toHaveBeenCalled();
+    expect(screen.getByText('phase: done')).toBeTruthy();
   });
 });
