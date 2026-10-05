@@ -1,10 +1,10 @@
 # Flash Cashback — Delivery Plan
 
 Order of work for [prd.md](../docs/prd.md) and [tech-spec.md](../docs/tech-spec.md) ("§" = tech-spec section). Phases
-follow the AGENTS.md outline as cut by D08 (read caches and CI kept), with the load test restored by D51. Each task lands as one commit
+follow the AGENTS.md outline as cut by D08 (read caches and CI kept), with the load test restored by D51 and dropped again by D52. Each task lands as one commit
 carrying its code, its tests, its ticked box here, and its `plans/learnings.md` row (AGENTS rule 9). **28 tasks**,
 above the ~25 guide by owner decision: smaller reviewable tasks; merging would create two oversized tasks;
-P4.5 added by D51.
+P4.5 added by D51; its tooling removed by D52.
 
 **Naming (D49):** repository `github.com/riyanpratamap/flash-cashback` (the existing `origin`, cloned by the
 clean-clone check); Go module `github.com/riyanpratamap/flash-cashback/backend`, `go.mod` in `backend/`. Tools on the
@@ -262,10 +262,13 @@ green on `cebfe64`.
     mixed-pay     off       3.1      5.9     13.8     20.0       0      0
     ```
     Plainly: on this machine `on` shows no reliable gain. The reads are single-row queries (sub-millisecond either way), the load generator and the stack compete for the same 8 CPUs, and run-to-run noise (an earlier run had mixed-pay p95 5.0 `on` vs 14.3 `off`, this one the reverse) is larger than the difference. No payment saw a 503 in either mode, so D06's `SERVICE_BUSY` claim is not shown by this load. Assumptions: transport errors (status 0) fail the run like a 5xx; `dropped_iterations` is a warning only; api is left in `CACHE_READS=on`.
+  - Removed (D52, 2026-10-05): the owner dropped the load test ("the numbers don't prove anything"); `loadtest/`,
+    the compose `k6` service and `make load-test` are deleted, `CACHE_READS` stays. This Result is kept as the one-off
+    measurement.
 
 **P4 gate:** `make gate`, `make test-race` → exit 0 · stack up · `docker compose exec -e FC_DEMO=1 api /app/admin
 demo-reset` → exit 0 · `docker compose stop redis`; healthz → 200, `status` ok, redis `degraded`; `GET /me/cashback`
-as user_a → 15000; `docker compose start redis` · pause/resume both switches with `--by` · reconcile → exit=0 · `make load-test` → exit 0 with the table ·
+as user_a → 15000; `docker compose start redis` · pause/resume both switches with `--by` · reconcile → exit=0 ·
 `down` · CI green.
 
 ## P5 — Mobile app
@@ -308,8 +311,8 @@ exit=0 · CI `gate`, `smoke`, `mobile` green.
   - Sections in order: how to run (stack, curl examples, app on Expo Go Android / iOS simulator with
     `EXPO_PUBLIC_API_URL`, changing port 8080, a placeholder link `TODO(owner): screen recording` for the owner to
     fill); trust conditions (copied from DECISIONS.md, not rewritten); rules as interpreted; decisions that matter;
-    rejected options; out of scope; where it breaks (§12). The P4.5 load-test table and its machine go under
-    decisions that matter, next to D06/D50. Every rule line checked against its AC.
+    rejected options; out of scope; where it breaks (§12). The load test (D51, dropped by D52) goes under rejected
+    options. Every rule line checked against its AC.
   - Done when: the owner reads it start to finish and each curl example runs as written.
 - [ ] **P6.2** Submission checks — AC-56, AC-57 · owner-run · not critical
   - `docker compose down -v`; `docker builder prune -af`; the clean-clone check with `docker compose build --no-cache`
