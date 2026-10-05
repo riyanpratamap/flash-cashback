@@ -1,0 +1,54 @@
+# One command: docker compose up -d --build --wait (API on localhost:8080).
+# Only the API port is published, so a local PostgreSQL or Redis never collides.
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: flash
+      POSTGRES_PASSWORD: flash
+      POSTGRES_DB: flash
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "flash", "-d", "flash"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:8
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      HTTP_ADDR: 0.0.0.0:8080
+      DATABASE_URL: ${DATABASE_URL:-postgres://flash:flash@postgres:5432/flash?sslmode=disable}
+      DB_MAX_CONNS: ${DB_MAX_CONNS:-20}
+      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
+      REDIS_TIMEOUT: ${REDIS_TIMEOUT:-50ms}
+      CACHE_CAMPAIGN_TTL: ${CACHE_CAMPAIGN_TTL:-5s}
+      CACHE_CASHBACK_TTL: ${CACHE_CASHBACK_TTL:-60s}
+      LOCK_TIMEOUT: ${LOCK_TIMEOUT:-2s}
+      STATEMENT_TIMEOUT: ${STATEMENT_TIMEOUT:-5s}
+      CAMPAIGN_BUDGET: ${CAMPAIGN_BUDGET:-10000000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "/app/api", "healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:

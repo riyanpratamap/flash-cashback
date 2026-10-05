@@ -48,7 +48,7 @@ is built through the services; a test may set only a switch flag or the reseeded
     `freshDB` per run → one migration, one row. **Mutation:** boot without the session locker, run against `freshDB` → red.
   - Done when: `make test-integration` and `make test-race` exit 0; no `fc_boot_*` database left after; mutation reported.
   - Result: `make gate`, `make test-race` exit 0, no `fc_boot_*` left; pgx v5.11.0, goose v3.28.0 pinned; no-locker mutation red (`pg_proc` duplicate key), constraint and trigger drops red; `TestRaceBootTwiceEmpty` (empty DB, outcome-only) added; re-boot keeps budget and spent (TC10), reset-on-conflict mutation red.
-- [ ] **P0.3** API server, healthz, image, compose — AC-50, AC-56 · TC8 (health), TC20 · `go` · not critical
+- [x] **P0.3** API server, healthz, image, compose — AC-50, AC-56 · TC8 (health), TC20 · `go` · not critical
   - `cmd/api` (§8 timeouts, 8 s drain on SIGTERM, `healthcheck` subcommand), chi router, `GET /v1/healthz` (PG 1 s,
     Redis 50 ms, go-redis options of §6); `cmd/admin` and `cmd/reconcile` as stubs (exit 2, "not built yet") so the
     image and the Commands table exist from P0; `backend/Dockerfile` (multi-stage, `CGO_ENABLED=0`, distroless,
@@ -58,6 +58,7 @@ is built through the services; a test may set only a switch flag or the reseeded
   - Done when: integration tests give 200 `status` ok, redis ok / 200 `status` ok, redis `degraded` (Redis at a closed
     port) / 503 `status` `unavailable`, postgres `down` (PG at a closed port, C16 body); `docker compose up -d --build
     --wait` exits 0; `docker compose ps` shows only 8080.
+  - Result: `make gate`, `make test-race` exit 0; `docker compose up -d --build --wait` exit 0, `ps` publishes only 8080, healthz `ok`/`ok`/`ok`; chi v5.3.2, go-redis v9.22.0 pinned (google/uuid deferred to P1.2, first use); mutations red: PG failure mapped to 200 (unit and integration), Redis failure not degraded.
 
 **P0 gate** (in order):
 1. Add CI job `smoke` to `ci.yml` (`up -d --build --wait`, `curl -fsS` healthz, only 8080 published, `down -v`); own
