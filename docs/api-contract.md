@@ -31,7 +31,7 @@ Confirmed as one batch (D10–D23).
 | Endpoint | Purpose | Screens |
 | --- | --- | --- |
 | `GET /campaign` | Campaign state and rules | Home banner, Pay info line, How it works |
-| `GET /me/cashback` | Balance and today's progress | Home, Pay info line, Redeem, History header |
+| `GET /me/cashback` | Balance and today's progress | Home, Pay info line, Redeem, History day labels |
 | `POST /payments` | Make a payment; cashback is decided here | Pay, Checking, Payment result |
 | `POST /redemptions` | Redeem cashback | Redeem |
 | `GET /me/history` | Payments and redemptions, newest first | History, Home recent activity |

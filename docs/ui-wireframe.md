@@ -256,8 +256,6 @@ Up to Rp18.000                        ( Redeem all )
 ```
 <  Transaction history
 
-[ Cashback balance                       Rp18.000 ]
-
 TODAY, 3 OCT
 Payment                                 −Rp100.000
 14:32 · Earned Rp5.000 cashback
@@ -272,7 +270,7 @@ Payment                                 −Rp200.000
 ```
 
 - Every payment (Rp0 ones included) and every redemption: a transaction list, not only cashback.
-- The header is the cashback balance, not a running balance per row and not a sum of the right column.
+- No balance header: the list only; the balance lives on Home and Redeem.
 - The right column is the money the transaction moved: a payment is `−` its amount, a redemption is `+` its amount
   (sent to the main account) in the positive colour.
 - Title: "Payment" or "Cashback redeemed". Subtitle of a payment: the time, then "Earned Rp{awarded} cashback" (no

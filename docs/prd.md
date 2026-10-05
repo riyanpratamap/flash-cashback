@@ -210,7 +210,7 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
 - **AC-65b** A replay (200 with `Idempotent-Replayed: true`) shows no balance. A body that cannot be parsed shows the
   mark, "Your redemption went through.", and "Check your balance on the home screen.", with no balance.
 - **AC-66** With the device in UTC and an item at 2026-10-04T00:30:00+07:00, History groups it under 4 Oct; it shows at most 20 rows; row content is AC-66a.
-- **AC-66a** History (titled "Transaction history", header "Cashback balance") shows a payment of Rp100.000 that
+- **AC-66a** History (titled "Transaction history", no balance header) shows a payment of Rp100.000 that
   earned Rp5.000 as "Payment", "14:32 · Earned Rp5.000 cashback", and "−Rp100.000"; a partial award adds its reason
   chip after the cashback; a Rp0 payment shows only its time, "13:05"; a redemption of Rp42.000 shows "Cashback
   redeemed", "11:20 · To main account", and "+Rp42.000".
