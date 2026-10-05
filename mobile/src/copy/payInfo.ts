@@ -22,5 +22,5 @@ export function payInfoLine(amount: number, status: string, rules: Rules, remain
   if (fullAward(amount, rules) > remainingToday) {
     return `Earn up to ${formatRp(estimate)} cashback, the rest of today's ${formatRp(rules.daily_cap)} limit.`;
   }
-  return `Earn up to ${formatRp(estimate)} cashback. Final amount is confirmed after payment.`;
+  return `Earn up to ${formatRp(estimate)} cashback. You'll see the exact amount after you pay.`;
 }

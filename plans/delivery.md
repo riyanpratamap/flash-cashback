@@ -488,6 +488,13 @@ From `/change` (2026-10-06, after C6): AC-62, AC-63 amended, AC-65 split into AC
   - Done when: test asserts the payment amount renders before "Cashback earned", red then green;
     `payment-result.test.tsx` updated for the removed labels; `make mobile-check` exits 0.
   - Result: `payment-result.tsx` stacks SuccessMark, title, display amount, two muted caption lines (time+zone, reference), then a Card with the cashback block; detail card and its labels removed; unparsed body shows mark, title, attempt amount. New order test and mark test red then green; three expectations changed. `make mobile-check` exit 0.
+- [x] **C11** Pay info line: smaller text, clearer wording — AC-63 · `ts` · not critical
+  - The line under the amount ends "You'll see the exact amount after you pay."; the info line and the rule hint
+    use caption (muted); the error alert stays subhead / danger. Wireframe screen 2 amended.
+  - Done when: five expectations changed to the new wording, red then green; `make mobile-check` exits 0.
+  - Result: `payInfo.ts` plain variant reworded, `pay.tsx` info and rule hint `variant="caption"`, wireframe sketch and
+    "otherwise" variant updated; four `payInfo.test.ts` and one `pay.test.tsx` expectations changed (wording only),
+    red on the string then green. `make mobile-check` exit 0.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

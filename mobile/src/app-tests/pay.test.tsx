@@ -91,7 +91,7 @@ describe('Pay info line (AC-63)', () => {
   it('shows the plain estimate when it fits', async () => {
     await mount([], { cashback: { ...cashback, today: { ...cashback.today, remaining: 50000 } } });
     await type('100000');
-    expect(screen.getByText('Earn up to Rp5.000 cashback. Final amount is confirmed after payment.')).toBeTruthy();
+    expect(screen.getByText("Earn up to Rp5.000 cashback. You'll see the exact amount after you pay.")).toBeTruthy();
   });
 
   it.each([

@@ -55,11 +55,11 @@ export default function Pay() {
             {error}
           </AppText>
         ) : info !== null ? (
-          <AppText variant="subhead" tone="muted">
+          <AppText variant="caption" tone="muted">
             {info}
           </AppText>
         ) : rules === undefined ? null : (
-          <AppText variant="subhead" tone="muted">
+          <AppText variant="caption" tone="muted">
             Payments under {formatRp(rules.min_payment)} earn no cashback.
           </AppText>
         )}

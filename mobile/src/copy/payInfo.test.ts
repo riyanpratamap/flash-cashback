@@ -25,7 +25,7 @@ describe('payInfoLine (AC-63)', () => {
   });
 
   it('exactly the minimum earns', () => {
-    expect(line(20000)).toBe('Earn up to Rp1.000 cashback. Final amount is confirmed after payment.');
+    expect(line(20000)).toBe("Earn up to Rp1.000 cashback. You'll see the exact amount after you pay.");
   });
 
   it('campaign ended', () => {
@@ -45,14 +45,14 @@ describe('payInfoLine (AC-63)', () => {
   });
 
   it('5% exactly equals what is left: the plain line', () => {
-    expect(line(100000, 'ACTIVE', 5000)).toBe('Earn up to Rp5.000 cashback. Final amount is confirmed after payment.');
+    expect(line(100000, 'ACTIVE', 5000)).toBe("Earn up to Rp5.000 cashback. You'll see the exact amount after you pay.");
   });
 
   it('otherwise the estimate with the plain line', () => {
-    expect(line(100000)).toBe('Earn up to Rp5.000 cashback. Final amount is confirmed after payment.');
+    expect(line(100000)).toBe("Earn up to Rp5.000 cashback. You'll see the exact amount after you pay.");
   });
 
   it('an unknown status is treated like an active campaign', () => {
-    expect(line(100000, 'SOMETHING_NEW')).toBe('Earn up to Rp5.000 cashback. Final amount is confirmed after payment.');
+    expect(line(100000, 'SOMETHING_NEW')).toBe("Earn up to Rp5.000 cashback. You'll see the exact amount after you pay.");
   });
 });

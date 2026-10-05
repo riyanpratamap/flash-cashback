@@ -92,8 +92,8 @@ Payment Rp500.000                        +Rp25.000
 
 Amount (IDR)
 [ 100.000                                          ]
-(i) Earn up to Rp5.000 cashback. Final amount is
-    confirmed after payment.
+(i) Earn up to Rp5.000 cashback. You'll see the exact
+    amount after you pay.
 ( Rp20.000 ) ( Rp50.000 ) ( Rp100.000 )
 
 [                Pay Rp100.000                     ]
@@ -113,7 +113,7 @@ With no amount typed, the slot under the field reads "Payments under Rp20.000 ea
   - nothing left today: "This payment won't earn cashback. You've reached today's limit."
   - 5% is more than what is left today: the estimate is what is left, and the line reads "Earn up to Rp3.000
     cashback, the rest of today's Rp50.000 limit." (D02)
-  - otherwise: "Earn up to Rp{estimate} cashback. Final amount is confirmed after payment."
+  - otherwise: "Earn up to Rp{estimate} cashback. You'll see the exact amount after you pay."
   - The estimate never knows the budget, so a `PARTIAL_BUDGET` result can be lower; "up to" covers it.
 - **Pay button:** on press it disables at once, creates one idempotency key for this attempt, and sends the request.
 - **Outcomes:** success opens screen 3. A timeout or server error opens screen 4. A rejected amount shows the inline
