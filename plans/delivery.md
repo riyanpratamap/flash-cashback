@@ -316,7 +316,7 @@ balance 15000; Redis started → healthz redis ok; pause/resume awards and redem
 
 ## P5 — Mobile app
 
-- [ ] **P5.1** Expo scaffold, API client, formatting, user — AC-67, AC-68 · `ts` · not critical
+- [x] **P5.1** Expo scaffold, API client, formatting, user — AC-67, AC-68 · `ts` · not critical
   - Install: `npx create-expo-app@<pinned> mobile` (TypeScript, Expo Router), delete its `AGENTS.md`, `CLAUDE.md`,
     `.claude/`, reset script; `npx expo install @tanstack/react-query @react-native-async-storage/async-storage
     expo-crypto`; `npm i -D jest-expo @testing-library/react-native @types/jest eslint-config-expo` (lockfile
@@ -325,6 +325,7 @@ balance 15000; Redis started → healthz redis ok; pause/resume awards and redem
     `copy/codes.ts`, `user/`.
   - Done when: `make mobile-check` exits 0 (formatter, classification, base URL, user kept after remount); a
     deliberate lint error makes the stop check exit 2.
+  - Result: `make mobile-check` (74 tests), `make gate` exit 0; expo-doctor 21/21; stop check exit 2 on a lint error, 0 after; Expo SDK 57 (expo 57.0.26, create-expo-app 5.0.0), react-native 0.86.3, TypeScript 6.0.3, jest-expo 57.0.5, RNTL 14.0.1, @types/jest 29.5.14 (expo's pin), eslint 9.39.5; CI job `mobile` added; the template's `src/app` kept as the router root.
 - [ ] **P5.2** Read screens: Home, History, How it works — AC-64, AC-66, AC-67 (picker), AC-75 · US-6 · `ts` · not
   critical
   - Done when: RNTL tests (awaited) cover every AC-64 state; AC-66 runs with `TZ=UTC`; AC-75 serves `rules` as 1000
