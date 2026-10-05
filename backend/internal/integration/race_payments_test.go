@@ -59,29 +59,38 @@ type raceResult struct {
 	err   error
 }
 
+// allAtOnce runs f(0..n-1), each in its own goroutine, released together.
+// Goroutines only record; the caller asserts.
+func allAtOnce(n int, f func(i int)) {
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			f(i)
+		}()
+	}
+	close(start)
+	wg.Wait()
+}
+
 // payAllAtOnce sends every request from its own goroutine, released together.
 // Nothing here holds a lock outside a request, so a failed run leaves no
 // transaction to roll back. Goroutines only record; the test asserts.
 func payAllAtOnce(h http.Handler, reqs []raceReq) []raceResult {
 	out := make([]raceResult, len(reqs))
-	start := make(chan struct{})
-	var wg sync.WaitGroup
-	for i, r := range reqs {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-start
-			key := r.key
-			if key == "" {
-				key = uuid.NewString()
-			}
-			out[i].reply, out[i].err = doPayment(h, map[string]string{
-				"X-User-ID": r.user, "Idempotency-Key": key,
-			}, `{"amount":`+itoa(r.amount)+`}`)
-		}()
-	}
-	close(start)
-	wg.Wait()
+	allAtOnce(len(reqs), func(i int) {
+		r := reqs[i]
+		key := r.key
+		if key == "" {
+			key = uuid.NewString()
+		}
+		out[i].reply, out[i].err = doPayment(h, map[string]string{
+			"X-User-ID": r.user, "Idempotency-Key": key,
+		}, `{"amount":`+itoa(r.amount)+`}`)
+	})
 	return out
 }
 
@@ -317,11 +326,12 @@ func TestRacePaySameKeyTwoBodiesAC24(t *testing.T) {
 	assertReconciled(t)
 }
 
-// holdCampaignLock opens a transaction that holds the campaign row lock. The
-// returned release rolls it back once, whoever calls it first (pgx.Tx is not
-// safe for concurrent use, so the Once guards the timer and the cleanup). pid
-// is the holder's backend pid, read before any timer can touch the holder.
-func holdCampaignLock(t *testing.T) (release func(), pid int64) {
+// holdRowLock opens a transaction that runs the locking statement sql, so the
+// row it names stays locked. The returned release rolls it back once, whoever
+// calls it first (pgx.Tx is not safe for concurrent use, so the Once guards the
+// timer and the cleanup). pid is the holder's backend pid, read before any
+// timer can touch the holder.
+func holdRowLock(t *testing.T, sql string, args ...any) (release func(), pid int64) {
 	t.Helper()
 	ctx := context.Background()
 	holder, err := pool.Begin(ctx)
@@ -335,11 +345,16 @@ func holdCampaignLock(t *testing.T) (release func(), pid int64) {
 	var once sync.Once
 	release = func() { once.Do(func() { _ = holder.Rollback(ctx) }) }
 	t.Cleanup(release)
-	if _, err := holder.Exec(ctx,
-		`SELECT 1 FROM campaigns WHERE id = 'flash-cashback' FOR NO KEY UPDATE`); err != nil {
+	if _, err := holder.Exec(ctx, sql, args...); err != nil {
 		t.Fatal(err)
 	}
 	return release, pid
+}
+
+// holdCampaignLock holds the campaign row lock.
+func holdCampaignLock(t *testing.T) (release func(), pid int64) {
+	t.Helper()
+	return holdRowLock(t, `SELECT 1 FROM campaigns WHERE id = 'flash-cashback' FOR NO KEY UPDATE`)
 }
 
 // AC-27: a payment that waits longer than the lock timeout answers 503
@@ -400,18 +415,25 @@ func countInt(sql string, args ...any) (int64, error) {
 	return n, err
 }
 
-// waitBlockedBy reports whether, within 5 s, a client backend is blocked by
-// the backend holderPid. The error is the last query error, if any.
-func waitBlockedBy(holderPid int64) (bool, error) {
+// waitBlockedByN reports whether, within 5 s, at least n client backends wait
+// on the backend holderPid: directly, or queued behind a backend that does
+// (PostgreSQL's row-lock queue makes the second waiter wait on the first, not
+// on the holder). The error is the last query error, if any.
+func waitBlockedByN(holderPid int64, n int64) (bool, error) {
 	var pollErr error
 	blocked := waitFor(5*time.Second, func() bool {
-		n, err := countInt(`SELECT count(*) FROM pg_stat_activity
-			WHERE backend_type = 'client backend' AND $1::int = ANY(pg_blocking_pids(pid))`, holderPid)
+		got, err := countInt(`SELECT count(*) FROM pg_stat_activity
+			WHERE backend_type = 'client backend' AND ($1::int = ANY(pg_blocking_pids(pid))
+				OR EXISTS (SELECT 1 FROM unnest(pg_blocking_pids(pid)) AS b
+					WHERE $1::int = ANY(pg_blocking_pids(b))))`, holderPid)
 		pollErr = err
-		return err == nil && n > 0
+		return err == nil && got >= n
 	})
 	return blocked, pollErr
 }
+
+// waitBlockedBy waits for one backend blocked by holderPid.
+func waitBlockedBy(holderPid int64) (bool, error) { return waitBlockedByN(holderPid, 1) }
 
 // AC-70: the client hangs up while its payment waits for the campaign lock.
 // The payment still commits, and the resend with the same key replays it.
