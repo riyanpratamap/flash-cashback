@@ -456,6 +456,35 @@ From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 foll
     `make mobile-check` exits 0; the only test changed is `payment-result.test.tsx` (one line).
   - Result: `make mobile-check` exit 0, 27 suites / 297 tests; only `payment-result.test.tsx` changed (one line into three assertions: `Amount`, the reference, `3 Oct, 14:32 WIB`; mutation: label `Amount` renamed -> red). Greps for raw `fontSize` / hex in `src/app` and `src/ui` and for `<Text` in `src/app`: empty. `primaryStrong` is `#1869B6` (5.62:1 on white; the suggested `#1A6FC0` gave 4.49:1 on the tint). `FormScreen` is new: it pins the action above the keyboard. Review: F1–F7 applied (keyboard view `padding` on Android too, `minHeight` buttons, vertical-only slop on small buttons, `primaryTintPressed` `#D6E9FB` 4.53:1, `gap: 0` on list cards, padded empty/loading/error notes, no bottom inset while the keyboard is up); F8 in the commit message; F9 not applied (owner's brief: no underline). `make mobile-check` exit 0, 297 tests.
 
+From `/change` (2026-10-06, after C6): AC-62, AC-63 amended, AC-65 split into AC-65a/b; wireframe screens 1, 2, 3, 5.
+
+- [ ] **C7** Home: the campaign strip below the hero and Make a payment, lighter · `ts` · not critical
+  - Strip after the balance hero and the pay button, above Earned today; title subhead semibold, text caption,
+    padding 8 / 12, tint kept, How it works in caption with its 44 pt target; the balance is the only display text.
+  - Done when: a test asserts the strip text renders after `Make a payment` and before `Earned today`, red then green;
+    `make mobile-check` exits 0.
+- [ ] **C8** Redemption success screen; balance only on a fresh 201 — AC-65a, AC-65b · `ts` · **critical** (attempt state)
+  - `done` carries `replayed` from `ApiResult` (`src/attempts/machine.ts`, owner-approved). New `src/ui/SuccessMark.tsx`
+    (Views only, 72 pt positive-tint circle, check in positive, role image, label "Success"). Redeem success: mark,
+    "Redemption successful", amount (display, tabular), "Sent to your main account", details (Reference; Sent to: Main
+    account; "Cashback balance: Rp{balance_after}" only when not replayed); unparsed body: mark, "Your redemption went
+    through.", "Check your balance on the home screen."; footer Done only.
+  - Cause (2a, reproduced on the stack): a replay after other activity returned the stored `balance_after` 3000 while
+    `GET /me/cashback` was 8000; the app dropped `replayed` and printed the stale value.
+  - Done when: tests red then green: a replayed `done` hides the balance; an unparsed body hides it; a fresh 201 shows
+    it; machine test: `done.replayed` follows the header. Mutation (ignore `replayed`) red; code-checker report.
+- [ ] **C9** Pay: one line slot under the amount, footer holds only Pay — AC-63 · `ts` · not critical
+  - Hint while empty, `payInfoLine` once typed, the error alert takes the slot; below-minimum text in
+    `src/copy/payInfo.ts` becomes "This payment won't earn cashback. The minimum is Rp20.000.".
+  - Done when: test shows the hint, then the info line, never both, red then green; `payInfo.test.ts` and `pay.test.tsx`
+    updated for the new wording only; `make mobile-check` exits 0.
+- [ ] **C10** Payment result leads with the payment; cashback block below — AC-62 · `ts` · not critical
+  - Mark, "Payment successful", amount (display, text colour), caption time+zone then reference, Cashback block
+    (label subhead muted, amount headline, positive above zero, chip and text in subhead, How it works when called);
+    Amount / Reference / Time card removed; unparsed body: mark, title, attempt amount, no block; file comment updated.
+  - Done when: test asserts the payment amount renders before "Cashback earned", red then green;
+    `payment-result.test.tsx` updated for the removed labels; `make mobile-check` exits 0.
+
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
 
