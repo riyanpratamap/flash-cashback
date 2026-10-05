@@ -9,12 +9,14 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 jest.mock('expo-crypto', () => ({ randomUUID: jest.fn() }));
 
 const mockScreens: Record<string, unknown> = {};
+let mockStackOptions: unknown;
 jest.mock('expo-router', () => {
   function Screen({ name, options }: { name: string; options: unknown }) {
     mockScreens[name] = options;
     return null;
   }
-  function Stack({ children }: { children: ReactNode }) {
+  function Stack({ children, screenOptions }: { children: ReactNode; screenOptions?: unknown }) {
+    mockStackOptions = screenOptions;
     return children;
   }
   Stack.Screen = Screen;
@@ -23,6 +25,7 @@ jest.mock('expo-router', () => {
 
 beforeEach(() => {
   Object.keys(mockScreens).forEach((name) => delete mockScreens[name]);
+  mockStackOptions = undefined;
 });
 
 describe('root layout screen options (AC-60)', () => {
@@ -42,5 +45,11 @@ describe('root layout screen options (AC-60)', () => {
     await render(<RootLayout />);
     await waitFor(() => expect(mockScreens['redeem']).toBeDefined());
     expect(mockScreens['redeem']).toEqual({ title: 'Redeem cashback' });
+  });
+
+  it('every back button shows the arrow only, without the previous title', async () => {
+    await render(<RootLayout />);
+    await waitFor(() => expect(mockScreens['redeem']).toBeDefined());
+    expect(mockStackOptions).toMatchObject({ headerBackButtonDisplayMode: 'minimal' });
   });
 });

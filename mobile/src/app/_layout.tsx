@@ -15,7 +15,7 @@ export default function RootLayout() {
       <UserProvider>
         <AttemptProvider>
           <AttemptNavigator />
-          <Stack>
+          <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
             <Stack.Screen name="index" options={{ title: 'Flash Cashback', headerShown: false }} />
             <Stack.Screen name="pay" options={{ title: 'Make a payment' }} />
             <Stack.Screen name="payment-result" options={{ headerShown: false, gestureEnabled: false }} />
