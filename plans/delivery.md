@@ -76,6 +76,10 @@ is built through the services; a test may set only a switch flag or the reseeded
    0, or green in the browser).
 8. The AGENTS.md clean-clone check → healthz succeeds, then `down -v` in the clone.
 
+**P0 gate result (2026-10-05):** steps 1–3 and 5–8 pass; CI run 37252821294 `gate` and `smoke` green. Step 4: the
+script exits 2 and blocks the main session; the subagent block is not proven (probe transcript shows no message).
+The owner accepted this evidence; the subagent proof moves to P6.2.
+
 ## P1 — Pure rules and read endpoints
 
 - [ ] **P1.1** Domain rules — AC-01–12 and AC-71 (rule level), AC-13 (reference) · INV-07 · TC1, TC2 · `go` · **critical**
@@ -242,6 +246,8 @@ exit=0 · CI `gate`, `smoke`, `mobile` green.
     before `up -d --wait`; walkthrough from the README only on Expo Go on an Android phone (C11); reconcile after it →
     exit=0; `! docker compose logs api | grep -qEi 'select |insert |goroutine '; echo exit=$?` → exit=0; the owner's
     recording link is filled in; CI green on the commit.
+  - Carried from the P0 gate step 4: rerun the subagent stop-hook proof (a subagent that writes the unformatted
+    `zz_stop.go` itself, then tries to finish; its transcript must show the stop-check block).
 
 **P6 gate:** every P6.2 step exits 0 / passes as stated, recorded in the P6.2 commit body.
 
