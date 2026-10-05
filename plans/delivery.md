@@ -2,9 +2,9 @@
 
 Order of work for [prd.md](../docs/prd.md) and [tech-spec.md](../docs/tech-spec.md) ("§" = tech-spec section). Phases
 follow the AGENTS.md outline as cut by D08 (read caches and CI kept), with the load test restored by D51 and dropped again by D52. Each task lands as one commit
-carrying its code, its tests, its ticked box here, and its `plans/learnings.md` row (AGENTS rule 9). **28 tasks**,
+carrying its code, its tests, its ticked box here, and its `plans/learnings.md` row (AGENTS rule 9). **29 tasks**,
 above the ~25 guide by owner decision: smaller reviewable tasks; merging would create two oversized tasks;
-P4.5 added by D51; its tooling removed by D52.
+P4.5 added by D51; its tooling removed by D52. P4.6 added by D53.
 
 **Naming (D49):** repository `github.com/riyanpratamap/flash-cashback` (the existing `origin`, cloned by the
 clean-clone check); Go module `github.com/riyanpratamap/flash-cashback/backend`, `go.mod` in `backend/`. Tools on the
@@ -265,6 +265,20 @@ green on `cebfe64`.
   - Removed (D52, 2026-10-05): the owner dropped the load test ("the numbers don't prove anything"); `loadtest/`,
     the compose `k6` service and `make load-test` are deleted, `CACHE_READS` stays. This Result is kept as the one-off
     measurement.
+- [ ] **P4.6** Campaign cache only — AC-42, AC-45, AC-76 (amended), AC-46 (removed) · INV-11 · TC8, TC9 · D53 · `go` ·
+  **critical** (Pay/Redeem after-commit path)
+  - Remove the cashback read cache: `ReadCache.Cashback` / `SetCashback`, `cashbackTTL`, `TodayRow.Now` if nothing else
+    reads it, `CashbackKey`, `CACHE_CASHBACK_TTL` (`internal/config`, `.env.example`, `docker-compose.yml`); `Reads`
+    serves `GET /me/cashback` from PostgreSQL only. Pay deletes only `fc:v1:campaign` when exhausted (nothing on an
+    unknown COMMIT outcome); Redeem deletes nothing and holds no `Invalidator`. Switch commands and `demo-reset` unchanged.
+  - Tests first: AC-42 amended (cashback reads fresh after pay and redeem with no `fc:v1:cashback:*` key written;
+    campaign `PAUSED` after `pause-awards`, `ENDED` after the last-of-budget award, cache warm); AC-45 stale key
+    999999 planted for user_a → `GET /me/cashback` 18000 and redeem 20000 → 422; AC-76 campaign only. Delete the
+    AC-46 tests and the cashback-key invalidation tests, and say which tests were removed in the Result.
+  - **Mutations:** `Reads` reads `fc:v1:cashback:{user}` again → AC-45 red; Pay campaign delete removed → AC-42
+    `ENDED` red; flag ignored → AC-76 red.
+  - Done when: `make gate` and `make test-race` exit 0; mutations reported; compose: after a read of user_a, `KEYS
+    fc:v1:*` shows only `fc:v1:campaign`; reconcile exit 0.
 
 **P4 gate:** `make gate`, `make test-race` → exit 0 · stack up · `docker compose exec -e FC_DEMO=1 api /app/admin
 demo-reset` → exit 0 · `docker compose stop redis`; healthz → 200, `status` ok, redis `degraded`; `GET /me/cashback`
