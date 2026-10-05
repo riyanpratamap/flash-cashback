@@ -385,13 +385,18 @@ by deep link had no back (`initialRouteName: 'index'`). Reconcile exit 0 (INV-01
 
 ## P6 — Hardening, README, submission
 
-- [ ] **P6.1** README — all trust conditions · `go`, `ts` · not critical
+- [x] **P6.1** README — all trust conditions · `go`, `ts` · not critical
   - Sections in order: how to run (stack, curl examples, app on Expo Go Android / iOS simulator with
     `EXPO_PUBLIC_API_URL`, changing port 8080, a placeholder link `TODO(owner): screen recording` for the owner to
     fill); trust conditions (copied from DECISIONS.md, not rewritten); rules as interpreted; decisions that matter;
     rejected options; out of scope; where it breaks (§12). The load test (D51, dropped by D52) goes under rejected
     options. Every rule line checked against its AC.
   - Done when: the owner reads it start to finish and each curl example runs as written.
+  - Result: `README.md` written in the AGENTS.md section order; the D07 table is copied verbatim (22 rows, diffed
+    against DECISIONS.md). Every README command run as written on the stack after `demo-reset`: healthz, reads 200,
+    payment 201 then replay 200 (`Idempotent-Replayed: true`, same body), redeem 201, four switch commands, reconcile,
+    each exit 0. The run found `GET /campaign` needs `X-User-ID` (400 `MISSING_USER`); the example now sends it.
+    The screen-recording link stays `TODO(owner)` for P6.2.
 - [ ] **P6.2** Submission checks — AC-56, AC-57 · owner-run · not critical
   - `docker compose down -v`; `docker builder prune -af`; the clean-clone check with `docker compose build --no-cache`
     before `up -d --wait`; walkthrough from the README only on Expo Go on an Android phone (C11); reconcile after it →
