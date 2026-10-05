@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCampaign } from '../api/hooks';
 import { parsePaymentResult } from '../api/payments';
@@ -35,39 +36,42 @@ export default function PaymentResult() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Text accessibilityRole="header" style={styles.title}>
-        Payment successful
-      </Text>
-      <Text style={styles.amount}>{formatRp(result?.amount ?? state.attempt.amount)}</Text>
-      {result === null ? null : (
-        <Text>
-          Ref. {result.reference} · {formatStamp(result.createdAt)}
-          {rules === undefined ? '' : ` ${zoneLabel(rules.timezone)}`}
+    <SafeAreaView style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text accessibilityRole="header" style={styles.title}>
+          Payment successful
         </Text>
-      )}
-      {result === null ? null : (
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.section}>Cashback earned</Text>
-            <Text style={styles.section}>{formatSigned(result.awarded, 'earned')}</Text>
+        <Text style={styles.amount}>{formatRp(result?.amount ?? state.attempt.amount)}</Text>
+        {result === null ? null : (
+          <Text>
+            Ref. {result.reference} · {formatStamp(result.createdAt)}
+            {rules === undefined ? '' : ` ${zoneLabel(rules.timezone)}`}
+          </Text>
+        )}
+        {result === null ? null : (
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <Text style={styles.section}>Cashback earned</Text>
+              <Text style={styles.section}>{formatSigned(result.awarded, 'earned')}</Text>
+            </View>
+            {copy === null ? null : (
+              <>
+                {copy.chip === null ? null : <Text style={styles.chip}>{copy.chip}</Text>}
+                <Text>{copy.text}</Text>
+                {copy.howItWorks ? <LinkText label="How it works" onPress={() => router.push('/how-it-works')} /> : null}
+              </>
+            )}
           </View>
-          {copy === null ? null : (
-            <>
-              {copy.chip === null ? null : <Text style={styles.chip}>{copy.chip}</Text>}
-              <Text>{copy.text}</Text>
-              {copy.howItWorks ? <LinkText label="How it works" onPress={() => router.push('/how-it-works')} /> : null}
-            </>
-          )}
-        </View>
-      )}
-      <Button label="Done" onPress={done} />
-      <Button label="Make another payment" variant="secondary" onPress={another} />
-    </ScrollView>
+        )}
+        <Button label="Done" onPress={done} />
+        <Button label="Make another payment" variant="secondary" onPress={another} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   content: { padding: 16, gap: 12, alignItems: 'stretch' },
   title: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
   amount: { fontSize: 28, fontWeight: '700', textAlign: 'center' },

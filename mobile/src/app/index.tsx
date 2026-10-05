@@ -1,6 +1,7 @@
 import { type Href, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '../api/hooks';
 import type { Campaign, CashbackSummary } from '../api/queries';
@@ -43,55 +44,57 @@ export default function Home() {
   };
 
   return (
-    <ScrollView
-      testID="home-scroll"
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <Text accessibilityRole="header" style={styles.heading}>
-        Flash Cashback
-      </Text>
-      <UserSwitcher />
-      {unconfirmed.map((attempt) => (
-        <UnconfirmedCard
-          key={attempt.key}
-          attempt={attempt}
-          onCheckNow={() => checkNow(attempt.key)}
-          onDismiss={() => {
-            void dismiss(attempt.key).then(() => setDismissed(true));
-          }}
-        />
-      ))}
-      {dismissed ? <Text>{HISTORY_HINT}</Text> : null}
-      {campaign.data !== undefined && cashback.data !== undefined ? (
-        <Loaded campaign={campaign.data} cashback={cashback.data} onNavigate={(href) => router.push(href)} />
-      ) : campaign.isError || cashback.isError ? (
-        <LoadError message={LOAD_ERROR} onRetry={() => void refetchAll()} />
-      ) : (
-        <Text>Loading…</Text>
-      )}
-      {campaign.data !== undefined && cashback.data !== undefined ? (
-        <View style={styles.card}>
-          <View style={styles.rowBetween}>
-            <Text accessibilityRole="header" style={styles.section}>
-              Recent activity
-            </Text>
-            <LinkText label="See all" onPress={() => router.push('/history')} />
-          </View>
-          {activity.data !== undefined ? (
-            activity.data.items.length === 0 ? (
-              <Text>No activity yet.</Text>
+    <SafeAreaView style={styles.screen}>
+      <ScrollView
+        testID="home-scroll"
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <Text accessibilityRole="header" style={styles.heading}>
+          Flash Cashback
+        </Text>
+        <UserSwitcher />
+        {unconfirmed.map((attempt) => (
+          <UnconfirmedCard
+            key={attempt.key}
+            attempt={attempt}
+            onCheckNow={() => checkNow(attempt.key)}
+            onDismiss={() => {
+              void dismiss(attempt.key).then(() => setDismissed(true));
+            }}
+          />
+        ))}
+        {dismissed ? <Text>{HISTORY_HINT}</Text> : null}
+        {campaign.data !== undefined && cashback.data !== undefined ? (
+          <Loaded campaign={campaign.data} cashback={cashback.data} onNavigate={(href) => router.push(href)} />
+        ) : campaign.isError || cashback.isError ? (
+          <LoadError message={LOAD_ERROR} onRetry={() => void refetchAll()} />
+        ) : (
+          <Text>Loading…</Text>
+        )}
+        {campaign.data !== undefined && cashback.data !== undefined ? (
+          <View style={styles.card}>
+            <View style={styles.rowBetween}>
+              <Text accessibilityRole="header" style={styles.section}>
+                Recent activity
+              </Text>
+              <LinkText label="See all" onPress={() => router.push('/history')} />
+            </View>
+            {activity.data !== undefined ? (
+              activity.data.items.length === 0 ? (
+                <Text>No activity yet.</Text>
+              ) : (
+                activity.data.items.map((item) => <ActivityRow key={`${item.type}-${item.id}`} item={item} />)
+              )
+            ) : activity.isError ? (
+              <Text accessibilityRole="alert">{ACTIVITY_ERROR}</Text>
             ) : (
-              activity.data.items.map((item) => <ActivityRow key={`${item.type}-${item.id}`} item={item} />)
-            )
-          ) : activity.isError ? (
-            <Text accessibilityRole="alert">{ACTIVITY_ERROR}</Text>
-          ) : (
-            <Text>Loading…</Text>
-          )}
-        </View>
-      ) : null}
-    </ScrollView>
+              <Text>Loading…</Text>
+            )}
+          </View>
+        ) : null}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -176,6 +179,7 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   content: { padding: 16, gap: 12 },
   heading: { fontSize: 24, fontWeight: '700' },
   switcher: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, BackHandler, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, StyleSheet, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAttempts } from '../attempts/AttemptProvider';
 import { blocksLeaving } from '../attempts/blockBack';
@@ -24,7 +25,7 @@ export default function Checking() {
   const verb = state.attempt.kind === 'payment' ? 'pay' : 'redeem';
 
   return (
-    <View style={styles.content}>
+    <SafeAreaView style={styles.content}>
       {state.phase === 'checking' ? <ActivityIndicator testID="checking-spinner" size="large" /> : null}
       <Text accessibilityRole="header" style={styles.title}>
         Checking your {noun}...
@@ -34,7 +35,7 @@ export default function Checking() {
         {`This is taking longer than usual. Please don't ${verb} again. This screen updates as soon as we have the result.`}
       </Text>
       {state.phase === 'waiting' ? <Button label="Check again" onPress={checkAgain} /> : null}
-    </View>
+    </SafeAreaView>
   );
 }
 
