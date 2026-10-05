@@ -21,7 +21,7 @@ import {
   type MoneyAnswer,
 } from '../test/fixtures';
 import { dismissTo, resetRouter } from '../test/router-mock';
-import Redeem from './redeem';
+import Redeem from '../app/redeem';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

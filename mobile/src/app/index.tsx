@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -113,7 +113,7 @@ function UserSwitcher() {
   );
 }
 
-type LoadedProps = { campaign: Campaign; cashback: CashbackSummary; onNavigate: (href: string) => void };
+type LoadedProps = { campaign: Campaign; cashback: CashbackSummary; onNavigate: (href: Href) => void };
 
 function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
   const { rules } = campaign;

@@ -3,7 +3,7 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { HistoryItem } from '../api/queries';
 import { cashback, fetchMock, renderScreen, requestedUrls, resetStorage, serve } from '../test/fixtures';
 import { regainFocus } from '../test/router-mock';
-import History from './history';
+import History from '../app/history';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

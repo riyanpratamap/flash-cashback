@@ -17,7 +17,7 @@ import {
   serveMoney,
 } from '../test/fixtures';
 import { push, regainFocus } from '../test/router-mock';
-import Home from './index';
+import Home from '../app/index';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

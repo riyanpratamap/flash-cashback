@@ -5,8 +5,8 @@ import { randomUUID } from 'expo-crypto';
 import { useAttempts } from '../attempts/AttemptProvider';
 import { ATTEMPTS_STORAGE_KEY } from '../attempts/store';
 import { campaign, cashback, moneyOk, moneyRejected, posts, renderApp, resetStorage, serveMoney } from '../test/fixtures';
-import Home from './index';
-import Pay from './pay';
+import Home from '../app/index';
+import Pay from '../app/pay';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

@@ -8,7 +8,7 @@ import { useAttempts } from '../attempts/AttemptProvider';
 import { ATTEMPTS_STORAGE_KEY } from '../attempts/store';
 import { moneyOk, PAID, posts, renderApp, resetStorage, serveMoney } from '../test/fixtures';
 import { dismissTo, push, resetRouter } from '../test/router-mock';
-import PaymentResult from './payment-result';
+import PaymentResult from '../app/payment-result';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

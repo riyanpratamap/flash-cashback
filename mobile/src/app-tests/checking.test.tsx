@@ -4,7 +4,7 @@ import { BackHandler, Pressable, Text } from 'react-native';
 
 import { useAttempts } from '../attempts/AttemptProvider';
 import { moneyOk, moneyRejected, posts, renderApp, resetStorage, serveMoney, type MoneyAnswer } from '../test/fixtures';
-import Checking from './checking';
+import Checking from '../app/checking';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
