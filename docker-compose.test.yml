@@ -1,0 +1,32 @@
+# Throwaway PostgreSQL and Redis for the integration tests (make test-integration).
+# Host ports are uncommon so they do not collide with a local install.
+name: flash-cashback-test
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: flash
+      POSTGRES_PASSWORD: flash
+      POSTGRES_DB: flash
+    ports:
+      - "55432:5432"
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "flash", "-d", "flash"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:8
+    ports:
+      - "56379:6379"
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
