@@ -195,6 +195,12 @@ reconcile exit 0 (INV-01–09 ok); `down` exit 0; CI run 37265718476 `gate` and 
 **P3 gate:** P2 gate commands, plus curl `POST /v1/redemptions` 1000 as user_a → 201 with `balance_after` · `GET
 /v1/me/history` lists both, newest first · reconcile → exit=0.
 
+**P3 gate result (2026-10-05):** all steps pass. `make gate` exit 0; `make test-race` exit 0 (230 s); `up -d --build
+--wait` exit 0; POST 100000 as user_a → 201, 5000 `AWARDED`; same key → 200, `Idempotent-Replayed: true`, same body;
+POST /redemptions 1000 → 201, `balance_after` 14000; `GET /me/history` lists the redemption, then the payments,
+newest first; reconcile exit 0 (INV-01–09 ok, liability 14000); `down` exit 0; CI run 37272712560 `gate` and `smoke`
+green on `cebfe64`.
+
 ## P4 — Operations tools, then Redis invalidation, then read caches
 
 - [ ] **P4.1** Switch commands — AC-36, AC-37, AC-40, AC-12 / AC-32 / AC-41 via the command · TC7 (base) · `go` ·
