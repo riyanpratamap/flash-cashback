@@ -559,6 +559,15 @@ From `/change` (2026-10-06, after C15): AC-62 amended; wireframe screen 3.
     no sentence: red on 11 assertions, then green; chip suffix dropped turns 6 red. Scroll content centred
     vertically (`flexGrow: 1`, `justifyContent: 'center'`), owner request. `make mobile-check` exit 0.
 
+From `/change` (2026-10-06, after C16): AC-65a amended; wireframe screen 5.
+
+- [ ] **C17** Compact, centred redemption result — AC-65a, AC-65b · `ts` · not critical
+  - Success view in `redeem.tsx`: drop the details card and the "Sent to" row; under "Sent to your main account" a
+    muted caption with the reference, then "Cashback balance Rp{balance_after}" on a fresh 201 only; content centred
+    vertically above Done. The form view keeps its "Sent to" row.
+  - Done when: the Redeem tests assert the caption reference and balance text, no "Sent to" / "Main account" on the
+    success view, and no balance on a replay, red on an assertion then green; `make mobile-check` exits 0.
+
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
 
