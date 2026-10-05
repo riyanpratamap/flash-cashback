@@ -61,7 +61,7 @@ Recent activity                            See all
 Cashback redeemed                        +Rp42.000
 To main account
 Payment                                 −Rp500.000
-+Rp25.000 cashback
+Earned Rp25.000 cashback
 ```
 
 - **User switcher:** marked `DEMO`, stands in for login. It sets `X-User-ID`, reloads the screen, and the choice is
@@ -260,24 +260,24 @@ Up to Rp18.000                        ( Redeem all )
 
 TODAY, 3 OCT
 Payment                                 −Rp100.000
-14:32 · +Rp5.000 cashback
+14:32 · Earned Rp5.000 cashback
 Payment                                  −Rp15.000
-13:05 · No cashback · Below minimum
+13:05 · No cashback
 Cashback redeemed                        +Rp42.000
 To main account · 11:20
 
 YESTERDAY, 2 OCT
 Payment                                 −Rp200.000
-19:45 · +Rp10.000 cashback
+19:45 · Earned Rp10.000 cashback
 ```
 
 - Every payment (Rp0 ones included) and every redemption: a transaction list, not only cashback.
 - The header is the cashback balance, not a running balance per row and not a sum of the right column.
 - The right column is the money the transaction moved: a payment is `−` its amount, a redemption is `+` its amount
   (sent to the main account) in the positive colour.
-- Title: "Payment" or "Cashback redeemed". Subtitle of a payment: the time, then "+Rp{awarded} cashback", or "No
-  cashback" when it earned Rp0, then the reason chip when the payment earned less than the full 5%. Subtitle of a
-  redemption: "To main account", then the time.
+- Title: "Payment" or "Cashback redeemed". Subtitle of a payment: the time, then "Earned Rp{awarded} cashback" (no
+  sign), then the reason chip when the award was above Rp0 but less than the full 5%; a Rp0 payment reads "No
+  cashback" with no reason. Subtitle of a redemption: "To main account", then the time.
 - Grouped by day, from the date in `created_at` as sent by the API, never converted to the device's time zone.
 - Empty: "No activity yet. Make a payment to start earning cashback." Error: "Couldn't load your history." with Try
   again.

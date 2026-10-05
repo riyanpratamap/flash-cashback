@@ -211,8 +211,8 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
   mark, "Your redemption went through.", and "Check your balance on the home screen.", with no balance.
 - **AC-66** With the device in UTC and an item at 2026-10-04T00:30:00+07:00, History groups it under 4 Oct; it shows at most 20 rows; row content is AC-66a.
 - **AC-66a** History (titled "Transaction history", header "Cashback balance") shows a payment of Rp100.000 that
-  earned Rp5.000 as "Payment", "14:32 · +Rp5.000 cashback", and "−Rp100.000"; a partial award adds its reason chip
-  after the cashback; a Rp0 payment reads "No cashback" then its chip; a redemption of Rp42.000 shows "Cashback
+  earned Rp5.000 as "Payment", "14:32 · Earned Rp5.000 cashback", and "−Rp100.000"; a partial award adds its reason
+  chip after the cashback; a Rp0 payment reads "No cashback" with no chip; a redemption of Rp42.000 shows "Cashback
   redeemed", "To main account · 11:20", and "+Rp42.000".
 - **AC-66b** Home recent activity rows have the AC-66a title, amount, and subtitle without the time.
 - **AC-67** The chosen demo user sets `X-User-ID` on every request and is remembered after the app restarts.
