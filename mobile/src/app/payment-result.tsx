@@ -3,13 +3,13 @@ import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useCampaign } from '../api/hooks';
-import { parsePaymentResult } from '../api/payments';
-import { useAttempts } from '../attempts/AttemptProvider';
-import { reasonCopy, zoneLabel } from '../copy/codes';
-import { formatStamp } from '../copy/stamp';
-import { formatRp, formatSigned } from '../money/format';
-import { Button, LinkText } from '../ui/Button';
+import { useCampaign } from '@/api/hooks';
+import { parsePaymentResult } from '@/api/payments';
+import { useAttempts } from '@/attempts/AttemptProvider';
+import { reasonCopy, zoneLabel } from '@/copy/codes';
+import { formatStamp } from '@/copy/stamp';
+import { formatRp, formatSigned } from '@/money/format';
+import { Button, LinkText } from '@/ui/Button';
 
 /** Screen 3. The payment always shows as successful; the cashback is a separate card (wireframe). */
 export default function PaymentResult() {

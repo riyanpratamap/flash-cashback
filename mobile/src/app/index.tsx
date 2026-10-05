@@ -3,17 +3,17 @@ import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '../api/hooks';
-import type { Campaign, CashbackSummary } from '../api/queries';
-import { useAttempts } from '../attempts/AttemptProvider';
-import { bannerCopy, zoneLabel } from '../copy/codes';
-import { formatRp } from '../money/format';
-import { useUser } from '../user/UserProvider';
-import { DEMO_USERS, userLabel } from '../user/users';
-import { ActivityRow } from '../ui/ActivityRow';
-import { Button, LinkText } from '../ui/Button';
-import { LoadError } from '../ui/LoadError';
-import { UnconfirmedCard } from '../ui/UnconfirmedCard';
+import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '@/api/hooks';
+import type { Campaign, CashbackSummary } from '@/api/queries';
+import { useAttempts } from '@/attempts/AttemptProvider';
+import { bannerCopy, zoneLabel } from '@/copy/codes';
+import { formatRp } from '@/money/format';
+import { useUser } from '@/user/UserProvider';
+import { DEMO_USERS, userLabel } from '@/user/users';
+import { ActivityRow } from '@/ui/ActivityRow';
+import { Button, LinkText } from '@/ui/Button';
+import { LoadError } from '@/ui/LoadError';
+import { UnconfirmedCard } from '@/ui/UnconfirmedCard';
 
 const LOAD_ERROR = "Couldn't load your cashback. Your balance is safe. Check your connection and try again.";
 const ACTIVITY_ERROR = "Couldn't load your recent activity.";

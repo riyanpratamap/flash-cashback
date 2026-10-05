@@ -1,4 +1,4 @@
-import { apiBaseUrl, request } from './client';
+import { apiBaseUrl, request } from '@/api/client';
 
 type FetchInit = RequestInit & { headers: Record<string, string> };
 

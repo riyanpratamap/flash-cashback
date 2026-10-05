@@ -1,5 +1,5 @@
-import type { Campaign } from '../api/queries';
-import { formatRp } from '../money/format';
+import type { Campaign } from '@/api/queries';
+import { formatRp } from '@/money/format';
 
 // Server codes become the copy of docs/ui-wireframe.md (screens 1, 3, 5). Every mapping has a fallback for a code this
 // version does not know (D20). Numbers in the copy come from the campaign rules, never from the text.

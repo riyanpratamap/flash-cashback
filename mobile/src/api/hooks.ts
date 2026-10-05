@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef } from 'react';
 
-import { useUser } from '../user/UserProvider';
-import { campaignQuery, cashbackQuery, historyQuery, queryKeys } from './queries';
+import { useUser } from '@/user/UserProvider';
+import { campaignQuery, cashbackQuery, historyQuery, queryKeys } from '@/api/queries';
 
 export const HOME_ACTIVITY_LIMIT = 2;
 export const HISTORY_LIMIT = 20; // D08: the newest 20, no paging

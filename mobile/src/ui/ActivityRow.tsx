@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { HistoryItem } from '../api/queries';
-import { formatRp, formatSigned } from '../money/format';
+import type { HistoryItem } from '@/api/queries';
+import { formatRp, formatSigned } from '@/money/format';
 
 /** The title and amount of a history item (docs/ui-wireframe.md screens 1 and 6). Rp0 has no sign; redemptions use −. */
 export function activityLine(item: HistoryItem): { title: string; amount: string } {

@@ -4,11 +4,11 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { randomUUID } from 'expo-crypto';
 import { Pressable, Text } from 'react-native';
 
-import { newClient } from '../test/fixtures';
-import { UserProvider, useUser } from '../user/UserProvider';
-import { AttemptProvider, useAttempts } from './AttemptProvider';
-import { ATTEMPTS_STORAGE_KEY, RESOLVED_STORAGE_KEY } from './store';
-import type { SavedAttempt } from './types';
+import { newClient } from '@/test/fixtures';
+import { UserProvider, useUser } from '@/user/UserProvider';
+import { AttemptProvider, useAttempts } from '@/attempts/AttemptProvider';
+import { ATTEMPTS_STORAGE_KEY, RESOLVED_STORAGE_KEY } from '@/attempts/store';
+import type { SavedAttempt } from '@/attempts/types';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

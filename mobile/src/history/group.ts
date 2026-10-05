@@ -1,12 +1,11 @@
-import type { HistoryItem } from '../api/queries';
-
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] as const;
+import type { HistoryItem } from '@/api/queries';
+import { MONTHS } from '@/copy/stamp';
 
 export type DayGroup = { day: string; label: string; items: readonly HistoryItem[] };
 
 /** "2026-10-03" -> "3 OCT". Pure text: no Date, so the device zone cannot move a day (KP). */
 function shortDate(day: string): string {
-  const month = MONTHS[Number(day.slice(5, 7)) - 1] ?? '';
+  const month = (MONTHS[Number(day.slice(5, 7)) - 1] ?? '').toUpperCase();
   return `${Number(day.slice(8, 10))} ${month}`;
 }
 

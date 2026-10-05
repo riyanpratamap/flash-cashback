@@ -2,13 +2,13 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { useCampaign, useCashback } from '../api/hooks';
-import { parseRedemptionResult } from '../api/redemptions';
-import { useAttempts } from '../attempts/AttemptProvider';
-import { errorCopy } from '../copy/codes';
-import { formatAsTyped, formatRp, parseDigits } from '../money/format';
-import { Button } from '../ui/Button';
-import { LoadError } from '../ui/LoadError';
+import { useCampaign, useCashback } from '@/api/hooks';
+import { parseRedemptionResult } from '@/api/redemptions';
+import { useAttempts } from '@/attempts/AttemptProvider';
+import { errorCopy } from '@/copy/codes';
+import { formatAsTyped, formatRp, parseDigits } from '@/money/format';
+import { Button } from '@/ui/Button';
+import { LoadError } from '@/ui/LoadError';
 
 const PAUSED_LINE = errorCopy('REDEMPTION_PAUSED', {});
 

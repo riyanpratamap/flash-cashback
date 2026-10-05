@@ -2,14 +2,14 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import { randomUUID } from 'expo-crypto';
 import { BackHandler, Pressable, Text } from 'react-native';
 
-import { useAttempts } from '../attempts/AttemptProvider';
-import { moneyOk, moneyRejected, posts, renderApp, resetStorage, serveMoney, type MoneyAnswer } from '../test/fixtures';
-import Checking from '../app/checking';
+import { useAttempts } from '@/attempts/AttemptProvider';
+import { moneyOk, moneyRejected, posts, renderApp, resetStorage, serveMoney, type MoneyAnswer } from '@/test/fixtures';
+import Checking from '@/app/checking';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
-jest.mock('expo-router', () => jest.requireActual('../test/router-mock'));
+jest.mock('expo-router', () => jest.requireActual('@/test/router-mock'));
 jest.mock('expo-crypto', () => ({ randomUUID: jest.fn() }));
 
 const NOW = Date.parse('2026-10-03T10:00:00.000Z');

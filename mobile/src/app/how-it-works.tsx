@@ -1,9 +1,9 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useCampaign } from '../api/hooks';
-import { formatPercent, zoneLabel, type Rules } from '../copy/codes';
-import { formatRp } from '../money/format';
-import { LoadError } from '../ui/LoadError';
+import { useCampaign } from '@/api/hooks';
+import { formatPercent, zoneLabel, type Rules } from '@/copy/codes';
+import { formatRp } from '@/money/format';
+import { LoadError } from '@/ui/LoadError';
 
 const EXAMPLE_PAYMENT = 100_000;
 

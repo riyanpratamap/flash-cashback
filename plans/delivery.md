@@ -411,10 +411,11 @@ by deep link had no back (`initialRouteName: 'index'`). Reconcile exit 0 (INV-01
 
 From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 follows the amended tech-spec focus rule.
 
-- [ ] **C1** Shared guards, one month table, one import style · `ts` · not critical
+- [x] **C1** Shared guards, one month table, one import style · `ts` · not critical
   - `src/api/guards.ts` (`isRecord`, `isStr`, `isInt`) used by `client.ts`, `payments.ts`, `redemptions.ts`,
     `queries.ts`, `attempts/store.ts`; `MONTHS` exported once from `copy/stamp.ts`; every import in `src/` uses `@/`.
   - Done when: `make mobile-check` exits 0 with no test changed.
+  - Result: `make mobile-check` exit 0, 24 suites / 274 tests, no test changed beyond import lines; `jest.mock` and `requireActual` paths moved to `@/` too (Jest resolves it).
 - [ ] **C2** Theme tokens and UI primitives · `ts` · not critical
   - `src/ui/theme.ts` (colours, spacing, radius), `src/ui/Card.tsx`, `src/ui/AmountInput.tsx`, used by every screen
     and `UnconfirmedCard`, `Button`, `ActivityRow`, `LoadError`.

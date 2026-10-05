@@ -1,5 +1,5 @@
-import { formatRp } from '../money/format';
-import type { Rules } from './codes';
+import { formatRp } from '@/money/format';
+import type { Rules } from '@/copy/codes';
 
 const NO_CASHBACK = "This payment won't earn cashback.";
 

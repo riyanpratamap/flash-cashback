@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { useCampaign, useCashback } from '../api/hooks';
-import { useAttempts } from '../attempts/AttemptProvider';
-import { errorCopy, MAX_AMOUNT } from '../copy/codes';
-import { payInfoLine } from '../copy/payInfo';
-import { formatAsTyped, formatRp, parseDigits } from '../money/format';
-import { Button } from '../ui/Button';
+import { useCampaign, useCashback } from '@/api/hooks';
+import { useAttempts } from '@/attempts/AttemptProvider';
+import { errorCopy, MAX_AMOUNT } from '@/copy/codes';
+import { payInfoLine } from '@/copy/payInfo';
+import { formatAsTyped, formatRp, parseDigits } from '@/money/format';
+import { Button } from '@/ui/Button';
 
 /** Quick amounts of the wireframe (screen 2). They are conveniences, not rules. */
 const CHIPS = [20_000, 50_000, 100_000] as const;

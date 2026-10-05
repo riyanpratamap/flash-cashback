@@ -1,4 +1,4 @@
-import { bannerCopy, errorCopy, formatPercent, reasonCopy, zoneLabel } from './codes';
+import { bannerCopy, errorCopy, formatPercent, reasonCopy, zoneLabel } from '@/copy/codes';
 
 const rules = { rate_bps: 500, min_payment: 20000, daily_cap: 50000, timezone: 'Asia/Jakarta' };
 const otherRules = { rate_bps: 1000, min_payment: 30000, daily_cap: 70000, timezone: 'Asia/Jakarta' };

@@ -2,16 +2,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { randomUUID } from 'expo-crypto';
 
-import { useAttempts } from '../attempts/AttemptProvider';
-import { ATTEMPTS_STORAGE_KEY } from '../attempts/store';
-import { campaign, cashback, moneyOk, moneyRejected, posts, renderApp, resetStorage, serveMoney } from '../test/fixtures';
-import Home from '../app/index';
-import Pay from '../app/pay';
+import { useAttempts } from '@/attempts/AttemptProvider';
+import { ATTEMPTS_STORAGE_KEY } from '@/attempts/store';
+import { campaign, cashback, moneyOk, moneyRejected, posts, renderApp, resetStorage, serveMoney } from '@/test/fixtures';
+import Home from '@/app/index';
+import Pay from '@/app/pay';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
-jest.mock('expo-router', () => jest.requireActual('../test/router-mock'));
+jest.mock('expo-router', () => jest.requireActual('@/test/router-mock'));
 jest.mock('expo-crypto', () => ({ randomUUID: jest.fn() }));
 
 const NOW = Date.parse('2026-10-03T10:00:00.000Z');

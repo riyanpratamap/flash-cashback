@@ -1,3 +1,5 @@
+import { isRecord } from '@/api/guards';
+
 export type PaymentResult = {
   reference: string;
   amount: number;
@@ -5,10 +7,6 @@ export type PaymentResult = {
   awarded: number;
   reason: string;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 /** The fields of a `POST /payments` answer that the result shows; null when the body is not that shape. */
 export function parsePaymentResult(body: unknown): PaymentResult | null {

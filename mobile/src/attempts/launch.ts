@@ -1,4 +1,4 @@
-import type { SavedAttempt } from './types';
+import type { SavedAttempt } from '@/attempts/types';
 
 /** An attempt younger than this is resent at launch; an older one waits for the user's choice (D48). */
 export const RECENT_WINDOW_MS = 10 * 60 * 1000;

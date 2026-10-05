@@ -1,4 +1,4 @@
-import type { AttemptState } from './machine';
+import type { AttemptState } from '@/attempts/machine';
 
 /** While the outcome is unknown, or a request is on its way, the user must not leave Checking (AC-60). */
 export function blocksLeaving(phase: AttemptState['phase']): boolean {

@@ -1,5 +1,5 @@
-import { request, type ApiResult } from '../api/client';
-import type { SavedAttempt } from './types';
+import { request, type ApiResult } from '@/api/client';
+import type { SavedAttempt } from '@/attempts/types';
 
 export const RESEND_INTERVAL_MS = 2000;
 export const RESENDS_PER_ROUND = 3;

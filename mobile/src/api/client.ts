@@ -1,3 +1,5 @@
+import { isRecord } from '@/api/guards';
+
 export type ApiResult =
   | { kind: 'ok'; status: number; body: unknown; replayed: boolean }
   | { kind: 'rejected'; status: number; code: string; message: string; requestId: string }
@@ -17,10 +19,6 @@ const UNREADABLE_ERROR = 'UNREADABLE_ERROR';
 
 export function apiBaseUrl(): string {
   return process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_BASE_URL;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 function errorFields(body: unknown): { code: string; message: string; requestId: string } {

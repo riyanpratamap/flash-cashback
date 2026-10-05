@@ -1,4 +1,4 @@
-import { estimateCashback, payInfoLine } from './payInfo';
+import { estimateCashback, payInfoLine } from '@/copy/payInfo';
 
 const rules = { rate_bps: 500, min_payment: 20000, daily_cap: 50000, timezone: 'Asia/Jakarta' };
 

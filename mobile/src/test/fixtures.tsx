@@ -3,9 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
 
-import type { Campaign, CashbackSummary, History } from '../api/queries';
-import { AttemptProvider } from '../attempts/AttemptProvider';
-import { UserProvider } from '../user/UserProvider';
+import type { Campaign, CashbackSummary, History } from '@/api/queries';
+import { AttemptProvider } from '@/attempts/AttemptProvider';
+import { UserProvider } from '@/user/UserProvider';
 
 export const campaign: Campaign = {
   id: 'flash-cashback',

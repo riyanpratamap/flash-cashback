@@ -1,21 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { SavedAttempt } from './types';
+import { isInt, isRecord, isStr } from '@/api/guards';
+import type { SavedAttempt } from '@/attempts/types';
 
 export const ATTEMPTS_STORAGE_KEY = 'fc:attempts';
 /** Keys the server rejected (4xx) whose removal failed. The launch check skips them: a 4xx created no row. */
 export const RESOLVED_STORAGE_KEY = 'fc:attempts:resolved';
 
 function isSavedAttempt(value: unknown): value is SavedAttempt {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Record<string, unknown>;
+  if (!isRecord(value)) return false;
   return (
-    typeof v.user_id === 'string' &&
-    (v.kind === 'payment' || v.kind === 'redemption') &&
-    typeof v.amount === 'number' &&
-    Number.isInteger(v.amount) &&
-    typeof v.key === 'string' &&
-    typeof v.created_at === 'string'
+    isStr(value.user_id) &&
+    (value.kind === 'payment' || value.kind === 'redemption') &&
+    isInt(value.amount) &&
+    isStr(value.key) &&
+    isStr(value.created_at)
   );
 }
 

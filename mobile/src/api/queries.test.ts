@@ -1,4 +1,4 @@
-import { campaignQuery, cashbackQuery, historyQuery, queryKeys } from './queries';
+import { campaignQuery, cashbackQuery, historyQuery, queryKeys } from '@/api/queries';
 
 const fetchMock = jest.fn<Promise<Response>, [string, RequestInit & { headers: Record<string, string> }]>();
 

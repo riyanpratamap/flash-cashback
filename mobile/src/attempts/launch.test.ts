@@ -1,5 +1,5 @@
-import { splitByAge } from './launch';
-import type { SavedAttempt } from './types';
+import { splitByAge } from '@/attempts/launch';
+import type { SavedAttempt } from '@/attempts/types';
 
 const NOW = Date.parse('2026-10-03T10:00:00Z');
 const minutesAgo = (m: number) => new Date(NOW - m * 60_000).toISOString();

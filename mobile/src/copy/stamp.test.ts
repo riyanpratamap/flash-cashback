@@ -1,4 +1,4 @@
-import { formatDeviceStamp, formatStamp } from './stamp';
+import { formatDeviceStamp, formatStamp } from '@/copy/stamp';
 
 describe('formatStamp', () => {
   it('reads the date and time out of the text as sent, whatever the device zone', () => {

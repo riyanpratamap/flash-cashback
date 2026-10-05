@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { ATTEMPTS_STORAGE_KEY, loadAttempts, removeAttempt, saveAttempt } from './store';
-import type { SavedAttempt } from './types';
+import { ATTEMPTS_STORAGE_KEY, loadAttempts, removeAttempt, saveAttempt } from '@/attempts/store';
+import type { SavedAttempt } from '@/attempts/types';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

@@ -2,12 +2,12 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { queryKeys } from '../api/queries';
-import { useUser } from '../user/UserProvider';
-import { splitByAge } from './launch';
-import { check, runPress, sendAttempt, type AttemptState, type MachineDeps } from './machine';
-import { loadAttempts, markResolved, removeAttempt, saveAttempt } from './store';
-import type { AttemptKind, SavedAttempt } from './types';
+import { queryKeys } from '@/api/queries';
+import { useUser } from '@/user/UserProvider';
+import { splitByAge } from '@/attempts/launch';
+import { check, runPress, sendAttempt, type AttemptState, type MachineDeps } from '@/attempts/machine';
+import { loadAttempts, markResolved, removeAttempt, saveAttempt } from '@/attempts/store';
+import type { AttemptKind, SavedAttempt } from '@/attempts/types';
 
 export type AttemptContextValue = {
   /** The current attempt. `idle` until a press or a launch resend. */

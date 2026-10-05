@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { DEFAULT_USER, DEMO_USERS, type DemoUser } from './users';
+import { DEFAULT_USER, DEMO_USERS, type DemoUser } from '@/user/users';
 
 export const USER_STORAGE_KEY = 'fc:user';
 

@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { SavedAttempt } from '../attempts/types';
-import { formatDeviceStamp } from '../copy/stamp';
-import { formatRp } from '../money/format';
-import { Button } from './Button';
+import type { SavedAttempt } from '@/attempts/types';
+import { formatDeviceStamp } from '@/copy/stamp';
+import { formatRp } from '@/money/format';
+import { Button } from '@/ui/Button';
 
 type Props = { attempt: SavedAttempt; onCheckNow: () => void; onDismiss: () => void };
 

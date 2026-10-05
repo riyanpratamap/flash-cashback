@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
 
-import { cashbackQuery, queryKeys } from '../api/queries';
-import { USER_STORAGE_KEY, UserProvider, useUser } from './UserProvider';
+import { cashbackQuery, queryKeys } from '@/api/queries';
+import { USER_STORAGE_KEY, UserProvider, useUser } from '@/user/UserProvider';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

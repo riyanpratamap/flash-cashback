@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { HISTORY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '../api/hooks';
-import { reasonCopy } from '../copy/codes';
-import { groupByDay, timeOf } from '../history/group';
-import { formatRp } from '../money/format';
-import { ActivityRow } from '../ui/ActivityRow';
-import { LoadError } from '../ui/LoadError';
+import { HISTORY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '@/api/hooks';
+import { reasonCopy } from '@/copy/codes';
+import { groupByDay, timeOf } from '@/history/group';
+import { formatRp } from '@/money/format';
+import { ActivityRow } from '@/ui/ActivityRow';
+import { LoadError } from '@/ui/LoadError';
 
 export default function History() {
   const history = useHistory(HISTORY_LIMIT);

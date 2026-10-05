@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import { USER_STORAGE_KEY } from '../user/UserProvider';
-import { ATTEMPTS_STORAGE_KEY } from '../attempts/store';
-import { AttemptNavigator } from '../attempts/AttemptNavigator';
+import { USER_STORAGE_KEY } from '@/user/UserProvider';
+import { ATTEMPTS_STORAGE_KEY } from '@/attempts/store';
+import { AttemptNavigator } from '@/attempts/AttemptNavigator';
 import {
   campaign,
   cashback,
@@ -15,14 +15,14 @@ import {
   resetStorage,
   serve,
   serveMoney,
-} from '../test/fixtures';
-import { push, regainFocus } from '../test/router-mock';
-import Home from '../app/index';
+} from '@/test/fixtures';
+import { push, regainFocus } from '@/test/router-mock';
+import Home from '@/app/index';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
-jest.mock('expo-router', () => jest.requireActual('../test/router-mock'));
+jest.mock('expo-router', () => jest.requireActual('@/test/router-mock'));
 
 beforeEach(async () => {
   await resetStorage();

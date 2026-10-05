@@ -1,7 +1,7 @@
 import { render, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import RootLayout, * as layout from '../app/_layout';
+import RootLayout, * as layout from '@/app/_layout';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -20,7 +20,7 @@ jest.mock('expo-router', () => {
     return children;
   }
   Stack.Screen = Screen;
-  return { ...jest.requireActual('../test/router-mock'), Stack };
+  return { ...jest.requireActual('@/test/router-mock'), Stack };
 });
 
 beforeEach(() => {

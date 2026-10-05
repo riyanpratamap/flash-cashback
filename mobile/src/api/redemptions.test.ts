@@ -1,4 +1,4 @@
-import { parseRedemptionResult } from './redemptions';
+import { parseRedemptionResult } from '@/api/redemptions';
 
 const body = {
   redemption: { id: 3, reference: 'RDM-20261003-000003', amount: 18000, status: 'COMPLETED', destination: 'MAIN_ACCOUNT' },

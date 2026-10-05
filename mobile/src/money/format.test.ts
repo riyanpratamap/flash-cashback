@@ -1,4 +1,4 @@
-import { formatAsTyped, formatRp, formatSigned, parseDigits } from './format';
+import { formatAsTyped, formatRp, formatSigned, parseDigits } from '@/money/format';
 
 describe('formatRp', () => {
   it.each([

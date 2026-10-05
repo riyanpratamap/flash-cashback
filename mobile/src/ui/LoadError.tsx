@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Button } from './Button';
+import { Button } from '@/ui/Button';
 
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (

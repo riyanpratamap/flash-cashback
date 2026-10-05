@@ -1,4 +1,4 @@
-import { blocksLeaving } from './blockBack';
+import { blocksLeaving } from '@/attempts/blockBack';
 
 describe('blocksLeaving (AC-60)', () => {
   it.each(['sending', 'checking', 'waiting'] as const)('%s blocks leaving', (phase) => {

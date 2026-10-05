@@ -1,4 +1,4 @@
-import { parsePaymentResult } from './payments';
+import { parsePaymentResult } from '@/api/payments';
 
 const body = {
   payment: { id: 42, reference: 'PAY-20261003-000042', amount: 100000, status: 'SUCCEEDED', created_at: '2026-10-03T14:32:00+07:00' },

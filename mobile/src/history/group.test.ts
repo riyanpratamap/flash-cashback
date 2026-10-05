@@ -1,5 +1,5 @@
-import type { HistoryItem } from '../api/queries';
-import { dayLabel, groupByDay, timeOf } from './group';
+import type { HistoryItem } from '@/api/queries';
+import { dayLabel, groupByDay, timeOf } from '@/history/group';
 
 const payment = (id: number, created_at: string): HistoryItem => ({
   type: 'PAYMENT',

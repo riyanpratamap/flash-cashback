@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
-import { useAttempts } from './AttemptProvider';
-import type { AttemptState } from './machine';
+import { useAttempts } from '@/attempts/AttemptProvider';
+import type { AttemptState } from '@/attempts/machine';
 
 /**
  * Opens the screen each attempt state calls for (tech-spec §10), wherever the user is: a launch resend reaches Checking

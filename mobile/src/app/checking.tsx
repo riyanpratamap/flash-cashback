@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { ActivityIndicator, BackHandler, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAttempts } from '../attempts/AttemptProvider';
-import { blocksLeaving } from '../attempts/blockBack';
-import { formatRp } from '../money/format';
-import { Button } from '../ui/Button';
+import { useAttempts } from '@/attempts/AttemptProvider';
+import { blocksLeaving } from '@/attempts/blockBack';
+import { formatRp } from '@/money/format';
+import { Button } from '@/ui/Button';
 
 /**
  * Screen 4: an unknown outcome. The attempt provider resends the same key; this screen only shows it. The wording

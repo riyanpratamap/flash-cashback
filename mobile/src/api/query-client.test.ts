@@ -1,4 +1,4 @@
-import { createQueryClient } from './query-client';
+import { createQueryClient } from '@/api/query-client';
 
 describe('createQueryClient', () => {
   it('retries a failed GET once (tech-spec §10)', () => {
