@@ -32,7 +32,7 @@ export default function RootLayout() {
             <Stack.Screen name="payment-result" options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="checking" options={CHECKING_SCREEN_OPTIONS} />
             <Stack.Screen name="redeem" options={{ title: 'Redeem cashback' }} />
-            <Stack.Screen name="history" options={{ title: 'Cashback history' }} />
+            <Stack.Screen name="history" options={{ title: 'Transaction history' }} />
             <Stack.Screen name="how-it-works" options={{ title: 'How Flash Cashback works' }} />
           </Stack>
         </AttemptProvider>

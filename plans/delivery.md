@@ -498,12 +498,16 @@ From `/change` (2026-10-06, after C6): AC-62, AC-63 amended, AC-65 split into AC
 
 From `/change` (2026-10-06, after C11): AC-66 amended, AC-66a/b added; wireframe screens 1 and 6.
 
-- [ ] **C12** History rows as transactions — AC-66a, AC-66b · `ts` · not critical
+- [x] **C12** History rows as transactions — AC-66a, AC-66b · `ts` · not critical
   - Screen title "Transaction history", header "Cashback balance"; row title "Payment" / "Cashback redeemed"; right
     column the transaction amount (payment `−`, redemption `+` positive); cashback, "No cashback", reason chip, and
     destination move to the subtitle; Home rows use the same subtitle without the time.
   - Done when: History and Home tests assert each row kind (full, partial, Rp0, redemption), red on an assertion then
     green; a mutation (right column back to cashback) turns a test red; `make mobile-check` exits 0.
+  - Result: `activityLine` returns title, summary, amount, tone; `activityDetail` and `chipOf` compose the subtitle for
+    History (with time) and Home (without); `formatSigned` gains `paid` and `received`, loses unused `redeemed`; screen
+    title "Transaction history", header "Cashback balance". Tests red on assertions then green; right column back to
+    cashback turns three tests red. `make mobile-check` exit 0.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

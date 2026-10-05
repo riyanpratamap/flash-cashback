@@ -2,10 +2,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { HISTORY_LIMIT, useCampaign, useCashback, useHistory, useRefreshOnFocus } from '@/api/hooks';
 import { queryKeys } from '@/api/queries';
-import { reasonCopy } from '@/copy/codes';
 import { groupByDay, timeOf } from '@/history/group';
 import { formatRp } from '@/money/format';
-import { ActivityRow } from '@/ui/ActivityRow';
+import { ActivityRow, activityDetail, chipOf } from '@/ui/ActivityRow';
 import { AppText } from '@/ui/AppText';
 import { Card } from '@/ui/Card';
 import { LoadError } from '@/ui/LoadError';
@@ -28,7 +27,7 @@ export default function History() {
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <AppText variant="subhead" tone="muted">
-          Current balance
+          Cashback balance
         </AppText>
         {cashback.data === undefined ? null : (
           <AppText variant="title" tabular>
@@ -52,8 +51,7 @@ export default function History() {
             </AppText>
             <Card style={styles.list}>
               {group.items.map((item, index) => {
-                const chip = item.type === 'PAYMENT' && rules !== undefined ? reasonCopy(item.cashback.reason, rules).chip : null;
-                const detail = chip === null ? timeOf(item.created_at) : `${timeOf(item.created_at)} · ${chip}`;
+                const detail = activityDetail(item, timeOf(item.created_at), chipOf(item, rules));
                 return (
                   <ActivityRow
                     key={`${item.type}-${item.id}`}

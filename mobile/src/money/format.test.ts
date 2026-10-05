@@ -15,9 +15,11 @@ describe('formatRp', () => {
 describe('formatSigned', () => {
   it.each([
     [5000, 'earned', '+Rp5.000'],
-    [42000, 'redeemed', '−Rp42.000'],
     [0, 'earned', 'Rp0'],
-    [0, 'redeemed', 'Rp0'],
+    [0, 'received', 'Rp0'],
+    [100000, 'paid', '−Rp100.000'],
+    [42000, 'received', '+Rp42.000'],
+    [0, 'paid', 'Rp0'],
   ] as const)('%d %s -> %s', (amount, kind, want) => {
     expect(formatSigned(amount, kind)).toBe(want);
   });

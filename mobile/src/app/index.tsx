@@ -10,7 +10,7 @@ import { bannerCopy, zoneLabel } from '@/copy/codes';
 import { formatRp } from '@/money/format';
 import { useUser } from '@/user/UserProvider';
 import { DEMO_USERS, userLabel } from '@/user/users';
-import { ActivityRow } from '@/ui/ActivityRow';
+import { ActivityRow, activityDetail, chipOf } from '@/ui/ActivityRow';
 import { AppText } from '@/ui/AppText';
 import { Button, LinkText } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -86,7 +86,12 @@ export default function Home() {
                   <AppText tone="muted" style={styles.listNote}>No activity yet.</AppText>
                 ) : (
                   activity.data.items.map((item, index, items) => (
-                    <ActivityRow key={`${item.type}-${item.id}`} item={item} last={index === items.length - 1} />
+                    <ActivityRow
+                      key={`${item.type}-${item.id}`}
+                      item={item}
+                      detail={activityDetail(item, null, chipOf(item, campaign.data.rules))}
+                      last={index === items.length - 1}
+                    />
                   ))
                 )
               ) : activity.isError ? (

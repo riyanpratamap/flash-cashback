@@ -9,10 +9,10 @@ export function formatRp(amount: number): string {
   return `Rp${group(String(amount))}`;
 }
 
-/** +Rp5.000 for earned cashback, −Rp42.000 for a redemption, Rp0 with no sign. */
-export function formatSigned(amount: number, kind: 'earned' | 'redeemed'): string {
+/** +Rp5.000 for cashback earned or money received, −Rp100.000 for money paid, Rp0 with no sign. */
+export function formatSigned(amount: number, kind: 'earned' | 'paid' | 'received'): string {
   if (amount === 0) return formatRp(0);
-  return `${kind === 'earned' ? '+' : MINUS}${formatRp(amount)}`;
+  return `${kind === 'paid' ? MINUS : '+'}${formatRp(amount)}`;
 }
 
 /** The integer in the digits of the text, or null when it has none. Never parseFloat. */

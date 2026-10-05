@@ -1,35 +1,56 @@
 import { StyleSheet, View } from 'react-native';
 
-import type { HistoryItem } from '@/api/queries';
-import { formatRp, formatSigned } from '@/money/format';
+import type { Campaign, HistoryItem } from '@/api/queries';
+import { reasonCopy } from '@/copy/codes';
+import { formatSigned } from '@/money/format';
 import { AppText } from '@/ui/AppText';
 import { colors, spacing } from '@/ui/theme';
 
-/** The title and amount of a history item (docs/ui-wireframe.md screens 1 and 6). Rp0 has no sign; redemptions use −. */
-export function activityLine(item: HistoryItem): { title: string; amount: string } {
+type Line = { title: string; summary: string; amount: string; positive: boolean };
+
+/**
+ * The row as a transaction (docs/ui-wireframe.md screens 1 and 6): the payment or redemption amount on the right,
+ * the cashback or destination in the summary. Rp0 has no sign; only a redemption is positive.
+ */
+export function activityLine(item: HistoryItem): Line {
   if (item.type === 'REDEMPTION') {
-    return { title: 'Redeemed to main account', amount: formatSigned(item.amount, 'redeemed') };
+    return { title: 'Cashback redeemed', summary: 'To main account', amount: formatSigned(item.amount, 'received'), positive: true };
   }
-  return { title: `Payment ${formatRp(item.amount)}`, amount: formatSigned(item.cashback.awarded, 'earned') };
+  const { awarded } = item.cashback;
+  return {
+    title: 'Payment',
+    summary: awarded > 0 ? `${formatSigned(awarded, 'earned')} cashback` : 'No cashback',
+    amount: formatSigned(item.amount, 'paid'),
+    positive: false,
+  };
 }
 
-type Props = { item: HistoryItem; detail?: string; last?: boolean };
+/** The subtitle: payment "time · summary · chip", redemption "summary · time"; a null time or chip is left out. */
+export function activityDetail(item: HistoryItem, time: string | null, chip: string | null): string {
+  const { summary } = activityLine(item);
+  const parts = item.type === 'REDEMPTION' ? [summary, time] : [time, summary, chip];
+  return parts.filter((part) => part !== null).join(' · ');
+}
+
+/** The reason chip of a payment, or null when rules are not loaded, the item is a redemption, or the reason has none. */
+export function chipOf(item: HistoryItem, rules: Campaign['rules'] | undefined): string | null {
+  return item.type === 'PAYMENT' && rules !== undefined ? reasonCopy(item.cashback.reason, rules).chip : null;
+}
+
+type Props = { item: HistoryItem; detail: string; last?: boolean };
 
 /** A row of a list on a white surface. A hairline separates it from the next row; `last` drops it. */
 export function ActivityRow({ item, detail, last = false }: Props) {
-  const { title, amount } = activityLine(item);
-  const earned = item.type === 'PAYMENT' && item.cashback.awarded > 0;
+  const { title, amount, positive } = activityLine(item);
   return (
     <View style={[styles.row, !last && styles.separator]}>
       <View style={styles.left}>
         <AppText>{title}</AppText>
-        {detail === undefined ? null : (
-          <AppText variant="caption" tone="muted">
-            {detail}
-          </AppText>
-        )}
+        <AppText variant="caption" tone="muted">
+          {detail}
+        </AppText>
       </View>
-      <AppText variant="headline" tone={earned ? 'positive' : 'text'} tabular style={styles.amount}>
+      <AppText variant="headline" tone={positive ? 'positive' : 'text'} tabular style={styles.amount}>
         {amount}
       </AppText>
     </View>

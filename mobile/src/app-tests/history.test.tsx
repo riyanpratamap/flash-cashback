@@ -52,14 +52,15 @@ describe('History (AC-66)', () => {
     await renderScreen(<History />);
     expect(await screen.findByText('4 OCT')).toBeTruthy();
     expect(screen.queryByText('3 OCT')).toBeNull();
-    expect(screen.getByText('00:30')).toBeTruthy();
+    expect(screen.getByText('00:30 · +Rp5.000 cashback')).toBeTruthy();
   });
 
   it('shows the current balance header from the cashback summary', async () => {
     serve({ cashback: { ...cashback, balance: 18000 } });
     await renderScreen(<History />);
     expect(await screen.findByText('Rp18.000')).toBeTruthy();
-    expect(screen.getByText('Current balance')).toBeTruthy();
+    expect(screen.getByText('Cashback balance')).toBeTruthy();
+    expect(screen.queryByText('Current balance')).toBeNull();
   });
 
   it('labels TODAY and YESTERDAY from the campaign day the API reports', async () => {
@@ -77,42 +78,28 @@ describe('History (AC-66)', () => {
     expect(screen.getByText('YESTERDAY, 2 OCT')).toBeTruthy();
   });
 
-  it('shows rows: earned with +, redemption neutral with −, Rp0 unsigned', async () => {
+  it('shows each row as a transaction: payment out, cashback in the subtitle, redemption in', async () => {
     serve({
       history: {
         items: [
-          payment(3, '2026-10-03T14:32:00+07:00', 100000, 5000, 'AWARDED'),
+          payment(4, '2026-10-03T14:32:00+07:00', 100000, 5000, 'AWARDED'),
+          payment(3, '2026-10-03T14:00:00+07:00', 60000, 2000, 'PARTIAL_DAILY_CAP'),
           payment(2, '2026-10-03T13:05:00+07:00', 15000, 0, 'BELOW_MINIMUM'),
           redemption(1, '2026-10-03T11:20:00+07:00', 42000),
         ],
       },
     });
     await renderScreen(<History />);
-    expect(await screen.findByText('Payment Rp100.000')).toBeTruthy();
-    expect(screen.getByText('+Rp5.000')).toBeTruthy();
-    expect(screen.getByText('Payment Rp15.000')).toBeTruthy();
-    expect(screen.getByText('Rp0')).toBeTruthy();
-    expect(screen.getByText('Redeemed to main account')).toBeTruthy();
-    expect(screen.getByText('−Rp42.000')).toBeTruthy();
-    expect(screen.getByText('11:20')).toBeTruthy();
-  });
-
-  it('shows the reason for a partial and for a Rp0 payment, not for a full award', async () => {
-    serve({
-      history: {
-        items: [
-          payment(4, '2026-10-03T15:00:00+07:00', 100000, 5000, 'AWARDED'),
-          payment(3, '2026-10-03T14:00:00+07:00', 100000, 3000, 'PARTIAL_DAILY_CAP'),
-          payment(2, '2026-10-03T13:05:00+07:00', 15000, 0, 'BELOW_MINIMUM'),
-          payment(1, '2026-10-03T12:00:00+07:00', 100000, 0, 'DAILY_CAP_REACHED'),
-        ],
-      },
-    });
-    await renderScreen(<History />);
-    expect(await screen.findByText('14:00 · Daily limit reached')).toBeTruthy();
-    expect(screen.getByText('13:05 · Below minimum')).toBeTruthy();
-    expect(screen.getByText('12:00 · Daily limit reached')).toBeTruthy();
-    expect(screen.getByText('15:00')).toBeTruthy();
+    expect(await screen.findByText('14:32 · +Rp5.000 cashback')).toBeTruthy();
+    expect(screen.getByText('−Rp100.000')).toBeTruthy();
+    expect(screen.getByText('14:00 · +Rp2.000 cashback · Daily limit reached')).toBeTruthy();
+    expect(screen.getByText('−Rp60.000')).toBeTruthy();
+    expect(screen.getByText('13:05 · No cashback · Below minimum')).toBeTruthy();
+    expect(screen.getByText('−Rp15.000')).toBeTruthy();
+    expect(screen.getAllByText('Payment')).toHaveLength(3);
+    expect(screen.getByText('Cashback redeemed')).toBeTruthy();
+    expect(screen.getByText('To main account · 11:20')).toBeTruthy();
+    expect(screen.getByText('+Rp42.000')).toBeTruthy();
   });
 
   it('asks for 20 and shows at most 20 rows', async () => {
@@ -121,9 +108,9 @@ describe('History (AC-66)', () => {
     );
     serve({ history: { items } });
     await renderScreen(<History />);
-    await screen.findAllByText('Payment Rp100.000');
+    await screen.findAllByText('Payment');
     expect(requestedUrls().some((u) => u.endsWith('/me/history?limit=20'))).toBe(true);
-    expect(screen.getAllByText('Payment Rp100.000')).toHaveLength(20);
+    expect(screen.getAllByText('Payment')).toHaveLength(20);
   });
 
   it('shows the empty copy', async () => {
@@ -140,13 +127,13 @@ describe('History (AC-66)', () => {
 
     serve();
     await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText('Redeemed to main account')).toBeTruthy();
+    expect(await screen.findByText('Cashback redeemed')).toBeTruthy();
     expect(screen.queryByText("Couldn't load your history.")).toBeNull();
   });
 
   it('refetches when the screen regains focus', async () => {
     await renderScreen(<History />);
-    await screen.findByText('Redeemed to main account');
+    await screen.findByText('Cashback redeemed');
     const before = fetchMock.mock.calls.length;
     // The data is fresh for FOCUS_FRESH_MS; the clock moves past it, as when the user was away.
     const now = Date.now();
