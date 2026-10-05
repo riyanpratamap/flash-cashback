@@ -36,7 +36,7 @@ is built through the services; a test may set only a switch flag or the reseeded
   - Done when: `make gate` exits 0 with config unit tests (defaults; `LOCK_TIMEOUT=abc` rejected); `make
     test-integration` and `make test-race` each exit 0 with no tests yet ("no test files").
   - Result: `make gate`, `test-integration`, `test-race` exit 0; staticcheck v0.8.1 pinned; postgres:18 and redis:8 healthy with tmpfs.
-- [ ] **P0.2** Migration, boot, integration harness — AC-53 · INV-02–07 (constraints), INV-06 (triggers) · TC10 · `go`
+- [x] **P0.2** Migration, boot, integration harness — AC-53 · INV-02–07 (constraints), INV-06 (triggers) · TC10 · `go`
   · **critical** (migration)
   - `migrations/00001_init.sql` exactly as §2 + `embed.go`; `internal/boot` (connect with 30 s retry, goose up with
     the Postgres session locker, seed `ON CONFLICT DO NOTHING`); `internal/integration` harness (truncate + reseed
@@ -47,6 +47,7 @@ is built through the services; a test may set only a switch flag or the reseeded
     catalogue; UPDATE/DELETE on ledger, payments, redemptions raise. `TestRaceBootTwice`: two boots at once on one
     `freshDB` per run → one migration, one row. **Mutation:** boot without the session locker, run against `freshDB` → red.
   - Done when: `make test-integration` and `make test-race` exit 0; no `fc_boot_*` database left after; mutation reported.
+  - Result: `make gate`, `make test-race` exit 0, no `fc_boot_*` left; pgx v5.11.0, goose v3.28.0 pinned; no-locker mutation red (`pg_proc` duplicate key), constraint and trigger drops red; `TestRaceBootTwiceEmpty` (empty DB, outcome-only) added; re-boot keeps budget and spent (TC10), reset-on-conflict mutation red.
 - [ ] **P0.3** API server, healthz, image, compose — AC-50, AC-56 · TC8 (health), TC20 · `go` · not critical
   - `cmd/api` (§8 timeouts, 8 s drain on SIGTERM, `healthcheck` subcommand), chi router, `GET /v1/healthz` (PG 1 s,
     Redis 50 ms, go-redis options of §6); `cmd/admin` and `cmd/reconcile` as stubs (exit 2, "not built yet") so the
