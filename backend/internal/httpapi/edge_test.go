@@ -18,7 +18,7 @@ import (
 const goodKey = "123e4567-e89b-12d3-a456-426614174000"
 
 type fakeMoney struct {
-	calls    []MoneyCommand
+	calls    []domain.MoneyCommand
 	histCall []histArgs
 	err      error
 	panicVal any
@@ -29,9 +29,11 @@ type histArgs struct {
 	limit int
 }
 
-func (f *fakeMoney) Pay(_ context.Context, c MoneyCommand) error    { return f.record(c) }
-func (f *fakeMoney) Redeem(_ context.Context, c MoneyCommand) error { return f.record(c) }
-func (f *fakeMoney) record(c MoneyCommand) error {
+func (f *fakeMoney) Pay(_ context.Context, c domain.MoneyCommand) (domain.PaymentResult, error) {
+	return domain.PaymentResult{}, f.record(c)
+}
+func (f *fakeMoney) Redeem(_ context.Context, c domain.MoneyCommand) error { return f.record(c) }
+func (f *fakeMoney) record(c domain.MoneyCommand) error {
 	f.calls = append(f.calls, c)
 	if f.panicVal != nil {
 		panic(f.panicVal)
@@ -250,7 +252,7 @@ func TestValidRequestReachesService(t *testing.T) {
 		t.Run(path, func(t *testing.T) {
 			r := newRig()
 			rec := r.do("POST", path, reqOpt{
-				user: str("user_a"), key: str(strings.ToUpper(goodKey)), body: ` { "amount" : 100000 } `,
+				user: str("user_a"), key: str(strings.ToUpper(goodKey)), body: ` { "amount" : 100000 } `, reqID: "rid-9",
 			})
 			if rec.Code != http.StatusCreated {
 				t.Fatalf("status = %d", rec.Code)
@@ -258,8 +260,9 @@ func TestValidRequestReachesService(t *testing.T) {
 			if len(r.fake.calls) != 1 {
 				t.Fatalf("calls = %d", len(r.fake.calls))
 			}
-			want := MoneyCommand{
+			want := domain.MoneyCommand{
 				UserID: "user_a", Key: uuid.MustParse(goodKey), Amount: 100000, Hash: domain.RequestHash(100000),
+				RequestID: "rid-9",
 			}
 			if r.fake.calls[0] != want {
 				t.Fatalf("command = %+v, want %+v", r.fake.calls[0], want)

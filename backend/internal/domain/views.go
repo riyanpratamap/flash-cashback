@@ -31,3 +31,27 @@ type TodayView struct {
 	Remaining int64  `json:"remaining"`
 	ResetsAt  string `json:"resets_at"`
 }
+
+// PaymentStatusSucceeded is the only payment status the schema allows.
+const PaymentStatusSucceeded = "SUCCEEDED"
+
+// PaymentResult is the body of POST /payments.
+type PaymentResult struct {
+	Payment  PaymentView `json:"payment"`
+	Cashback AwardView   `json:"cashback"`
+}
+
+// PaymentView is the payment itself.
+type PaymentView struct {
+	ID        int64  `json:"id"`
+	Reference string `json:"reference"`
+	Amount    int64  `json:"amount"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
+
+// AwardView is the cashback decision for the payment.
+type AwardView struct {
+	Awarded int64  `json:"awarded"`
+	Reason  Reason `json:"reason"`
+}

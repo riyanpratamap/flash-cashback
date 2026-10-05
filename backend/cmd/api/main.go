@@ -66,6 +66,9 @@ func serve(cfg config.Config) int {
 			PingRedis:    func(ctx context.Context) error { return cache.Ping(ctx, rc) },
 			Log:          log,
 			Reads:        service.NewReads(pool),
+			Payments: service.NewPayments(store.TxRunner{
+				Pool: pool, LockTimeoutMS: cfg.LockTimeoutMS(), StatementTimeoutMS: cfg.StatementTimeoutMS(),
+			}, log),
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

@@ -36,10 +36,10 @@ func NewRouter(d Deps) http.Handler {
 			r.Get("/me/cashback", d.getCashback)
 		}
 		if d.Payments != nil {
-			r.Post("/payments", d.postMoney(d.Payments.Pay))
+			r.Post("/payments", d.postPayment)
 		}
 		if d.Redemptions != nil {
-			r.Post("/redemptions", d.postMoney(d.Redemptions.Redeem))
+			r.Post("/redemptions", d.postRedemption)
 		}
 		if d.History != nil {
 			r.Get("/me/history", d.getHistory)

@@ -122,7 +122,7 @@ no user → 400 `MISSING_USER`; `down` exit 0.
     (lock-timeout test, red only after its "gave up within 2 s" assertion), COMMIT errors classified by SQLSTATE
     (commit-error test), `ErrBusy` mapped to 500 (mapper busy/deadlock test). The deadlock test is named
     `TestRaceTx…`, so it runs under `make test-race`.
-- [ ] **P2.2** `Payments.Pay` and `POST /payments` — AC-01–12, AC-15, AC-71, AC-41 (spent rows), AC-17/18 (no row) ·
+- [x] **P2.2** `Payments.Pay` and `POST /payments` — AC-01–12, AC-15, AC-71, AC-41 (spent rows), AC-17/18 (no row) ·
   INV-01–04, 06–08 · TC1, TC2, TC12 · `go` · **critical**
   - §4.1 steps 1, 3–4, 6–9 and COMMIT (cache deletes come in P4.3); lock order D44; rule snapshot; money log line
     (§7). AC-12 sets `awards_paused` by SQL until P4.1.
@@ -132,6 +132,7 @@ no user → 400 `MISSING_USER`; `down` exit 0.
     partial and equal, built by payments; `GET /me/cashback` for user_a after payments vs user_new (AC-48 reads);
     **mutations:** `spent` ignored in `Status`; balance subquery and user-day join in `store.Today` unscoped;
     `TodayRemaining` without the user-day row.
+  - Result: `store.Pay` (§4.1 steps 4, 6-9, D44 order, user-day cap, one `fc_now()`), `service.Payments.Pay` with the §7 money log line (incl. `request_id`, carried in `domain.MoneyCommand`) after COMMIT, `POST /v1/payments` 201 with the contract body, wired in `cmd/api`; integration tests for AC-01-12, 15, 17, 18, 71, AC-41 spent rows, AC-48 reads, a two-user payment, the log line and the boundary list, clock pinned; books asserted after each. Mutations red: `Award` with the campaign cap (AC-71 → 500), `spent` ignored in `Status`, `Today` balance subquery unscoped, user-day join unscoped, `TodayRemaining` without the row, ledger insert skipped, `earned` not added, `user_id` dropped from the user-day UPDATE and from its FOR UPDATE select, literal rate/min in the payment insert, `campaignCap` snapshotted instead of `userCap`, money log line demoted and its `request_id` removed. Replay is not built (P2.3): a duplicate key surfaces as 23505 → 500.
 - [ ] **P2.3** Payment idempotency — AC-19–22 (payment parts) · INV-05 · TC3 · `go` · **critical**
   - Fast replay, in-lock lookup (step 5), `ON CONFLICT … DO NOTHING RETURNING` no row → rollback + replay, 409 on
     hash mismatch, `Idempotent-Replayed: true`, body rebuilt from the stored row.
