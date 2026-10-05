@@ -16,7 +16,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D05 | Kill switch                                    | Two independent switches: awards, redemptions                                          |
 | D06 | What Redis is for                              | Read caches for `GET /campaign` and `GET /me/cashback`; no rate limiting               |
 | D07 | Trust conditions                               | The trust conditions table below                                                       |
-| D08 | Cut line                                       | Keep read caches, CI; drop `ENDING_SOON`, cursor paging, detail sheet, load test       |
+| D08 | Cut line                                       | Keep read caches, CI; drop `ENDING_SOON`, cursor paging, detail sheet (load test: D51) |
 | D09 | Demo path without a Mac                        | Expo Go on a phone; iOS simulator documented; README recording and curl examples      |
 | D10 | Base URL                                       | `http://localhost:8080/v1`                                                             |
 | D11 | Money                                          | Integer IDR, `int64` / `BIGINT`                                                        |
@@ -58,6 +58,8 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D47 | Operator action trail (spec check F1)          | Not built; trust condition 11 becomes stated only                                      |
 | D48 | App killed while checking                      | Persist the in-flight attempt; resume with the same key after relaunch                 |
 | D49 | Repository name and Go module path             | `flash-cashback`; `github.com/riyanpratamap/flash-cashback/backend`                     |
+| D50 | Where the Redis layer goes (revisits D06)      | Keep D06: read caches for `GET /campaign` and `GET /me/cashback` only                  |
+| D51 | Load test for the read caches                  | k6 in Docker, three scenarios, cache on vs off; supersedes the D08 load-test drop      |
 
 ## Open decisions
 
@@ -77,6 +79,8 @@ are never reused. A later change adds a new entry that supersedes an old one; it
   the budget into buckets."
 - **Note:** D08 drops the load-test command, so "in testing" means the concurrency tests (as the owner states in D08).
   A lock timeout returns 503 `SERVICE_BUSY`, retryable with the same key.
+- **Note (D51):** the load test is back. Its mixed scenario counts 503 `SERVICE_BUSY` on payments under a read burst,
+  so "in testing" now also means that measurement.
 
 ### D02 — What a payment earns when its full 5% does not fit
 
@@ -328,6 +332,44 @@ Required by AGENTS.md before P0.
 - **Rationale:** the owner confirmed the recommendation: "yes, use that module path". The path matches where the module
   lives, so Go tooling resolves it.
 - **Would revisit if:** the Go code moves to the repository root.
+
+### D50 — Where the Redis layer goes (revisits D06)
+
+Raised by the owner before P4.4, the first task that reads the cache: is Redis on the right endpoints, and is there a
+better place for it, given the brief requires Redis but not where.
+
+- **Options:** A. Keep D06: cache `GET /campaign` and `GET /me/cashback` · B. Cache `GET /campaign` only · C. Both
+  caches plus rate limiting on `POST /payments` · D. Move Redis elsewhere (for example an idempotency fast path)
+- **Considered and ruled out before the options:** caching `GET /me/history` (opened less often, a `limit` parameter,
+  changes on every payment); budget or cap counters and distributed locks (D01); the award switch in Redis (the pause
+  must be read inside the payment transaction, AC-38); an idempotency or "campaign ended" check in Redis before the
+  transaction (a money decision, INV-11); pub/sub invalidation (one API instance).
+- **Recommended:** A
+- **Chosen:** A
+- **Rationale:** "same reason as D06" (the owner's answer; the D06 rationale applies unchanged).
+- **Cost accepted:** as stated in D06.
+- **Would revisit if:** as stated in D06, or if the D51 load test shows the caches give no measurable gain.
+
+### D51 — Load test for the read caches
+
+Supersedes the load-test part of D08 only; the rest of D08 stands.
+
+- **Options:** A. k6 in Docker, three scenarios: `GET /campaign` and `GET /me/cashback` each with the cache on and off,
+  and a mix of a read burst with `POST /payments` · B. k6 in Docker, the two read scenarios only · C. Go `testing.B`
+  benchmark in-process · D. `hey` or `vegeta` one-liners
+- **Recommended:** A
+- **Chosen:** A
+- **Rationale:** "we need to prove redis actually helps"
+- **Cost accepted:** the largest of the four to build and explain (the reason D08 dropped it); one more pinned image.
+- **Would revisit if:** the numbers show no gain: then the result goes into "where it breaks" and D50 is revisited.
+- **Assumptions:** the cache is switched by `CACHE_READS` (`on` by default, `off` skips every cache GET and SET in the
+  reads; the deletes after commit still run), so one image is measured both ways; stopping Redis is not a fair "off",
+  since each read would also pay for a failed Redis call. k6 is the pinned `grafana/k6` image in a compose service
+  under the `loadtest` profile, so `docker compose up` never starts it and nothing is installed on the host. It runs
+  locally through `make load-test`, never as a CI gate (shared runners are too noisy to time). Load is a fixed arrival
+  rate, the same for both modes. Each mode starts from `demo-reset` and ends with reconcile exit 0. k6 thresholds fail
+  the run only on errors (any read 5xx; any payment 5xx other than 503 `SERVICE_BUSY`); the gain itself is reported,
+  not asserted, and the results table goes into the README with the machine it ran on.
 
 ## Further batch
 
