@@ -410,7 +410,7 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
 | `src/api/client.ts`                    | base URL `EXPO_PUBLIC_API_URL` (default `http://localhost:8080/v1`, D09), headers, 10 s `AbortController` timeout (KP), outcome classification |
 | `src/api/queries.ts`                   | query keys `['campaign']`, `['cashback', user]`, `['history', user, limit]`               |
 | `src/money/format.ts`                  | hand-written `Rp100.000` formatter and digit parser (KP)                                   |
-| `src/rules/estimate.ts`                | the one client estimate and info-line variant (pure)                                      |
+| `src/copy/payInfo.ts`                  | the one client estimate and info-line variant (pure)                                      |
 | `src/copy/codes.ts`                    | reason, status, and error code → copy, with the fallback (D20)                            |
 | `src/user/`                            | demo user in AsyncStorage (D36)                                                           |
 | `src/attempts/`                        | the money-attempt state machine below; the saved-attempt store and the launch check (D48) |
