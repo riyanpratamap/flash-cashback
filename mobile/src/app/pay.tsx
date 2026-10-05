@@ -39,30 +39,26 @@ export default function Pay() {
   return (
     <FormScreen
       footer={
-        <>
-          {info === null ? null : (
-            <AppText variant="subhead" tone="muted">
-              {info}
-            </AppText>
-          )}
-          <Button
-            label={canPay ? `Pay ${formatRp(amount)}` : 'Pay'}
-            disabled={!canPay}
-            onPress={() => {
-              if (canPay) press('payment', amount);
-            }}
-          />
-        </>
+        <Button
+          label={canPay ? `Pay ${formatRp(amount)}` : 'Pay'}
+          disabled={!canPay}
+          onPress={() => {
+            if (canPay) press('payment', amount);
+          }}
+        />
       }
     >
       <View style={styles.group}>
         <AmountInput label="Amount (IDR)" value={text} onChangeText={setText} />
-        {error === null ? null : (
+        {error !== null ? (
           <AppText variant="subhead" tone="danger" accessibilityRole="alert">
             {error}
           </AppText>
-        )}
-        {rules === undefined ? null : (
+        ) : info !== null ? (
+          <AppText variant="subhead" tone="muted">
+            {info}
+          </AppText>
+        ) : rules === undefined ? null : (
           <AppText variant="subhead" tone="muted">
             Payments under {formatRp(rules.min_payment)} earn no cashback.
           </AppText>

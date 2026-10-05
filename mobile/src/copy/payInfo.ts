@@ -14,7 +14,7 @@ function fullAward(amount: number, rules: Rules): number {
 
 /** The Pay screen info line (wireframe screen 2). Always worded "up to": the server decides the award. */
 export function payInfoLine(amount: number, status: string, rules: Rules, remainingToday: number): string {
-  if (amount < rules.min_payment) return `${NO_CASHBACK} Payments under ${formatRp(rules.min_payment)} earn no cashback.`;
+  if (amount < rules.min_payment) return `${NO_CASHBACK} The minimum is ${formatRp(rules.min_payment)}.`;
   if (status === 'ENDED') return `${NO_CASHBACK} Flash Cashback has ended.`;
   if (status === 'PAUSED') return `${NO_CASHBACK} Cashback is temporarily unavailable.`;
   if (remainingToday <= 0) return `${NO_CASHBACK} You've reached today's limit.`;

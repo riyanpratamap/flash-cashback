@@ -95,7 +95,7 @@ describe('Pay info line (AC-63)', () => {
   });
 
   it.each([
-    ['below the minimum', '19999', {}, "This payment won't earn cashback. Payments under Rp20.000 earn no cashback."],
+    ['below the minimum', '19999', {}, "This payment won't earn cashback. The minimum is Rp20.000."],
     [
       'campaign ended',
       '100000',
@@ -123,6 +123,56 @@ describe('Pay info line (AC-63)', () => {
   it('shows no line before an amount is typed', async () => {
     await mount();
     expect(screen.queryByText(/cashback\. Final|won't earn/)).toBeNull();
+  });
+});
+
+describe('Pay line slot (AC-63)', () => {
+  const HINT = 'Payments under Rp20.000 earn no cashback.';
+  const INFO = "Earn up to Rp3.000 cashback, the rest of today's Rp50.000 limit.";
+
+  it('shows the hint with an empty field, and no info line', async () => {
+    await mount();
+    expect(screen.getByText(HINT)).toBeTruthy();
+    expect(screen.queryByText(/^Earn up to|won't earn/)).toBeNull();
+  });
+
+  it('shows the hint, not the info line, when the amount is 0', async () => {
+    await mount();
+    await type('0');
+    expect(screen.getByText(HINT)).toBeTruthy();
+    expect(screen.queryByText(/^Earn up to|won't earn/)).toBeNull();
+  });
+
+  it('replaces the hint with the info line once an amount is typed', async () => {
+    await mount();
+    await type('100000');
+    expect(screen.getByText(INFO)).toBeTruthy();
+    expect(screen.queryByText(HINT)).toBeNull();
+  });
+
+  it('below the minimum, the info line is the only line', async () => {
+    await mount();
+    await type('19999');
+    expect(screen.getByText("This payment won't earn cashback. The minimum is Rp20.000.")).toBeTruthy();
+    expect(screen.queryByText(HINT)).toBeNull();
+  });
+
+  it('an invalid amount shows only the alert', async () => {
+    await mount();
+    await type('10000001');
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter an amount up to Rp10.000.000.');
+    expect(screen.queryByText(HINT)).toBeNull();
+    expect(screen.queryByText(/^Earn up to|won't earn/)).toBeNull();
+  });
+
+  it('a rejection shows only the alert', async () => {
+    await mount([moneyRejected(422, 'INVALID_AMOUNT')]);
+    await type('100000');
+    await fireEvent.press(screen.getByRole('button', { name: 'Pay Rp100.000' }));
+    await settle(0);
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter an amount up to Rp10.000.000.');
+    expect(screen.queryByText(HINT)).toBeNull();
+    expect(screen.queryByText(INFO)).toBeNull();
   });
 });
 

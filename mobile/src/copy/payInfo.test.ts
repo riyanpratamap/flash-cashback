@@ -21,7 +21,7 @@ describe('payInfoLine (AC-63)', () => {
   const line = (amount: number, status = 'ACTIVE', remaining = 47000) => payInfoLine(amount, status, rules, remaining);
 
   it('below the minimum', () => {
-    expect(line(19999)).toBe("This payment won't earn cashback. Payments under Rp20.000 earn no cashback.");
+    expect(line(19999)).toBe("This payment won't earn cashback. The minimum is Rp20.000.");
   });
 
   it('exactly the minimum earns', () => {
