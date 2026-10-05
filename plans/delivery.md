@@ -509,6 +509,14 @@ From `/change` (2026-10-06, after C11): AC-66 amended, AC-66a/b added; wireframe
     title "Transaction history", header "Cashback balance". Tests red on assertions then green; right column back to
     cashback turns three tests red. `make mobile-check` exit 0.
 
+From the C12 walkthrough (2026-10-06): AC-66a amended; wireframe screens 1 and 6.
+
+- [ ] **C13** Cashback subtitle without a sign; no reason on Rp0 — AC-66a, AC-66b · `ts` · not critical
+  - Payment subtitle reads "Earned Rp{awarded} cashback"; a Rp0 payment reads "No cashback" with no chip; a partial
+    award keeps its chip. History and Home.
+  - Done when: History and Home tests assert the new copy and the missing chip on Rp0, red on an assertion then
+    green; `make mobile-check` exits 0.
+
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
 
