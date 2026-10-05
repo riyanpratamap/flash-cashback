@@ -16,7 +16,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D05 | Kill switch                                    | Two independent switches: awards, redemptions                                          |
 | D06 | What Redis is for                              | Read caches for `GET /campaign` and `GET /me/cashback`; no rate limiting               |
 | D07 | Trust conditions                               | The trust conditions table below                                                       |
-| D08 | Cut line                                       | Keep read caches, CI; drop `ENDING_SOON`, cursor paging, detail sheet (load test: D51) |
+| D08 | Cut line                                       | Keep read caches, CI; drop `ENDING_SOON`, cursor paging, detail sheet (load test: D52) |
 | D09 | Demo path without a Mac                        | Expo Go on a phone; iOS simulator documented; README recording and curl examples      |
 | D10 | Base URL                                       | `http://localhost:8080/v1`                                                             |
 | D11 | Money                                          | Integer IDR, `int64` / `BIGINT`                                                        |
@@ -60,6 +60,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D49 | Repository name and Go module path             | `flash-cashback`; `github.com/riyanpratamap/flash-cashback/backend`                     |
 | D50 | Where the Redis layer goes (revisits D06)      | Keep D06: read caches for `GET /campaign` and `GET /me/cashback` only                  |
 | D51 | Load test for the read caches                  | k6 in Docker, three scenarios, cache on vs off; supersedes the D08 load-test drop      |
+| D52 | Load test (revisits D51)                       | Dropped again; `CACHE_READS` kept; P4.5 numbers kept as a one-off measurement          |
 
 ## Open decisions
 
@@ -81,6 +82,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
   A lock timeout returns 503 `SERVICE_BUSY`, retryable with the same key.
 - **Note (D51):** the load test is back. Its mixed scenario counts 503 `SERVICE_BUSY` on payments under a read burst,
   so "in testing" now also means that measurement.
+- **Note (D52):** the load test is dropped again, so "in testing" means the concurrency tests only.
 
 ### D02 — What a payment earns when its full 5% does not fit
 
@@ -370,6 +372,26 @@ Supersedes the load-test part of D08 only; the rest of D08 stands.
   rate, the same for both modes. Each mode starts from `demo-reset` and ends with reconcile exit 0. k6 thresholds fail
   the run only on errors (any read 5xx; any payment 5xx other than 503 `SERVICE_BUSY`); the gain itself is reported,
   not asserted, and the results table goes into the README with the machine it ran on.
+
+### D52 — Load test dropped again (revisits D51)
+
+Raised by the owner after P4.5 ran: k6 is a tool outside the brief's stack (Go, PostgreSQL, Redis, React Native), and
+the P4.5 numbers showed no measurable gain from the read caches. Supersedes D51; the D08 load-test drop stands again.
+
+- **Options:** A. Keep the k6 load test as built in P4.5 · B. Replace k6 with a Go command (`backend/cmd/loadtest`,
+  standard library only) · C. Drop the load test; keep the P4.5 numbers in the delivery plan as a one-off measurement
+  · D. vegeta or hey
+- **Recommended:** A (B while the concern was the stack; A once it was complexity)
+- **Chosen:** C (against recommendation)
+- **Rationale:** "the numbers don't prove anything"
+- **Cost accepted:** the owner accepted the stated cost: no repeatable load command, so the P4.5 measurement cannot be
+  reproduced; as under D08, the limits and the D01 revisit condition are checked by the concurrency tests only.
+- **Would revisit if:** as stated in D08 ("I need to measure real throughput before a launch").
+- **Evidence:** P4.5 on one Apple M2 (k6 and the stack sharing 8 CPUs, 4000 reads/s, 30 s per scenario): read p50
+  about 0.25 ms with the cache on and off, on/off differences smaller than run-to-run noise, k6 dropped up to 1944
+  iterations, no payment 503 in either mode. The full table is the P4.5 Result in `plans/delivery.md`.
+- **Assumptions:** `CACHE_READS` (AC-76) stays: it is built and tested, and lets an operator serve reads from
+  PostgreSQL alone without stopping Redis. D50 is revisited separately (its D51 condition was met).
 
 ## Further batch
 
