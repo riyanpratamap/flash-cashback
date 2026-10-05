@@ -56,7 +56,7 @@ afterEach(() => {
 });
 
 describe('Payment result (AC-58)', () => {
-  it('shows the payment as successful with amount, reference and time in WIB, and the cashback card', async () => {
+  it('shows the payment as successful with amount, reference and time in WIB, and the cashback pill', async () => {
     await pay({ awarded: 5000, reason: 'AWARDED' });
     expect(screen.getByText('Payment successful')).toBeTruthy();
     expect(screen.getByText('Rp100.000')).toBeTruthy();
@@ -65,14 +65,14 @@ describe('Payment result (AC-58)', () => {
     expect(screen.queryByText('Time')).toBeNull();
     expect(screen.getByText('PAY-20261003-000042')).toBeTruthy();
     expect(screen.getByText('3 Oct, 14:32 WIB')).toBeTruthy();
-    expect(screen.getByText('Cashback earned')).toBeTruthy();
-    expect(screen.getByText('+Rp5.000')).toBeTruthy();
-    expect(screen.getByText('5% cashback added to your balance.')).toBeTruthy();
+    expect(screen.getByText('+Rp5.000 cashback')).toBeTruthy();
+    expect(screen.queryByText('Cashback earned')).toBeNull();
+    expect(screen.queryByText('5% cashback added to your balance.')).toBeNull();
     expect(screen.queryByRole('link', { name: 'How it works' })).toBeNull();
     expect(screen.queryByText(/failed/i)).toBeNull();
   });
 
-  it('leads with the payment: the amount renders before the cashback block (AC-62)', async () => {
+  it('leads with the payment: the amount renders before the cashback pill (AC-62)', async () => {
     await pay({ awarded: 5000, reason: 'AWARDED' });
     const texts: string[] = [];
     const walk = (node: unknown): void => {
@@ -83,7 +83,7 @@ describe('Payment result (AC-58)', () => {
     walk(screen.toJSON());
     const title = texts.indexOf('Payment successful');
     const amount = texts.indexOf('Rp100.000');
-    const cashback = texts.indexOf('Cashback earned');
+    const cashback = texts.indexOf('+Rp5.000 cashback');
     expect(title).toBeGreaterThan(-1);
     expect(amount).toBeGreaterThan(title);
     expect(cashback).toBeGreaterThan(amount);
@@ -117,40 +117,32 @@ describe('Payment result (AC-58)', () => {
 
 describe('Payment result, each reason (AC-62)', () => {
   it.each([
-    ['PARTIAL_DAILY_CAP', 3000, '+Rp3.000', 'Daily limit reached', "You've reached today's Rp50.000 cashback limit.", true],
-    [
-      'PARTIAL_BUDGET',
-      1200,
-      '+Rp1.200',
-      'Last of the cashback',
-      'This was the last of the campaign cashback. Flash Cashback has now ended.',
-      true,
-    ],
-    ['DAILY_CAP_REACHED', 0, 'Rp0', 'Daily limit reached', "You've already reached today's Rp50.000 cashback limit.", true],
-    ['BELOW_MINIMUM', 0, 'Rp0', 'Below minimum', "Payments under Rp20.000 don't earn cashback.", true],
-    ['CAMPAIGN_ENDED', 0, 'Rp0', 'Campaign ended', 'Flash Cashback has ended. All cashback has been claimed.', true],
-    [
-      'CAMPAIGN_PAUSED',
-      0,
-      'Rp0',
-      'Unavailable',
-      'Cashback is temporarily unavailable. Payments still work as usual.',
-      true,
-    ],
-  ])('%s', async (reason, awarded, amountText, chip, text, howItWorks) => {
+    ['AWARDED', 5000, '+Rp5.000 cashback', false],
+    ['PARTIAL_DAILY_CAP', 3000, '+Rp3.000 cashback · Daily limit reached', true],
+    ['PARTIAL_BUDGET', 1200, '+Rp1.200 cashback · Last of the cashback', true],
+    ['DAILY_CAP_REACHED', 0, 'No cashback · Daily limit reached', true],
+    ['BELOW_MINIMUM', 0, 'No cashback · Below minimum', true],
+    ['CAMPAIGN_ENDED', 0, 'No cashback · Campaign ended', true],
+    ['CAMPAIGN_PAUSED', 0, 'No cashback · Unavailable', true],
+  ])('%s', async (reason, awarded, pill, howItWorks) => {
     await pay({ awarded, reason });
     expect(screen.getByText('Payment successful')).toBeTruthy();
-    expect(screen.getByText(amountText)).toBeTruthy();
-    expect(screen.getByText(chip)).toBeTruthy();
-    expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.getByText(pill)).toBeTruthy();
+    expect(screen.queryByText('Cashback earned')).toBeNull();
+    expect(screen.queryByText(/limit\.|ended\.|don't earn|temporarily unavailable|added to your balance/)).toBeNull();
     expect(screen.queryByRole('link', { name: 'How it works' }) !== null).toBe(howItWorks);
   });
 
-  it('an unknown code shows the amount as sent and the generic text', async () => {
+  it('an unknown code shows the amount alone in the pill, with the link', async () => {
     await pay({ awarded: 700, reason: 'BRAND_NEW_REASON' });
-    expect(screen.getByText('+Rp700')).toBeTruthy();
-    expect(screen.getByText('See How it works for the cashback rules.')).toBeTruthy();
+    expect(screen.getByText('+Rp700 cashback')).toBeTruthy();
+    expect(screen.queryByText('See How it works for the cashback rules.')).toBeNull();
     expect(screen.getByRole('link', { name: 'How it works' })).toBeTruthy();
+  });
+
+  it('an unknown code at Rp0 shows "No cashback" alone', async () => {
+    await pay({ awarded: 0, reason: 'BRAND_NEW_REASON' });
+    expect(screen.getByText('No cashback')).toBeTruthy();
   });
 
   it('the How it works link opens the rules', async () => {
@@ -169,6 +161,7 @@ describe('Payment result, each reason (AC-62)', () => {
     expect(screen.getByText('Payment successful')).toBeTruthy();
     expect(screen.getByText('Rp100.000')).toBeTruthy();
     expect(screen.queryByText('Cashback earned')).toBeNull();
+    expect(screen.queryByText(/cashback/)).toBeNull();
   });
 });
 

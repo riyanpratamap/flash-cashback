@@ -546,13 +546,18 @@ From `/change` (2026-10-06, after C14): AC-66a amended; wireframe screen 6; api-
 
 From `/change` (2026-10-06, after C15): AC-62 amended; wireframe screen 3.
 
-- [ ] **C16** Payment result cashback as an inline pill — AC-62 · `ts` · not critical
+- [x] **C16** Payment result cashback as an inline pill — AC-62 · `ts` · not critical
   - Replace the Cashback card with one centred pill per the wireframe table: "+Rp{award} cashback" (positive on
     positive tint), " · {chip}" on partials, "No cashback · {chip}" at Rp0 (muted on track); "How it works" link
     under it where the reason calls for it; amount alone for an unknown code or rules not loaded. Drop the unused
     `text` from `ReasonCopy`.
   - Done when: the Payment result test asserts each reason's pill text, no "Cashback earned", no reason sentence,
     and the link only where offered, red on an assertion then green; `make mobile-check` exits 0.
+  - Result: `Card` block replaced by one centred pill (`pillText`, positive on positiveTint / muted on track) and a
+    "How it works" link where offered; `text` and the unused `rules` argument dropped from `reasonCopy` (callers and
+    tests updated), theme.ts contrast note updated. Per-reason table asserts exact pill text, no "Cashback earned",
+    no sentence: red on 11 assertions, then green; chip suffix dropped turns 6 red. Scroll content centred
+    vertically (`flexGrow: 1`, `justifyContent: 'center'`), owner request. `make mobile-check` exit 0.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

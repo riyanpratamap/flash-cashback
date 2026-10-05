@@ -25,44 +25,26 @@ export function zoneLabel(timezone: string): string {
   return timezone === 'Asia/Jakarta' ? 'WIB' : timezone;
 }
 
-export type ReasonCopy = { chip: string | null; text: string; howItWorks: boolean };
+export type ReasonCopy = { chip: string | null; howItWorks: boolean };
 
-export function reasonCopy(reason: string, rules: Rules): ReasonCopy {
-  const cap = formatRp(rules.daily_cap);
-  const min = formatRp(rules.min_payment);
+export function reasonCopy(reason: string): ReasonCopy {
   switch (reason) {
     case 'AWARDED':
-      return { chip: null, text: `${formatPercent(rules.rate_bps)} cashback added to your balance.`, howItWorks: false };
+      return { chip: null, howItWorks: false };
     case 'PARTIAL_DAILY_CAP':
-      return { chip: 'Daily limit reached', text: `You've reached today's ${cap} cashback limit.`, howItWorks: true };
+      return { chip: 'Daily limit reached', howItWorks: true };
     case 'PARTIAL_BUDGET':
-      return {
-        chip: 'Last of the cashback',
-        text: 'This was the last of the campaign cashback. Flash Cashback has now ended.',
-        howItWorks: true,
-      };
+      return { chip: 'Last of the cashback', howItWorks: true };
     case 'DAILY_CAP_REACHED':
-      return {
-        chip: 'Daily limit reached',
-        text: `You've already reached today's ${cap} cashback limit.`,
-        howItWorks: true,
-      };
+      return { chip: 'Daily limit reached', howItWorks: true };
     case 'BELOW_MINIMUM':
-      return { chip: 'Below minimum', text: `Payments under ${min} don't earn cashback.`, howItWorks: true };
+      return { chip: 'Below minimum', howItWorks: true };
     case 'CAMPAIGN_ENDED':
-      return {
-        chip: 'Campaign ended',
-        text: 'Flash Cashback has ended. All cashback has been claimed.',
-        howItWorks: true,
-      };
+      return { chip: 'Campaign ended', howItWorks: true };
     case 'CAMPAIGN_PAUSED':
-      return {
-        chip: 'Unavailable',
-        text: 'Cashback is temporarily unavailable. Payments still work as usual.',
-        howItWorks: true,
-      };
+      return { chip: 'Unavailable', howItWorks: true };
     default:
-      return { chip: null, text: GENERIC_RULES_TEXT, howItWorks: true };
+      return { chip: null, howItWorks: true };
   }
 }
 

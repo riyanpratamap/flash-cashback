@@ -8,8 +8,9 @@ import type { TextStyle } from 'react-native';
  *   warning #8A5300 6.33 / 5.67 · danger #C4281C 5.73 / 5.13 · primaryStrong #1869B6 5.62 / 5.04
  *   white on primaryStrong 5.62 · white on primaryPressed #134F8C 8.32
  *   primaryStrong on primaryTint #E4F1FD 4.90 · on warningTint #FBEFD9 4.94 · on primaryTintPressed #D6E9FB 4.53 · textMuted on track #E5E5EA > 5
- * positiveTint #E4EFE7 is positive (#1E7B34) at 12% on white; positive on positiveTint 4.52. It is the SuccessMark disc, which
- * carries no text; if text ever sits on it, it must be positive or text (text on it is above 14).
+ * positiveTint #E4EFE7 is positive (#1E7B34) at 12% on white; positive on positiveTint 4.52. It is the SuccessMark disc and the
+ * background of the payment result's cashback pill, whose text is positive (4.52); any text on it must be positive or
+ * text (text on it is above 14).
  * #208AEF measures 3.53 on white, so it never carries text: it is the tint source, the progress bar and the focus ring.
  * primaryTint is #208AEF at 12% on white.
  */

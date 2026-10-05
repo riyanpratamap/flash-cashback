@@ -38,7 +38,7 @@ export function activityDetail(item: HistoryItem, time: string | null, chip: str
  */
 export function chipOf(item: HistoryItem, rules: Campaign['rules'] | undefined): string | null {
   if (item.type !== 'PAYMENT' || rules === undefined || item.cashback.awarded === 0) return null;
-  return reasonCopy(item.cashback.reason, rules).chip;
+  return reasonCopy(item.cashback.reason).chip;
 }
 
 type Props = { item: HistoryItem; detail: string; last?: boolean };
