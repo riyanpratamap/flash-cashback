@@ -50,8 +50,8 @@ func payRouterInv(tx store.TxRunner, inv *cache.Invalidator, w io.Writer) http.H
 		PingPostgres: func(context.Context) error { return nil },
 		PingRedis:    func(context.Context) error { return nil },
 		Log:          log,
-		Reads:        service.NewReads(p),
-		History:      service.NewReads(p),
+		Reads:        service.NewReads(p, nil),
+		History:      service.NewReads(p, nil),
 		Payments:     service.NewPayments(tx, inv, log),
 		Redemptions:  service.NewRedemptions(tx, inv, log),
 	})

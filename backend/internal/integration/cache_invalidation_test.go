@@ -21,7 +21,7 @@ import (
 
 // Tech-spec §6: a write deletes the keys of the views it changes, after
 // COMMIT. These tests plant a value under each key, run the write, and look
-// at which keys remain. No read uses the cache yet (P4.4).
+// at which keys remain. The read side is tested in cache_reads_test.go.
 
 func plantKeys(t *testing.T, keys ...string) {
 	t.Helper()

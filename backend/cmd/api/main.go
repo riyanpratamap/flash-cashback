@@ -61,7 +61,8 @@ func serve(cfg config.Config) int {
 
 	inv := cache.NewInvalidator(rc, cfg.RedisTimeout, log)
 	money := store.TxRunner{Pool: pool, LockTimeoutMS: cfg.LockTimeoutMS(), StatementTimeoutMS: cfg.StatementTimeoutMS()}
-	reads := service.NewReads(pool)
+	// NewReadCache is nil when CACHE_READS=off (AC-76).
+	reads := service.NewReads(pool, cache.NewReadCache(rc, cfg, log))
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.Deps{

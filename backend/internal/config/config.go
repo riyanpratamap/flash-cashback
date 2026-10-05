@@ -18,6 +18,8 @@ type Config struct {
 	RedisTimeout     time.Duration
 	CacheCampaignTTL time.Duration
 	CacheCashbackTTL time.Duration
+	// CacheReads is false only when CACHE_READS is "off" (D51, AC-76).
+	CacheReads bool
 	// LockTimeout and StatementTimeout are whole milliseconds: they are
 	// formatted into SET LOCAL, which takes no bind parameters.
 	LockTimeout      time.Duration
@@ -46,6 +48,7 @@ func Load(getenv func(string) string) (Config, error) {
 		RedisTimeout:     l.duration("REDIS_TIMEOUT", 50*time.Millisecond, false),
 		CacheCampaignTTL: l.duration("CACHE_CAMPAIGN_TTL", 5*time.Second, false),
 		CacheCashbackTTL: l.duration("CACHE_CASHBACK_TTL", 60*time.Second, false),
+		CacheReads:       l.onOff("CACHE_READS", true),
 		LockTimeout:      l.duration("LOCK_TIMEOUT", 2*time.Second, true),
 		StatementTimeout: l.duration("STATEMENT_TIMEOUT", 5*time.Second, true),
 		CampaignBudget:   l.positiveInt("CAMPAIGN_BUDGET", 10000000, 1<<62),
@@ -123,4 +126,18 @@ func (l *loader) logLevel(key, def string) string {
 	}
 	l.fail(key, "%q is not one of debug, info, warn, error", v)
 	return def
+}
+
+func (l *loader) onOff(key string, def bool) bool {
+	switch v := l.getenv(key); v {
+	case "":
+		return def
+	case "on":
+		return true
+	case "off":
+		return false
+	default:
+		l.fail(key, "%q is not one of on, off", v)
+		return def
+	}
 }

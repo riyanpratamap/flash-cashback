@@ -23,6 +23,7 @@ func TestLoadDefaults(t *testing.T) {
 		RedisTimeout:     50 * time.Millisecond,
 		CacheCampaignTTL: 5 * time.Second,
 		CacheCashbackTTL: 60 * time.Second,
+		CacheReads:       true,
 		LockTimeout:      2 * time.Second,
 		StatementTimeout: 5 * time.Second,
 		CampaignBudget:   10000000,
@@ -46,6 +47,7 @@ func TestLoadOverrides(t *testing.T) {
 		"REDIS_TIMEOUT":      "100ms",
 		"CACHE_CAMPAIGN_TTL": "1s",
 		"CACHE_CASHBACK_TTL": "2m",
+		"CACHE_READS":        "off",
 		"LOCK_TIMEOUT":       "1500ms",
 		"STATEMENT_TIMEOUT":  "7s",
 		"CAMPAIGN_BUDGET":    "500000",
@@ -74,6 +76,20 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if got.LockTimeoutMS() != 1500 || got.StatementTimeoutMS() != 7000 {
 		t.Fatalf("ms: lock %d statement %d", got.LockTimeoutMS(), got.StatementTimeoutMS())
+	}
+}
+
+func TestLoadCacheReadsOff(t *testing.T) {
+	got, err := Load(env(map[string]string{"CACHE_READS": "off"}))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got.CacheReads {
+		t.Fatal("CACHE_READS=off left CacheReads true")
+	}
+	got, err = Load(env(map[string]string{"CACHE_READS": "on"}))
+	if err != nil || !got.CacheReads {
+		t.Fatalf("CACHE_READS=on: %+v, %v", got, err)
 	}
 }
 
@@ -112,6 +128,8 @@ func TestLoadRejects(t *testing.T) {
 		{"budget not a number", "CAMPAIGN_BUDGET", "ten"},
 		{"log level unknown", "LOG_LEVEL", "trace"},
 		{"log level case", "LOG_LEVEL", "INFO"},
+		{"cache reads unknown", "CACHE_READS", "maybe"},
+		{"cache reads case", "CACHE_READS", "OFF"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -23,8 +23,8 @@ func readsRouter() http.Handler {
 	return httpapi.NewRouter(httpapi.Deps{
 		PingPostgres: func(context.Context) error { return nil },
 		PingRedis:    func(context.Context) error { return nil },
-		Reads:        service.NewReads(pool),
-		History:      service.NewReads(pool),
+		Reads:        service.NewReads(pool, nil),
+		History:      service.NewReads(pool, nil),
 	})
 }
 

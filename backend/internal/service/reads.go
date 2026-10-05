@@ -3,26 +3,51 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/riyanpratamap/flash-cashback/backend/internal/cache"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/store"
 )
 
 // Reads serves the two read endpoints.
-type Reads struct{ pool *pgxpool.Pool }
+type Reads struct {
+	pool  *pgxpool.Pool
+	cache *cache.ReadCache // nil: caching is off (AC-76)
+}
 
-// NewReads builds Reads on the pool.
-func NewReads(pool *pgxpool.Pool) *Reads { return &Reads{pool: pool} }
+// NewReads builds Reads on the pool. A nil rc turns the read cache off.
+func NewReads(pool *pgxpool.Pool, rc *cache.ReadCache) *Reads { return &Reads{pool: pool, cache: rc} }
 
 const (
 	campaignID = "flash-cashback"
 	timezone   = "Asia/Jakarta"
 )
 
-// Campaign returns the campaign state and rules.
+// Campaign returns the campaign state and rules, from the cache when it holds
+// a valid body. Only a successful read is stored (§6).
 func (r *Reads) Campaign(ctx context.Context) (domain.CampaignView, error) {
+	lookup := cache.Unavailable // no cache: nothing to fill
+	if r.cache != nil {
+		var v domain.CampaignView
+		if v, lookup = r.cache.Campaign(ctx); lookup == cache.Hit {
+			return v, nil
+		}
+	}
+	v, err := r.campaignFromDB(ctx)
+	if err != nil {
+		return domain.CampaignView{}, err
+	}
+	// A failed Redis is not asked again in this request (AC-44).
+	if r.cache != nil && lookup == cache.Miss {
+		r.cache.SetCampaign(ctx, v)
+	}
+	return v, nil
+}
+
+func (r *Reads) campaignFromDB(ctx context.Context) (domain.CampaignView, error) {
 	c, err := store.GetCampaign(ctx, r.pool, campaignID)
 	if err != nil {
 		return domain.CampaignView{}, err
@@ -38,13 +63,31 @@ func (r *Reads) Campaign(ctx context.Context) (domain.CampaignView, error) {
 	}, nil
 }
 
-// Cashback returns the user's balance and today's progress. A user with no
-// rows gets zeros and the campaign's cap.
+// Cashback returns the user's balance and today's progress, from the cache
+// when it holds a valid body. A user with no rows gets zeros and the
+// campaign's cap. The stored body lives until the campaign day ends at the
+// latest, by the database clock of the same statement (AC-46).
 func (r *Reads) Cashback(ctx context.Context, user domain.UserID) (domain.CashbackView, error) {
+	lookup := cache.Unavailable // no cache: nothing to fill
+	if r.cache != nil {
+		var v domain.CashbackView
+		if v, lookup = r.cache.Cashback(ctx, user); lookup == cache.Hit {
+			return v, nil
+		}
+	}
+	started := time.Now()
 	t, err := store.Today(ctx, r.pool, campaignID, user)
 	if err != nil {
 		return domain.CashbackView{}, err
 	}
+	v := cashbackView(t)
+	if r.cache != nil && lookup == cache.Miss {
+		r.cache.SetCashback(ctx, user, v, t.ResetsAt.Sub(t.Now), started)
+	}
+	return v, nil
+}
+
+func cashbackView(t store.TodayRow) domain.CashbackView {
 	var earned int64
 	if t.UserDay != nil {
 		earned = t.UserDay.Earned
@@ -57,7 +100,7 @@ func (r *Reads) Cashback(ctx context.Context, user domain.UserID) (domain.Cashba
 			Remaining: domain.TodayRemaining(t.CampaignCap, t.UserDay),
 			ResetsAt:  domain.FormatTime(t.ResetsAt),
 		},
-	}, nil
+	}
 }
 
 // History returns the user's newest payments and redemptions, newest first.
