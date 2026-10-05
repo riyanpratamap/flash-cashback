@@ -61,6 +61,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D50 | Where the Redis layer goes (revisits D06)      | Keep D06: read caches for `GET /campaign` and `GET /me/cashback` only                  |
 | D51 | Load test for the read caches                  | k6 in Docker, three scenarios, cache on vs off; supersedes the D08 load-test drop      |
 | D52 | Load test (revisits D51)                       | Dropped again; `CACHE_READS` kept; P4.5 numbers kept as a one-off measurement          |
+| D53 | Where the Redis layer goes (revisits D50)      | Cache `GET /campaign` only; `GET /me/cashback` always reads PostgreSQL                 |
 
 ## Open decisions
 
@@ -392,6 +393,22 @@ the P4.5 numbers showed no measurable gain from the read caches. Supersedes D51;
   iterations, no payment 503 in either mode. The full table is the P4.5 Result in `plans/delivery.md`.
 - **Assumptions:** `CACHE_READS` (AC-76) stays: it is built and tested, and lets an operator serve reads from
   PostgreSQL alone without stopping Redis. D50 is revisited separately (its D51 condition was met).
+
+### D53 — Redis caches `GET /campaign` only (revisits D50)
+
+Raised after D52: D50 was to be revisited if the load test showed no measurable gain, and the P4.5 run showed none.
+Supersedes D50; the rest of D06 (no rate limiting, fail open when Redis is down) stands.
+
+- **Options:** A. Keep both read caches as built · B. Cache `GET /campaign` only · C. Add rate limiting on
+  `POST /payments` as well, or instead
+- **Recommended:** A
+- **Chosen:** B (against recommendation)
+- **Rationale:** "the campaign cache is shared by every user, cashback barely helps"
+- **Cost accepted:** the owner accepted the stated cost ("i accept the trade off"): a removal task in the payment and
+  redemption after-commit path, with its own tests and review; every `GET /me/cashback` reads PostgreSQL.
+- **Would revisit if:** as stated in D06.
+- **Assumptions:** `fc:v1:cashback:*` is no longer read, written, or deleted; keys left by an older build expire within
+  their 60 s TTL. `CACHE_CASHBACK_TTL` is removed. `CACHE_READS` now switches the campaign cache only.
 
 ## Further batch
 
