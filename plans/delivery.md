@@ -308,6 +308,12 @@ demo-reset` → exit 0 · `docker compose stop redis`; healthz → 200, `status`
 as user_a → 15000; `docker compose start redis` · pause/resume both switches with `--by` · reconcile → exit=0 ·
 `down` · CI green.
 
+**P4 gate result (2026-10-05):** all steps pass. `make gate` exit 0; `make test-race` exit 0; `up -d --build --wait`
+exit 0; `demo-reset` exit 0; Redis stopped → healthz 200, `status` ok, redis `degraded`, `GET /me/cashback` user_a
+balance 15000; Redis started → healthz redis ok; pause/resume awards and redemptions with `--by owner` each exit 0,
+`changed` true; reconcile exit 0 (INV-01–09 ok, liability 65000); `down` exit 0; CI run 37300465581 `gate` and
+`smoke` green on `200cd71`. The load-test step was removed by D52.
+
 ## P5 — Mobile app
 
 - [ ] **P5.1** Expo scaffold, API client, formatting, user — AC-67, AC-68 · `ts` · not critical
