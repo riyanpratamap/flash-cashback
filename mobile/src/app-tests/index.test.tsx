@@ -176,21 +176,22 @@ describe('Home (AC-64)', () => {
     expect(screen.getByText('To main account')).toBeTruthy();
     expect(screen.getByText('+Rp42.000')).toBeTruthy();
     expect(screen.getByText('Payment')).toBeTruthy();
-    expect(screen.getByText('+Rp25.000 cashback')).toBeTruthy();
+    expect(screen.getByText('Earned Rp25.000 cashback')).toBeTruthy();
     expect(screen.getByText('−Rp500.000')).toBeTruthy();
     expect(requestedUrls().some((u) => u.endsWith('/me/history?limit=2'))).toBe(true);
   });
 
-  it('lists a partial and a Rp0 payment with the reason chip and no time', async () => {
+  it('lists a partial and a Rp0 payment with the chip only on the partial and no time', async () => {
     const pay = (id: number, amount: number, awarded: number, reason: string) => ({
       type: 'PAYMENT', id, reference: `PAY-${id}`, amount, status: 'SUCCEEDED',
       created_at: '2026-10-03T14:32:00+07:00', cashback: { awarded, reason },
     });
     serve({ history: { items: [pay(2, 60000, 2000, 'PARTIAL_DAILY_CAP'), pay(1, 15000, 0, 'BELOW_MINIMUM')] } });
     await renderApp(<Home />);
-    expect(await screen.findByText('+Rp2.000 cashback · Daily limit reached')).toBeTruthy();
+    expect(await screen.findByText('Earned Rp2.000 cashback · Daily limit reached')).toBeTruthy();
     expect(screen.getByText('−Rp60.000')).toBeTruthy();
-    expect(screen.getByText('No cashback · Below minimum')).toBeTruthy();
+    expect(screen.getByText('No cashback')).toBeTruthy();
+    expect(screen.queryByText(/Below minimum/)).toBeNull();
     expect(screen.getByText('−Rp15.000')).toBeTruthy();
   });
 

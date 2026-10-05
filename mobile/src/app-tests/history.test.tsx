@@ -52,7 +52,7 @@ describe('History (AC-66)', () => {
     await renderScreen(<History />);
     expect(await screen.findByText('4 OCT')).toBeTruthy();
     expect(screen.queryByText('3 OCT')).toBeNull();
-    expect(screen.getByText('00:30 · +Rp5.000 cashback')).toBeTruthy();
+    expect(screen.getByText('00:30 · Earned Rp5.000 cashback')).toBeTruthy();
   });
 
   it('shows the current balance header from the cashback summary', async () => {
@@ -90,11 +90,12 @@ describe('History (AC-66)', () => {
       },
     });
     await renderScreen(<History />);
-    expect(await screen.findByText('14:32 · +Rp5.000 cashback')).toBeTruthy();
+    expect(await screen.findByText('14:32 · Earned Rp5.000 cashback')).toBeTruthy();
     expect(screen.getByText('−Rp100.000')).toBeTruthy();
-    expect(screen.getByText('14:00 · +Rp2.000 cashback · Daily limit reached')).toBeTruthy();
+    expect(screen.getByText('14:00 · Earned Rp2.000 cashback · Daily limit reached')).toBeTruthy();
     expect(screen.getByText('−Rp60.000')).toBeTruthy();
-    expect(screen.getByText('13:05 · No cashback · Below minimum')).toBeTruthy();
+    expect(screen.getByText('13:05 · No cashback')).toBeTruthy();
+    expect(screen.queryByText(/Below minimum/)).toBeNull();
     expect(screen.getByText('−Rp15.000')).toBeTruthy();
     expect(screen.getAllByText('Payment')).toHaveLength(3);
     expect(screen.getByText('Cashback redeemed')).toBeTruthy();

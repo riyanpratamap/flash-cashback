@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import type { Campaign, HistoryItem } from '@/api/queries';
 import { reasonCopy } from '@/copy/codes';
-import { formatSigned } from '@/money/format';
+import { formatRp, formatSigned } from '@/money/format';
 import { AppText } from '@/ui/AppText';
 import { colors, spacing } from '@/ui/theme';
 
@@ -19,7 +19,7 @@ export function activityLine(item: HistoryItem): Line {
   const { awarded } = item.cashback;
   return {
     title: 'Payment',
-    summary: awarded > 0 ? `${formatSigned(awarded, 'earned')} cashback` : 'No cashback',
+    summary: awarded > 0 ? `Earned ${formatRp(awarded)} cashback` : 'No cashback',
     amount: formatSigned(item.amount, 'paid'),
     positive: false,
   };
@@ -32,9 +32,13 @@ export function activityDetail(item: HistoryItem, time: string | null, chip: str
   return parts.filter((part) => part !== null).join(' · ');
 }
 
-/** The reason chip of a payment, or null when rules are not loaded, the item is a redemption, or the reason has none. */
+/**
+ * The reason chip of a payment, or null when rules are not loaded, the item is a redemption, the reason has none, or
+ * nothing was awarded (a Rp0 payment reads "No cashback" and gives no reason, AC-66a). History and Home share this.
+ */
 export function chipOf(item: HistoryItem, rules: Campaign['rules'] | undefined): string | null {
-  return item.type === 'PAYMENT' && rules !== undefined ? reasonCopy(item.cashback.reason, rules).chip : null;
+  if (item.type !== 'PAYMENT' || rules === undefined || item.cashback.awarded === 0) return null;
+  return reasonCopy(item.cashback.reason, rules).chip;
 }
 
 type Props = { item: HistoryItem; detail: string; last?: boolean };
