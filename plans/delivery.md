@@ -561,12 +561,18 @@ From `/change` (2026-10-06, after C15): AC-62 amended; wireframe screen 3.
 
 From `/change` (2026-10-06, after C16): AC-65a amended; wireframe screen 5.
 
-- [ ] **C17** Compact, centred redemption result — AC-65a, AC-65b · `ts` · not critical
-  - Success view in `redeem.tsx`: drop the details card and the "Sent to" row; under "Sent to your main account" a
-    muted caption with the reference, then "Cashback balance Rp{balance_after}" on a fresh 201 only; content centred
-    vertically above Done. The form view keeps its "Sent to" row.
-  - Done when: the Redeem tests assert the caption reference and balance text, no "Sent to" / "Main account" on the
-    success view, and no balance on a replay, red on an assertion then green; `make mobile-check` exits 0.
+- [x] **C17** Centred redemption result with a details card — AC-65a, AC-65b · `ts` · not critical
+  - Success view in `redeem.tsx`: drop the "Sent to your main account" line; under the amount one details card (white
+    surface, hairline separators, muted label left, value right): Sent to · Main account; Reference; Cashback balance
+    on a fresh 201 only. Content centred vertically above Done (`FormScreen` `centred` prop), the unparsable-body
+    branch too. The form view is unchanged.
+  - Done when: the Redeem tests assert the Sent to / Main account / Reference / Cashback balance rows on a fresh 201,
+    no "Sent to your main account", and no balance on a replay, red on an assertion then green; `make mobile-check`
+    exits 0.
+  - Result: "Sent to your main account" removed; the success view shows one details card reusing `details`,
+    `detailRow`, `separator` and a right-aligned `value` style, the last row shown having no separator. `FormScreen`
+    gained an optional `centred` prop (`flexGrow: 1`, `justifyContent: 'center'`), used only by this view. Tests: red
+    on 3 tests, then green; balance row shown on a replay turns the replay test red. `make mobile-check` exit 0.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

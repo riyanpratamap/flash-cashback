@@ -169,11 +169,11 @@ describe('Redeem press and success (AC-65)', () => {
     expect(screen.getByLabelText('Success')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Redemption successful' })).toBeTruthy();
     expect(screen.getByText('Rp10.000')).toBeTruthy();
-    expect(screen.getByText('Sent to your main account')).toBeTruthy();
-    expect(screen.getByText('Reference')).toBeTruthy();
-    expect(screen.getByText('RDM-20261003-000003')).toBeTruthy();
+    expect(screen.queryByText('Sent to your main account')).toBeNull();
     expect(screen.getByText('Sent to')).toBeTruthy();
     expect(screen.getByText('Main account')).toBeTruthy();
+    expect(screen.getByText('Reference')).toBeTruthy();
+    expect(screen.getByText('RDM-20261003-000003')).toBeTruthy();
     expect(screen.getByText('Cashback balance')).toBeTruthy();
     expect(screen.getByText('Rp5.000')).toBeTruthy();
     expect(screen.queryByLabelText('Amount to redeem (IDR)')).toBeNull();
@@ -190,6 +190,8 @@ describe('Redeem press and success (AC-65)', () => {
     expect(screen.getByRole('header', { name: 'Redemption successful' })).toBeTruthy();
     expect(screen.getByText('Rp10.000')).toBeTruthy();
     expect(screen.getByText('RDM-20261003-000003')).toBeTruthy();
+    expect(screen.getByText('Sent to')).toBeTruthy();
+    expect(screen.getByText('Main account')).toBeTruthy();
     expect(screen.queryByText('Cashback balance')).toBeNull();
     expect(screen.queryByText('Rp3.000')).toBeNull();
   });
@@ -203,6 +205,7 @@ describe('Redeem press and success (AC-65)', () => {
     expect(screen.getByRole('header', { name: 'Your redemption went through.' })).toBeTruthy();
     expect(screen.getByText('Check your balance on the home screen.')).toBeTruthy();
     expect(screen.queryByText('Cashback balance')).toBeNull();
+    expect(screen.queryByText('Sent to')).toBeNull();
     expect(screen.getByRole('button', { name: 'Done' })).toBeTruthy();
   });
 });

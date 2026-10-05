@@ -8,9 +8,17 @@ import { colors, layout, spacing } from '@/ui/theme';
  * A scrolling form with its action pinned at the bottom, above the keyboard and the home indicator. The offset
  * the keyboard view needs is the distance from the top of the window to this screen (header and, on Android with
  * edge-to-edge, the status bar), measured rather than assumed. The home-indicator inset is dropped while the keyboard
- * covers it.
+ * covers it. `centred` puts the content in the middle of the space above the footer.
  */
-export function FormScreen({ children, footer }: { children: ReactNode; footer: ReactNode }) {
+export function FormScreen({
+  children,
+  footer,
+  centred = false,
+}: {
+  children: ReactNode;
+  footer: ReactNode;
+  centred?: boolean;
+}) {
   const frame = useRef<View>(null);
   const [offset, setOffset] = useState(0);
   const [keyboardShown, setKeyboardShown] = useState(false);
@@ -34,7 +42,7 @@ export function FormScreen({ children, footer }: { children: ReactNode; footer: 
         behavior="padding"
         keyboardVerticalOffset={offset}
       >
-        <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.fill} contentContainerStyle={centred ? [styles.content, styles.centred] : styles.content} keyboardShouldPersistTaps="handled">
           {children}
         </ScrollView>
         <SafeAreaView edges={keyboardShown ? [] : ['bottom']} style={styles.footer}>
@@ -48,6 +56,7 @@ export function FormScreen({ children, footer }: { children: ReactNode; footer: 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: layout.margin, gap: layout.section },
+  centred: { flexGrow: 1, justifyContent: 'center' },
   footer: {
     paddingHorizontal: layout.margin,
     paddingTop: spacing.md,

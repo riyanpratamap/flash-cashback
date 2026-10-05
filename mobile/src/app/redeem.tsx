@@ -36,7 +36,7 @@ export default function Redeem() {
       acknowledge();
     };
     return (
-      <FormScreen footer={<Button label="Done" onPress={done} />}>
+      <FormScreen centred footer={<Button label="Done" onPress={done} />}>
         <View style={styles.hero}>
           <SuccessMark />
           {result === null ? (
@@ -56,23 +56,20 @@ export default function Redeem() {
               <AppText variant="display" tabular>
                 {formatRp(result.amount)}
               </AppText>
-              <AppText variant="subhead" tone="muted">
-                Sent to your main account
-              </AppText>
             </>
           )}
         </View>
         {result === null ? null : (
           <View style={styles.details}>
             <View style={[styles.detailRow, styles.separator]}>
+              <AppText tone="muted">Sent to</AppText>
+              <AppText style={styles.value}>Main account</AppText>
+            </View>
+            <View style={[styles.detailRow, !state.replayed && styles.separator]}>
               <AppText tone="muted">Reference</AppText>
               <AppText tabular style={styles.value}>
                 {result.reference}
               </AppText>
-            </View>
-            <View style={[styles.detailRow, !state.replayed && styles.separator]}>
-              <AppText tone="muted">Sent to</AppText>
-              <AppText style={styles.value}>Main account</AppText>
             </View>
             {state.replayed ? null : (
               <View style={styles.detailRow}>
