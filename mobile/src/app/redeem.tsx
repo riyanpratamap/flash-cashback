@@ -12,6 +12,7 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { FormScreen } from '@/ui/FormScreen';
 import { LoadError } from '@/ui/LoadError';
+import { SuccessMark } from '@/ui/SuccessMark';
 import { colors, layout, radius, spacing } from '@/ui/theme';
 
 const PAUSED_LINE = errorCopy('REDEMPTION_PAUSED', {});
@@ -36,11 +37,53 @@ export default function Redeem() {
     };
     return (
       <FormScreen footer={<Button label="Done" onPress={done} />}>
-        <AppText variant="title" accessibilityRole="header">
-          {result === null
-            ? 'Your redemption went through.'
-            : `${formatRp(result.amount)} sent to your main account. Your balance is now ${formatRp(result.balanceAfter)}.`}
-        </AppText>
+        <View style={styles.hero}>
+          <SuccessMark />
+          {result === null ? (
+            <>
+              <AppText variant="title" accessibilityRole="header" style={styles.centred}>
+                Your redemption went through.
+              </AppText>
+              <AppText variant="subhead" tone="muted" style={styles.centred}>
+                Check your balance on the home screen.
+              </AppText>
+            </>
+          ) : (
+            <>
+              <AppText variant="title" accessibilityRole="header" style={styles.centred}>
+                Redemption successful
+              </AppText>
+              <AppText variant="display" tabular>
+                {formatRp(result.amount)}
+              </AppText>
+              <AppText variant="subhead" tone="muted">
+                Sent to your main account
+              </AppText>
+            </>
+          )}
+        </View>
+        {result === null ? null : (
+          <View style={styles.details}>
+            <View style={[styles.detailRow, styles.separator]}>
+              <AppText tone="muted">Reference</AppText>
+              <AppText tabular style={styles.value}>
+                {result.reference}
+              </AppText>
+            </View>
+            <View style={[styles.detailRow, !state.replayed && styles.separator]}>
+              <AppText tone="muted">Sent to</AppText>
+              <AppText style={styles.value}>Main account</AppText>
+            </View>
+            {state.replayed ? null : (
+              <View style={styles.detailRow}>
+                <AppText tone="muted">Cashback balance</AppText>
+                <AppText tabular style={styles.value}>
+                  {formatRp(result.balanceAfter)}
+                </AppText>
+              </View>
+            )}
+          </View>
+        )}
       </FormScreen>
     );
   }
@@ -112,6 +155,9 @@ export default function Redeem() {
 const styles = StyleSheet.create({
   content: { padding: layout.margin, gap: layout.section },
   group: { gap: spacing.sm },
+  hero: { alignItems: 'center', gap: spacing.sm },
+  centred: { textAlign: 'center' },
+  value: { flexShrink: 1, textAlign: 'right' },
   details: { backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.lg },
   separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },

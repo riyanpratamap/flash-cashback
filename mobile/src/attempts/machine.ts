@@ -15,7 +15,7 @@ export type AttemptState =
   | { phase: 'sending'; attempt: SavedAttempt }
   | { phase: 'checking'; attempt: SavedAttempt }
   | { phase: 'waiting'; attempt: SavedAttempt }
-  | { phase: 'done'; attempt: SavedAttempt; body: unknown }
+  | { phase: 'done'; attempt: SavedAttempt; body: unknown; replayed: boolean }
   | ({ phase: 'rejected'; attempt: SavedAttempt } & Rejection);
 
 export type MachineDeps = {
@@ -45,7 +45,7 @@ async function finish(attempt: SavedAttempt, result: ApiResult, deps: MachineDep
     // If the removal fails the attempt is resent at the next launch, and the server replays the stored answer for the
     // same key.
     await deps.remove(attempt.key).catch(() => undefined);
-    return { phase: 'done', attempt, body: result.body };
+    return { phase: 'done', attempt, body: result.body, replayed: result.replayed };
   }
   // A 4xx created no row, so the key is still unused: a resend could succeed and move money the user saw rejected.
   // Remove twice, then fall back to a marker the launch check skips.

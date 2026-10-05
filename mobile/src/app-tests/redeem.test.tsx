@@ -12,6 +12,7 @@ import {
   fetchMock,
   moneyOk,
   moneyRejected,
+  moneyReplayed,
   newClient,
   posts,
   renderApp,
@@ -41,6 +42,10 @@ const redeemed = (amount: number, balanceAfter: number) =>
     redemption: { id: 3, reference: 'RDM-20261003-000003', amount, status: 'COMPLETED', destination: 'MAIN_ACCOUNT' },
     balance_after: balanceAfter,
   });
+const STORED = {
+  redemption: { id: 3, reference: 'RDM-20261003-000003', amount: 10000, status: 'COMPLETED', destination: 'MAIN_ACCOUNT' },
+  balance_after: 3000,
+};
 const getCount = (path: string) => requestedUrls().filter((url) => url.includes(path)).length;
 
 function Harness() {
@@ -156,16 +161,49 @@ describe('Redeem press and success (AC-65)', () => {
     expect(posts[0]).toMatchObject({ url: expect.stringContaining('/redemptions'), key: 'K1', body: { amount: 10000 } });
   });
 
-  it('shows the amount sent and the balance after, and Done returns Home and acknowledges', async () => {
+  it('a fresh 201 shows the success screen with the balance after, and Done returns Home and acknowledges', async () => {
     await mount([redeemed(10000, 5000)]);
     await type('10000');
     await fireEvent.press(screen.getByRole('button', { name: 'Redeem Rp10.000' }));
     await settle(0);
-    expect(screen.getByText('Rp10.000 sent to your main account. Your balance is now Rp5.000.')).toBeTruthy();
+    expect(screen.getByLabelText('Success')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Redemption successful' })).toBeTruthy();
+    expect(screen.getByText('Rp10.000')).toBeTruthy();
+    expect(screen.getByText('Sent to your main account')).toBeTruthy();
+    expect(screen.getByText('Reference')).toBeTruthy();
+    expect(screen.getByText('RDM-20261003-000003')).toBeTruthy();
+    expect(screen.getByText('Sent to')).toBeTruthy();
+    expect(screen.getByText('Main account')).toBeTruthy();
+    expect(screen.getByText('Cashback balance')).toBeTruthy();
+    expect(screen.getByText('Rp5.000')).toBeTruthy();
     expect(screen.queryByLabelText('Amount to redeem (IDR)')).toBeNull();
     await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
     expect(dismissTo).toHaveBeenCalledWith('/');
     expect(screen.getByText('phase: idle')).toBeTruthy();
+  });
+
+  it('a replay (200, Idempotent-Replayed) shows the success screen with no balance, which may be stale', async () => {
+    await mount([moneyReplayed(STORED)]);
+    await type('10000');
+    await fireEvent.press(screen.getByRole('button', { name: 'Redeem Rp10.000' }));
+    await settle(0);
+    expect(screen.getByRole('header', { name: 'Redemption successful' })).toBeTruthy();
+    expect(screen.getByText('Rp10.000')).toBeTruthy();
+    expect(screen.getByText('RDM-20261003-000003')).toBeTruthy();
+    expect(screen.queryByText('Cashback balance')).toBeNull();
+    expect(screen.queryByText('Rp3.000')).toBeNull();
+  });
+
+  it('a body that cannot be parsed says it went through, points Home, and shows no balance', async () => {
+    await mount([moneyOk({ unexpected: true })]);
+    await type('10000');
+    await fireEvent.press(screen.getByRole('button', { name: 'Redeem Rp10.000' }));
+    await settle(0);
+    expect(screen.getByLabelText('Success')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Your redemption went through.' })).toBeTruthy();
+    expect(screen.getByText('Check your balance on the home screen.')).toBeTruthy();
+    expect(screen.queryByText('Cashback balance')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Done' })).toBeTruthy();
   });
 });
 
@@ -270,7 +308,10 @@ describe('Redeem with a launch-resent redemption (AC-60)', () => {
     };
     await renderApp(<Popped />);
     await settle(5000);
-    expect(screen.getByText('Rp18.000 sent to your main account. Your balance is now Rp0.')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Redemption successful' })).toBeTruthy();
+    expect(screen.getByText('Rp18.000')).toBeTruthy();
+    expect(screen.getByText('Cashback balance')).toBeTruthy();
+    expect(screen.getByText('Rp0')).toBeTruthy();
     expect(posts.map((p) => p.key)).toEqual(['OLDER']);
     await fireEvent.press(screen.getByRole('button', { name: 'pop' }));
     await settle(0);

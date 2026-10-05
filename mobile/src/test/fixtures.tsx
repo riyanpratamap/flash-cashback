@@ -92,12 +92,14 @@ export async function renderApp(ui: ReactElement, client = newClient()) {
   );
 }
 
-export type MoneyAnswer = { status: number; body: unknown } | 'network' | 'hang';
+export type MoneyAnswer = { status: number; body: unknown; replayed?: boolean } | 'network' | 'hang';
 export const PAID = {
   payment: { id: 42, reference: 'PAY-20261003-000042', amount: 100000, status: 'SUCCEEDED', created_at: '2026-10-03T14:32:00+07:00' },
   cashback: { awarded: 5000, reason: 'AWARDED' },
 };
 export const moneyOk = (body: unknown = PAID): MoneyAnswer => ({ status: 201, body });
+/** A 200 with `Idempotent-Replayed: true`: the stored answer of an earlier press with the same key. */
+export const moneyReplayed = (body: unknown): MoneyAnswer => ({ status: 200, body, replayed: true });
 export const moneyRejected = (status: number, code: string): MoneyAnswer => ({
   status,
   body: { error: { code, message: 'm', request_id: 'r' } },
@@ -126,6 +128,7 @@ export function serveMoney(answers: MoneyAnswer[], overrides: Partial<Record<key
         init.signal?.addEventListener('abort', () => reject(new Error('aborted')));
       });
     }
-    return new Response(JSON.stringify(answer.body), { status: answer.status });
+    const headers = answer.replayed === true ? { 'Idempotent-Replayed': 'true' } : undefined;
+    return new Response(JSON.stringify(answer.body), { status: answer.status, headers });
   });
 }
