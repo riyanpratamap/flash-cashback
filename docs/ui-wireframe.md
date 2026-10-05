@@ -146,7 +146,7 @@ Top to bottom:
 - a muted caption with the time and zone, then the reference;
 - the cashback pill, centred, caption size: above Rp0 positive text on the positive tint, "+Rp{award} cashback",
   followed by " · {chip}" when the reason has one; at Rp0 muted text on the track colour, "No cashback · {chip}";
-  under it a "How it works" link when the reason calls for it;
+  under it a centred "How it works" link on a partial award only;
 - the footer: Done (primary) and Make another payment (secondary).
 
 The content above the footer is centred vertically.
@@ -168,7 +168,8 @@ no chip.
 | `CAMPAIGN_PAUSED`   | Rp0        | "No cashback · Unavailable"             |
 | unknown code        | as sent    | the amount alone ("+Rp{award} cashback" or "No cashback") |
 
-"How it works" is offered on every variant except `AWARDED`. Cashback is credited at once; there is no pending state
+"How it works" is offered only when some cashback was earned but less than the full rate (`PARTIAL_DAILY_CAP`,
+`PARTIAL_BUDGET`); never on `AWARDED` and never at Rp0, an unknown code included. Cashback is credited at once; there is no pending state
 (D07, trust condition 18).
 
 ## 4. Checking
