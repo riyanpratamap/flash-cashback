@@ -60,7 +60,9 @@ describe('Payment result (AC-58)', () => {
     await pay({ awarded: 5000, reason: 'AWARDED' });
     expect(screen.getByText('Payment successful')).toBeTruthy();
     expect(screen.getByText('Rp100.000')).toBeTruthy();
-    expect(screen.getByText('Amount')).toBeTruthy();
+    expect(screen.queryByText('Amount')).toBeNull();
+    expect(screen.queryByText('Reference')).toBeNull();
+    expect(screen.queryByText('Time')).toBeNull();
     expect(screen.getByText('PAY-20261003-000042')).toBeTruthy();
     expect(screen.getByText('3 Oct, 14:32 WIB')).toBeTruthy();
     expect(screen.getByText('Cashback earned')).toBeTruthy();
@@ -68,6 +70,25 @@ describe('Payment result (AC-58)', () => {
     expect(screen.getByText('5% cashback added to your balance.')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'How it works' })).toBeNull();
     expect(screen.queryByText(/failed/i)).toBeNull();
+  });
+
+  it('leads with the payment: the amount renders before the cashback block (AC-62)', async () => {
+    await pay({ awarded: 5000, reason: 'AWARDED' });
+    const texts: string[] = [];
+    const walk = (node: unknown): void => {
+      if (typeof node === 'string') texts.push(node);
+      else if (Array.isArray(node)) node.forEach(walk);
+      else if (node !== null && typeof node === 'object') walk((node as { children?: unknown }).children);
+    };
+    walk(screen.toJSON());
+    const title = texts.indexOf('Payment successful');
+    const amount = texts.indexOf('Rp100.000');
+    const cashback = texts.indexOf('Cashback earned');
+    expect(title).toBeGreaterThan(-1);
+    expect(amount).toBeGreaterThan(title);
+    expect(cashback).toBeGreaterThan(amount);
+    expect(texts.indexOf('3 Oct, 14:32 WIB')).toBeLessThan(cashback);
+    expect(texts.indexOf('PAY-20261003-000042')).toBeLessThan(cashback);
   });
 
   it('Done returns Home and acknowledges the result', async () => {
@@ -144,6 +165,7 @@ describe('Payment result, each reason (AC-62)', () => {
     await settle(0);
     await fireEvent.press(screen.getByRole('button', { name: 'pay' }));
     await settle(0);
+    expect(screen.getByLabelText('Success')).toBeTruthy();
     expect(screen.getByText('Payment successful')).toBeTruthy();
     expect(screen.getByText('Rp100.000')).toBeTruthy();
     expect(screen.queryByText('Cashback earned')).toBeNull();

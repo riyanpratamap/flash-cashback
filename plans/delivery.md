@@ -481,12 +481,13 @@ From `/change` (2026-10-06, after C6): AC-62, AC-63 amended, AC-65 split into AC
   - Done when: test shows the hint, then the info line, never both, red then green; `payInfo.test.ts` and `pay.test.tsx`
     updated for the new wording only; `make mobile-check` exits 0.
   - Result: `pay.tsx` footer holds only Pay; one slot under the field: alert, else `payInfoLine`, else the rule hint (empty, 0, or info not yet computable). `payInfo.ts` below-minimum line is "This payment won't earn cashback. The minimum is Rp20.000.". Tests: new `Pay line slot (AC-63)` (hint when empty and at 0, info replaces hint, below minimum alone, over-max alert alone, rejection alert alone); two wording expectations updated. Mutations red: info at amount 0, hint always shown. `make mobile-check` exit 0.
-- [ ] **C10** Payment result leads with the payment; cashback block below — AC-62 · `ts` · not critical
+- [x] **C10** Payment result leads with the payment; cashback block below — AC-62 · `ts` · not critical
   - Mark, "Payment successful", amount (display, text colour), caption time+zone then reference, Cashback block
     (label subhead muted, amount headline, positive above zero, chip and text in subhead, How it works when called);
     Amount / Reference / Time card removed; unparsed body: mark, title, attempt amount, no block; file comment updated.
   - Done when: test asserts the payment amount renders before "Cashback earned", red then green;
     `payment-result.test.tsx` updated for the removed labels; `make mobile-check` exits 0.
+  - Result: `payment-result.tsx` stacks SuccessMark, title, display amount, two muted caption lines (time+zone, reference), then a Card with the cashback block; detail card and its labels removed; unparsed body shows mark, title, attempt amount. New order test and mark test red then green; three expectations changed. `make mobile-check` exit 0.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

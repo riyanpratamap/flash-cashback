@@ -12,10 +12,10 @@ import { formatRp, formatSigned } from '@/money/format';
 import { AppText } from '@/ui/AppText';
 import { Button, LinkText } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { SuccessMark } from '@/ui/SuccessMark';
 import { colors, layout, radius, spacing } from '@/ui/theme';
 
-/** Screen 3. The payment always shows as successful; the cashback is the number that leads (wireframe). */
-const DETAIL_LABELS = { amount: 'Amount', reference: 'Reference', time: 'Time' } as const;
+/** Screen 3. The payment always shows as successful and leads; the cashback is the bonus below it (D17, wireframe). */
 
 export default function PaymentResult() {
   const router = useRouter();
@@ -44,19 +44,31 @@ export default function PaymentResult() {
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
-        <AppText variant="title" accessibilityRole="header">
-          Payment successful
-        </AppText>
-        {result === null ? (
-          <AppText variant="display" tabular>
-            {formatRp(state.attempt.amount)}
+        <View style={styles.top}>
+          <SuccessMark />
+          <AppText variant="title" accessibilityRole="header">
+            Payment successful
           </AppText>
-        ) : (
-          <View style={styles.hero}>
+          <AppText variant="display" tabular>
+            {formatRp(result === null ? state.attempt.amount : result.amount)}
+          </AppText>
+          {result === null ? null : (
+            <View style={styles.caption}>
+              <AppText variant="caption" tone="muted" tabular>
+                {`${formatStamp(result.createdAt)}${rules === undefined ? '' : ` ${zoneLabel(rules.timezone)}`}`}
+              </AppText>
+              <AppText variant="caption" tone="muted" tabular>
+                {result.reference}
+              </AppText>
+            </View>
+          )}
+        </View>
+        {result === null ? null : (
+          <Card>
             <AppText variant="subhead" tone="muted">
               Cashback earned
             </AppText>
-            <AppText variant="display" tone={result.awarded > 0 ? 'positive' : 'text'} tabular>
+            <AppText variant="headline" tone={result.awarded > 0 ? 'positive' : 'text'} tabular>
               {formatSigned(result.awarded, 'earned')}
             </AppText>
             {copy === null ? null : (
@@ -68,20 +80,10 @@ export default function PaymentResult() {
                     </AppText>
                   </View>
                 )}
-                <AppText>{copy.text}</AppText>
+                <AppText variant="subhead">{copy.text}</AppText>
                 {copy.howItWorks ? <LinkText label="How it works" onPress={() => router.push('/how-it-works')} /> : null}
               </>
             )}
-          </View>
-        )}
-        {result === null ? null : (
-          <Card style={styles.details}>
-            <DetailRow label={DETAIL_LABELS.amount} value={formatRp(result.amount)} separated />
-            <DetailRow label={DETAIL_LABELS.reference} value={result.reference} separated />
-            <DetailRow
-              label={DETAIL_LABELS.time}
-              value={`${formatStamp(result.createdAt)}${rules === undefined ? '' : ` ${zoneLabel(rules.timezone)}`}`}
-            />
           </Card>
         )}
       </ScrollView>
@@ -93,25 +95,11 @@ export default function PaymentResult() {
   );
 }
 
-function DetailRow({ label, value, separated = false }: { label: string; value: string; separated?: boolean }) {
-  return (
-    <View style={[styles.detailRow, separated && styles.separator]}>
-      <AppText tone="muted">{label}</AppText>
-      <AppText tabular style={styles.value}>
-        {value}
-      </AppText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { padding: layout.margin, gap: layout.section },
-  hero: { gap: spacing.sm, alignItems: 'flex-start' },
-  chip: { borderRadius: radius.pill, backgroundColor: colors.warningTint, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-  details: { paddingVertical: spacing.xs, gap: 0 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.lg, paddingVertical: spacing.md },
-  separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
-  value: { flexShrink: 1, textAlign: 'right' },
+  top: { gap: spacing.sm, alignItems: 'center' },
+  caption: { alignItems: 'center' },
+  chip: { alignSelf: 'flex-start', borderRadius: radius.pill, backgroundColor: colors.warningTint, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   footer: { padding: layout.margin, gap: spacing.sm },
 });
