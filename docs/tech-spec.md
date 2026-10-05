@@ -437,6 +437,9 @@ checking --2xx--> done      checking --4xx--> rejected (back on the originating 
 checking --3 unknowns--> waiting: "Check again" --> checking (same key, as often as pressed)
 ```
 
+`done` carries `replayed` (from the `Idempotent-Replayed` header) next to the body; the Redeem confirmation shows
+`balance_after` only when `replayed` is false (AC-65a/b).
+
 Launch check (D48, wireframe screen 4), before Home renders its data, per saved attempt, oldest first:
 
 ```

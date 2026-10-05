@@ -193,10 +193,22 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
   request is sent and Home shows the unconfirmed-attempt card with the amount and the attempt's time per the wireframe
   (screen 4); Check now opens Checking and resends with the saved key and user; Dismiss removes the attempt, shows
   "Check your history before paying again.", and sends nothing.
-- **AC-62** The Payment result shows the amount, chip, and text of each reason in the wireframe table, and the fallback for an unknown code.
-- **AC-63** The Pay info line shows each wireframe variant; with today's remaining 3000 and amount Rp100.000, the estimate is Rp3.000.
+- **AC-62** The Payment result leads with the payment: the success mark, "Payment successful", the payment amount, then
+  the time with zone and the reference; below them a Cashback block shows the amount, chip, and text of each reason in
+  the wireframe table, and the fallback for an unknown code (D17). A body that cannot be parsed shows the mark, the
+  title, and the attempt's amount, with no Cashback block.
+- **AC-63** Pay shows one line under the amount field, never two: the minimum hint while no amount is typed, the info
+  line (each wireframe variant) once one is, or the error alert, which takes the slot. Below the minimum it reads "This
+  payment won't earn cashback. The minimum is Rp20.000."; with today's remaining 3000 and amount Rp100.000, the
+  estimate is Rp3.000.
 - **AC-64** Home shows loading, a load error with no zero values, the `ACTIVE`, `PAUSED`, and `ENDED` banners, the redemption-paused card, empty activity, and Redeem disabled at balance 0.
-- **AC-65** On Redeem, `INSUFFICIENT_BALANCE` refetches the balance then shows the limit; `REDEMPTION_PAUSED` refetches the campaign and shows the paused state; success shows the confirmation with `balance_after`, then Done returns Home.
+- **AC-65** On Redeem, `INSUFFICIENT_BALANCE` refetches the balance then shows the limit; `REDEMPTION_PAUSED`
+  refetches the campaign and shows the paused state.
+- **AC-65a** Success shows the success mark, "Redemption successful", the amount, "Sent to your main account", and a
+  details list with Reference and "Sent to: Main account"; "Cashback balance: Rp{balance_after}" appears only when the
+  answer was a fresh 201 for this press. Done returns Home.
+- **AC-65b** A replay (200 with `Idempotent-Replayed: true`) shows no balance. A body that cannot be parsed shows the
+  mark, "Your redemption went through.", and "Check your balance on the home screen.", with no balance.
 - **AC-66** With the device in UTC and an item at 2026-10-04T00:30:00+07:00, History groups it under 4 Oct; it shows at most 20 rows and the reason on partial and Rp0 payments.
 - **AC-67** The chosen demo user sets `X-User-ID` on every request and is remembered after the app restarts.
 - **AC-68** The app calls `EXPO_PUBLIC_API_URL` when set, else `http://localhost:8080/v1`.
@@ -247,7 +259,7 @@ Trust condition 11 (operator trail) is stated only (D47) and has no AC; AC-40 co
 | Payments under 20,000 IDR earn nothing                           | AC-02, AC-03, AC-07, AC-11                      |
 | At most 50,000 IDR of cashback per day                           | AC-05–07, AC-10, AC-13, AC-14, AC-26, INV-03    |
 | Budget 10,000,000 IDR; when gone, the campaign is over           | AC-08–11, AC-25, AC-41, AC-52, AC-53, INV-02    |
-| Users can redeem their cashback balance                          | AC-29–35, AC-37, AC-39, AC-65, AC-69            |
+| Users can redeem their cashback balance                          | AC-29–35, AC-37, AC-39, AC-65, AC-65a/b, AC-69  |
 | In scope: payments that earn or don't                            | AC-01–28, AC-70, AC-71                          |
 | In scope: what a user needs to see and do                        | AC-41–49, AC-58–68, AC-72–75                    |
 | Out of scope: refunds and clawback                               | Non-goals (TC17)                                |

@@ -42,19 +42,20 @@ There is no payment detail sheet; the history row itself shows the reason (D08).
 Flash Cashback
 [DEMO] (User A) ( User B ) ( User C )
 
+Cashback balance
+Rp15.000                                  [ Redeem ]
+[               Make a payment                     ]
+
 +--------------------------------------------------+
 | Campaign active                                   |
 | Cashback up to 5% on payments of Rp20.000 or      |
 | more, max Rp50.000 per day, while cashback lasts. |
 | How it works                                      |
 +--------------------------------------------------+
-| Cashback balance   Rp15.000           [ Redeem ]  |
-+--------------------------------------------------+
 | Earned today               Rp47.000 / Rp50.000    |
 | [=============================================  ] |
 | Rp3.000 left to earn today. Resets at 00:00 WIB.  |
 +--------------------------------------------------+
-[               Make a payment                     ]
 
 Recent activity                            See all
 Redeemed to main account                 −Rp42.000
@@ -63,7 +64,11 @@ Payment Rp500.000                        +Rp25.000
 
 - **User switcher:** marked `DEMO`, stands in for login. It sets `X-User-ID`, reloads the screen, and the choice is
   remembered across launches.
-- **Banner:** from `status`. The numbers come from `rules`, never from hard-coded text.
+- **Layout:** the balance hero and the Make a payment button come first; the balance is the only display-size text on
+  Home. The campaign status strip sits below them, above Earned today.
+- **Banner:** a compact tinted strip (info tint when `ACTIVE`, warning otherwise): its title in subhead semibold, its
+  text in caption, padding 8 vertical / 12 horizontal, and the "How it works" link in caption size with its 44 pt
+  target. Its content comes from `status`. The numbers come from `rules`, never from hard-coded text.
   - `ACTIVE`: "Campaign active" and the rule line above.
   - `PAUSED`: "Cashback is temporarily unavailable. Payments still work as usual." Neutral, not red. The Earned today
     card stays.
@@ -87,19 +92,22 @@ Payment Rp500.000                        +Rp25.000
 
 Amount (IDR)
 [ 100.000                                          ]
-Payments under Rp20.000 earn no cashback.
-( Rp20.000 ) ( Rp50.000 ) ( Rp100.000 )
-
 (i) Earn up to Rp5.000 cashback. Final amount is
     confirmed after payment.
+( Rp20.000 ) ( Rp50.000 ) ( Rp100.000 )
 
 [                Pay Rp100.000                     ]
 ```
 
+With no amount typed, the slot under the field reads "Payments under Rp20.000 earn no cashback."
+
 - **Amount:** digits only, formatted as typed. Chips fill it. Above Rp10.000.000: "Enter an amount up to
   Rp10.000.000."
+- **One line slot** under the amount field, never two lines: the hint "Payments under Rp20.000 earn no cashback." (its
+  numbers from the rules) while no amount is typed, and the info line once an amount is typed. An error
+  (`INVALID_AMOUNT` or a rejection) takes the slot as the alert line. The footer holds only the Pay button.
 - **Info line,** the only client-side estimate, always worded "up to":
-  - below the minimum: "This payment won't earn cashback. Payments under Rp20.000 earn no cashback."
+  - below the minimum: "This payment won't earn cashback. The minimum is Rp20.000."
   - campaign ended: "This payment won't earn cashback. Flash Cashback has ended."
   - awards paused: "This payment won't earn cashback. Cashback is temporarily unavailable."
   - nothing left today: "This payment won't earn cashback. You've reached today's limit."
@@ -114,25 +122,37 @@ Payments under Rp20.000 earn no cashback.
 ## 3. Payment result
 
 ```
+                      ( ✓ )
               Payment successful
-
-              Cashback earned
-                 +Rp5.000
-        5% cashback added to your balance.
+                  Rp100.000
+               3 Oct, 14:32 WIB
+              PAY-20261003-000042
 
 +--------------------------------------------------+
-| Amount                                 Rp100.000 |
-| Reference                    PAY-20261003-000042 |
-| Time                            3 Oct, 14:32 WIB |
+| Cashback earned                                   |
+| +Rp5.000                                          |
+| 5% cashback added to your balance.                |
 +--------------------------------------------------+
 
 [                    Done                          ]
 [             Make another payment                 ]
 ```
 
-The payment always shows as successful. The cashback leads, as the one large number, then the reason; the payment
-itself is a quiet two-column list of Amount, Reference and Time. No balance is shown here; Done returns to Home, which
-refetches.
+Top to bottom:
+
+- the success mark: a 72 pt circle in the positive tint with a check, drawn without an image or icon; accessibility
+  role image, label "Success";
+- "Payment successful";
+- the payment amount in display size, text colour;
+- a muted caption with the time and zone, then the reference;
+- a secondary "Cashback" block on a white surface: "Cashback earned" in subhead muted, the amount in headline
+  (positive colour above zero, text colour for Rp0), and the chip and reason text in subhead, with "How it works" when
+  the reason calls for it;
+- the footer: Done (primary) and Make another payment (secondary).
+
+The payment always shows as successful. The payment leads, as the one large number; the cashback is the bonus on top,
+in the block below it (D17). No balance is shown here; Done returns to Home, which refetches. When the body cannot be
+parsed: the mark, the title, and the attempt's amount, with no cashback block.
 
 | Reason              | Amount     | Chip                | Text                                                          |
 | ------------------- | ---------- | ------------------- | ------------------------------------------------------------- |
@@ -195,8 +215,31 @@ Up to Rp18.000                        ( Redeem all )
   Rp{balance}." No minimum.
 - The button is disabled at balance 0, or an empty or invalid amount. On press it disables at once and creates one
   idempotency key.
-- **Success:** "Rp{amount} sent to your main account. Your balance is now Rp{balance_after}." then Done returns to
-  Home.
+- **Success:**
+  - the success mark centred;
+  - "Redemption successful";
+  - the amount in display size, tabular;
+  - "Sent to your main account" in subhead muted;
+  - a quiet details list on a white surface: Reference; Sent to: Main account; and "Cashback balance:
+    Rp{balance_after}" only when the answer was a fresh 201 (a replay shows no balance);
+  - when the body cannot be parsed: the mark, "Your redemption went through.", and "Check your balance on the home
+    screen.";
+  - the footer: Done only, returning Home.
+
+  ```
+                        ( ✓ )
+                Redemption successful
+                      Rp18.000
+              Sent to your main account
+
+  +--------------------------------------------------+
+  | Reference                    RDM-20261003-000003 |
+  | Sent to                             Main account |
+  | Cashback balance                             Rp0 |
+  +--------------------------------------------------+
+
+  [                    Done                          ]
+  ```
 - **`INSUFFICIENT_BALANCE`:** the balance is refetched first, then "You can redeem up to Rp{balance}."
 - **Unknown outcome:** screen 4.
 - Works after the campaign has ended, unless redemptions are paused. The budget never refuses a redemption (D03).
