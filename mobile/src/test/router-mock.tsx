@@ -6,8 +6,19 @@ export const push = jest.fn<void, [string]>();
 type FocusEffect = () => void | (() => void);
 const focusEffects = new Set<FocusEffect>();
 
+export const replace = jest.fn<void, [string]>();
+export const back = jest.fn<void, []>();
+export const dismissTo = jest.fn<void, [string]>();
+
+const router = { push, replace, back, dismissTo };
+
+/** Clears every recorded navigation. */
+export function resetRouter() {
+  [push, replace, back, dismissTo].forEach((fn) => fn.mockReset());
+}
+
 export function useRouter() {
-  return { push };
+  return router;
 }
 
 export function useFocusEffect(effect: FocusEffect) {

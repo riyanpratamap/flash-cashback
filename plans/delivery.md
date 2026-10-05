@@ -345,15 +345,26 @@ balance 15000; Redis started → healthz redis ok; pause/resume awards and redem
     more mutations red. AC-73 "Checking opens" proved at provider level, the screen opening is asserted in P5.4.
     Assumption (owner-accepted deviation from §10): a launch resend that ends in `waiting` stops the launch queue; the
     remaining recent attempts become unconfirmed cards, with their keys kept.
-- [ ] **P5.4** Pay, Payment result, Checking, unconfirmed card — AC-58, AC-60, AC-61 (UI), AC-62, AC-63, AC-74 (UI) ·
+- [x] **P5.4** Pay, Payment result, Checking, unconfirmed card — AC-58, AC-60, AC-61 (UI), AC-62, AC-63, AC-74 (UI) ·
   TC21 · `ts` · **critical** (Checking blocks back; "failed" never shown)
   - Done when: RNTL tests: every reason + fallback, every info-line variant, estimate Rp3.000, a 4xx shows the inline
     or generic error copy and the next press sends a new key (AC-61), back blocked, Dismiss sends nothing and shows
     the history hint; with two recent attempts at launch, each one's result (done or rejected) is shown before the
     next is resent (P5.3 review F5).
+  - Result: `pay`, `payment-result`, `checking` routes, `AttemptNavigator` (state drives screens, incl. the launch
+    resend opening Checking), `UnconfirmedCard` on Home, `payInfoLine`/`estimateCashback`, and
+    `acknowledge()` in AttemptProvider (F5: a launch resend waits for Done or leaving the rejection). 86 new or
+    changed Jest tests; mutations red and restored: back block removed, key reused after a 4xx, acknowledge wait
+    skipped, "failed" copy, waiting not blocking, Dismiss that also sends, Pay not acknowledging on leave.
+    Review fixes (F1, F2, F3, F5): the result acknowledges on unmount; a press while the launch queue waits turns the
+    rest into cards and runs with a new key; Pay fills in a rejection that arrives while it is open; layout options,
+    disabled Pay and a non-UTC device stamp are now asserted. 6 more tests, each mutation red and restored.
+    Assumption: redemption answers only return Home until P5.5 adds its screens.
 - [ ] **P5.5** Redeem and confirmation — AC-65, AC-60 (redemption) · `ts` · not critical
   - Done when: RNTL tests: `INSUFFICIENT_BALANCE` refetches then shows the limit; `REDEMPTION_PAUSED` refetches the
-    campaign; success shows `balance_after`.
+    campaign; success shows `balance_after`; a launch-resent redemption result (done or rejected) is shown and
+    acknowledged on leave, and the P5.4 interim `dismissTo('/')` + `acknowledge()` in `AttemptNavigator` is removed
+    (P5.4 review F4).
 
 **P5 gate:** `make mobile-check`, `make gate` → exit 0 · stack up + demo-reset · `cd mobile && npm ci && npx expo
 start`; the owner walks screens 1–7 as user_a (pay, result, redeem, history) on a simulator or Expo Go · reconcile →

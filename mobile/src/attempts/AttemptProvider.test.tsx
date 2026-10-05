@@ -82,6 +82,12 @@ function Probe() {
       <Pressable accessibilityRole="button" onPress={() => a.press('redemption', 18000)}>
         <Text>redeem</Text>
       </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => a.acknowledge()}>
+        <Text>acknowledge</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => a.acknowledge('rejected')}>
+        <Text>acknowledge rejected</Text>
+      </Pressable>
       <Pressable accessibilityRole="button" onPress={a.checkAgain}>
         <Text>check again</Text>
       </Pressable>
@@ -350,6 +356,9 @@ describe('AC-73 launch check, recent attempt', () => {
     expect(calls.map((c) => c.key)).toEqual(['OLDER']); // the second waits for the first
     await settle(10_000);
     await settle(2000);
+    expect(calls.map((c) => c.key)).toEqual(['OLDER', 'OLDER']);
+    await press('acknowledge'); // F5: the first result is seen before the second is sent
+    await settle(0);
     expect(calls.map((c) => c.key)).toEqual(['OLDER', 'OLDER', 'NEWER']);
   });
 });
@@ -522,5 +531,79 @@ describe('guards and storage failures', () => {
     await press('dismiss');
     await settle(0);
     expect(await savedKeys()).toEqual(['OLD']);
+  });
+});
+
+describe('P5.3 review F5: each launch result is shown before the next resend', () => {
+  const twoRecent = () =>
+    AsyncStorage.setItem(ATTEMPTS_STORAGE_KEY, JSON.stringify([attemptAged('NEWER', 2), attemptAged('OLDER', 8)]));
+
+  it('holds a done result until it is acknowledged, then resends the next', async () => {
+    await twoRecent();
+    answers = [ok(PAID), ok(PAID)];
+    await mount();
+    await settle(0);
+    await settle(5000);
+    expect(phase('done')).toBeTruthy();
+    expect(calls.map((c) => c.key)).toEqual(['OLDER']);
+    await press('acknowledge');
+    await settle(0);
+    expect(calls.map((c) => c.key)).toEqual(['OLDER', 'NEWER']);
+    expect(phase('done')).toBeTruthy();
+  });
+
+  it('holds a rejected result the same way', async () => {
+    await twoRecent();
+    answers = [rejected(422, 'INVALID_AMOUNT'), ok(PAID)];
+    await mount();
+    await settle(5000);
+    expect(screen.getByText('code: INVALID_AMOUNT')).toBeTruthy();
+    expect(calls.map((c) => c.key)).toEqual(['OLDER']);
+    await press('acknowledge');
+    await settle(0);
+    expect(calls.map((c) => c.key)).toEqual(['OLDER', 'NEWER']);
+  });
+
+  it('acknowledging resets the state to idle; the typed variant only acts on its own phase', async () => {
+    answers = [ok(PAID)];
+    await mount();
+    await press('pay');
+    await settle(0);
+    expect(phase('done')).toBeTruthy();
+    await press('acknowledge rejected'); // not rejected: no effect
+    expect(phase('done')).toBeTruthy();
+    await press('acknowledge');
+    expect(phase('idle')).toBeTruthy();
+  });
+
+  it('the last attempt needs no acknowledgement and releases the guard', async () => {
+    await AsyncStorage.setItem(ATTEMPTS_STORAGE_KEY, JSON.stringify([attemptAged('ONLY', 2)]));
+    answers = [ok(PAID), ok(PAID)];
+    await mount();
+    await settle(0);
+    expect(phase('done')).toBeTruthy();
+    await press('pay');
+    await settle(0);
+    expect(calls.map((c) => c.key)).toEqual(['ONLY', 'K1']);
+  });
+
+  it('F2: a press while the launch queue waits runs with a new key, and the rest become cards, never resent', async () => {
+    await twoRecent();
+    answers = [rejected(422, 'INVALID_AMOUNT'), ok(PAID), ok(PAID)];
+    await mount();
+    await settle(5000);
+    expect(screen.getByText('code: INVALID_AMOUNT')).toBeTruthy();
+    expect(calls.map((c) => c.key)).toEqual(['OLDER']);
+    await press('pay');
+    await settle(0);
+    await settle(20_000);
+    expect(calls.map((c) => c.key)).toEqual(['OLDER', 'K1']); // NEWER is not resent behind the press
+    expect(calls[1]).toMatchObject({ url: expect.stringMatching(/\/payments$/), body: { amount: 100000 } });
+    expect(screen.getByText('unconfirmed: NEWER')).toBeTruthy();
+    expect(await savedKeys()).toEqual(['NEWER']); // original key kept
+    expect(phase('done')).toBeTruthy();
+    await press('acknowledge'); // a late acknowledgement does not wake a queue that is gone
+    await settle(0);
+    expect(calls.map((c) => c.key)).toEqual(['OLDER', 'K1']);
   });
 });

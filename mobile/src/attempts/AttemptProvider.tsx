@@ -22,6 +22,11 @@ export type AttemptContextValue = {
   checkNow: (key: string) => void;
   /** Removes the saved attempt and sends nothing. */
   dismiss: (key: string) => Promise<void>;
+  /**
+   * The user has seen a definite answer (Done on the result, or leaving the rejection): the state goes back to
+   * `idle` and a launch resend waiting on it carries on. With `only`, it acts when the state is in that phase.
+   */
+  acknowledge: (only?: 'done' | 'rejected') => void;
 };
 
 const AttemptContext = createContext<AttemptContextValue | null>(null);
@@ -56,6 +61,11 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef<AttemptState>(IDLE);
   const busyRef = useRef(false);
   const launchStarted = useRef(false);
+  const ackWaiter = useRef<(() => void) | null>(null);
+  /** Recent attempts the launch queue has not sent yet while it waits for an acknowledgement. */
+  const queuedRest = useRef<readonly SavedAttempt[]>([]);
+  /** Set when a press took over the launch queue: the loop must send nothing more and leave the guard alone. */
+  const queueTakenOver = useRef(false);
 
   const report = useCallback((next: AttemptState) => {
     stateRef.current = next;
@@ -91,6 +101,18 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
 
   const press = useCallback(
     (kind: AttemptKind, amount: number) => {
+      const release = ackWaiter.current;
+      if (release !== null) {
+        // The launch queue waits for the user to see an answer; a new press ends the wait. The unsent attempts become
+        // cards (keys kept) before the queue is released, so the loop cannot resend them behind the press.
+        const rest = queuedRest.current;
+        queuedRest.current = [];
+        ackWaiter.current = null;
+        queueTakenOver.current = true;
+        setUnconfirmed((list) => [...list, ...rest]);
+        busyRef.current = false; // the press below takes the guard itself, before anything awaits
+        release();
+      }
       if (!begin()) return;
       const attempt: SavedAttempt = {
         user_id: user,
@@ -131,6 +153,18 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
     [unconfirmed],
   );
 
+  const acknowledge = useCallback(
+    (only?: 'done' | 'rejected') => {
+      const phase = stateRef.current.phase;
+      if (phase !== 'done' && phase !== 'rejected') return;
+      if (only !== undefined && only !== phase) return;
+      report(IDLE);
+      ackWaiter.current?.();
+      ackWaiter.current = null;
+    },
+    [report],
+  );
+
   useEffect(() => {
     if (launchStarted.current) return;
     launchStarted.current = true;
@@ -148,14 +182,22 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
           setUnconfirmed((list) => [...list, ...recent.slice(i + 1)]);
           break;
         }
+        if (i < recent.length - 1) {
+          // F5: the user sees this answer before the next attempt is sent.
+          queuedRest.current = recent.slice(i + 1);
+          await new Promise<void>((resolve) => {
+            ackWaiter.current = resolve;
+          });
+          if (queueTakenOver.current) return; // a press owns the guard now, and the rest are cards
+        }
       }
       busyRef.current = false;
     })();
   }, [deps, settle]);
 
   const value = useMemo<AttemptContextValue>(
-    () => ({ state, launchChecked, unconfirmed, press, checkAgain, checkNow, dismiss }),
-    [state, launchChecked, unconfirmed, press, checkAgain, checkNow, dismiss],
+    () => ({ state, launchChecked, unconfirmed, press, checkAgain, checkNow, dismiss, acknowledge }),
+    [state, launchChecked, unconfirmed, press, checkAgain, checkNow, dismiss, acknowledge],
   );
   return <AttemptContext.Provider value={value}>{children}</AttemptContext.Provider>;
 }

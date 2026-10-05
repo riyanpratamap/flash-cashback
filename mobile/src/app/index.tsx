@@ -4,6 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 
 import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '../api/hooks';
 import type { Campaign, CashbackSummary } from '../api/queries';
+import { useAttempts } from '../attempts/AttemptProvider';
 import { bannerCopy, zoneLabel } from '../copy/codes';
 import { formatRp } from '../money/format';
 import { useUser } from '../user/UserProvider';
@@ -11,9 +12,11 @@ import { DEMO_USERS, userLabel } from '../user/users';
 import { ActivityRow } from '../ui/ActivityRow';
 import { Button, LinkText } from '../ui/Button';
 import { LoadError } from '../ui/LoadError';
+import { UnconfirmedCard } from '../ui/UnconfirmedCard';
 
 const LOAD_ERROR = "Couldn't load your cashback. Your balance is safe. Check your connection and try again.";
 const ACTIVITY_ERROR = "Couldn't load your recent activity.";
+const HISTORY_HINT = 'Check your history before paying again.';
 const HOLD_LINE = 'Redemption is on hold and your balance is safe.';
 
 export default function Home() {
@@ -21,7 +24,9 @@ export default function Home() {
   const campaign = useCampaign();
   const cashback = useCashback();
   const activity = useHistory(HOME_ACTIVITY_LIMIT);
+  const { unconfirmed, checkNow, dismiss } = useAttempts();
   const [refreshing, setRefreshing] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   const { refetch: refetchCampaign } = campaign;
   const { refetch: refetchCashback } = cashback;
@@ -47,6 +52,17 @@ export default function Home() {
         Flash Cashback
       </Text>
       <UserSwitcher />
+      {unconfirmed.map((attempt) => (
+        <UnconfirmedCard
+          key={attempt.key}
+          attempt={attempt}
+          onCheckNow={() => checkNow(attempt.key)}
+          onDismiss={() => {
+            void dismiss(attempt.key).then(() => setDismissed(true));
+          }}
+        />
+      ))}
+      {dismissed ? <Text>{HISTORY_HINT}</Text> : null}
       {campaign.data !== undefined && cashback.data !== undefined ? (
         <Loaded campaign={campaign.data} cashback={cashback.data} onNavigate={(href) => router.push(href)} />
       ) : campaign.isError || cashback.isError ? (
