@@ -149,6 +149,8 @@ Top to bottom:
   under it a "How it works" link when the reason calls for it;
 - the footer: Done (primary) and Make another payment (secondary).
 
+The content above the footer is centred vertically.
+
 The payment always shows as successful. The payment leads, as the one large number; the cashback is the bonus on top,
 in one small pill below it (D17). There is no card, no "Cashback earned" label, and no reason sentence. No balance is
 shown here; Done returns to Home, which refetches. When the body cannot be parsed: the mark, the title, and the
@@ -221,23 +223,20 @@ Up to Rp18.000                        ( Redeem all )
   - "Redemption successful";
   - the amount in display size, tabular;
   - "Sent to your main account" in subhead muted;
-  - a quiet details list on a white surface: Reference; Sent to: Main account; and "Cashback balance:
-    Rp{balance_after}" only when the answer was a fresh 201 (a replay shows no balance);
+  - a muted caption, centred: the reference, then "Cashback balance Rp{balance_after}" only when the answer was a
+    fresh 201 (a replay shows no balance); no details card and no "Sent to" row;
   - when the body cannot be parsed: the mark, "Your redemption went through.", and "Check your balance on the home
     screen.";
   - the footer: Done only, returning Home.
+  - The content is centred vertically above the footer, as on screen 3.
 
   ```
                         ( ✓ )
                 Redemption successful
                       Rp18.000
               Sent to your main account
-
-  +--------------------------------------------------+
-  | Reference                    RDM-20261003-000003 |
-  | Sent to                             Main account |
-  | Cashback balance                             Rp0 |
-  +--------------------------------------------------+
+                 RDM-20261003-000003
+                 Cashback balance Rp0
 
   [                    Done                          ]
   ```

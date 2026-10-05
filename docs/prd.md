@@ -205,9 +205,9 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
 - **AC-64** Home shows loading, a load error with no zero values, the `ACTIVE`, `PAUSED`, and `ENDED` banners, the redemption-paused card, empty activity, and Redeem disabled at balance 0.
 - **AC-65** On Redeem, `INSUFFICIENT_BALANCE` refetches the balance then shows the limit; `REDEMPTION_PAUSED`
   refetches the campaign and shows the paused state.
-- **AC-65a** Success shows the success mark, "Redemption successful", the amount, "Sent to your main account", and a
-  details list with Reference and "Sent to: Main account"; "Cashback balance: Rp{balance_after}" appears only when the
-  answer was a fresh 201 for this press. Done returns Home.
+- **AC-65a** Success shows the success mark, "Redemption successful", the amount, "Sent to your main account", then a
+  muted caption with the reference and "Cashback balance Rp{balance_after}", the balance only when the answer was a
+  fresh 201 for this press; there is no details card and no "Sent to" row. Done returns Home.
 - **AC-65b** A replay (200 with `Idempotent-Replayed: true`) shows no balance. A body that cannot be parsed shows the
   mark, "Your redemption went through.", and "Check your balance on the home screen.", with no balance.
 - **AC-66** With the device in UTC and an item at 2026-10-04T00:30:00+07:00, History groups it under 4 Oct; it shows at most 20 rows; row content is AC-66a.
