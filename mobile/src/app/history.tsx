@@ -3,7 +3,6 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { HISTORY_LIMIT, useCampaign, useCashback, useHistory, useRefreshOnFocus } from '@/api/hooks';
 import { queryKeys } from '@/api/queries';
 import { groupByDay, timeOf } from '@/history/group';
-import { formatRp } from '@/money/format';
 import { ActivityRow, activityDetail, chipOf } from '@/ui/ActivityRow';
 import { AppText } from '@/ui/AppText';
 import { Card } from '@/ui/Card';
@@ -25,16 +24,6 @@ export default function History() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <AppText variant="subhead" tone="muted">
-          Cashback balance
-        </AppText>
-        {cashback.data === undefined ? null : (
-          <AppText variant="title" tabular>
-            {formatRp(cashback.data.balance)}
-          </AppText>
-        )}
-      </View>
       {history.data === undefined ? (
         history.isError ? (
           <LoadError message="Couldn't load your history." onRetry={() => void refetchAll()} />
@@ -71,7 +60,6 @@ export default function History() {
 
 const styles = StyleSheet.create({
   content: { padding: layout.margin, gap: layout.section },
-  header: { gap: spacing.xs },
   group: { gap: spacing.sm },
   day: { textTransform: 'uppercase', letterSpacing: 0.5 },
   list: { paddingVertical: spacing.xs, gap: 0 },

@@ -535,11 +535,14 @@ From `/change` (2026-10-06, after C13): AC-66a, AC-66b amended; wireframe screen
 
 From `/change` (2026-10-06, after C14): AC-66a amended; wireframe screen 6; api-contract consumer row.
 
-- [ ] **C15** History without the balance header — AC-66a · `ts` · not critical
+- [x] **C15** History without the balance header — AC-66a · `ts` · not critical
   - Remove the "Cashback balance" header from History; keep `useCashback` for `today.date` (the TODAY / YESTERDAY
     labels) and its refetch on focus.
   - Done when: the History test asserts no "Cashback balance" and no balance amount while the TODAY label still
     renders, red on an assertion then green; `make mobile-check` exits 0.
+  - Result: header View, `formatRp` import and `header` style removed from `history.tsx`; `useCashback`, its focus
+    refetch key and `today.date` for the day labels kept. Test asserts no "Cashback balance" and no Rp18.000 while
+    "TODAY, 3 OCT" renders: red on the header, then green; header put back turns it red. `make mobile-check` exit 0.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

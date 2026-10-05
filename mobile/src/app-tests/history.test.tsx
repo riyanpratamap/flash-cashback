@@ -55,12 +55,15 @@ describe('History (AC-66)', () => {
     expect(screen.getByText('00:30 · Earned Rp5.000 cashback')).toBeTruthy();
   });
 
-  it('shows the current balance header from the cashback summary', async () => {
-    serve({ cashback: { ...cashback, balance: 18000 } });
+  it('has no balance header, while the TODAY label still comes from the cashback summary', async () => {
+    serve({
+      cashback: { ...cashback, balance: 18000 },
+      history: { items: [payment(1, '2026-10-03T14:32:00+07:00', 100000, 5000, 'AWARDED')] },
+    });
     await renderScreen(<History />);
-    expect(await screen.findByText('Rp18.000')).toBeTruthy();
-    expect(screen.getByText('Cashback balance')).toBeTruthy();
-    expect(screen.queryByText('Current balance')).toBeNull();
+    expect(await screen.findByText('TODAY, 3 OCT')).toBeTruthy();
+    expect(screen.queryByText('Cashback balance')).toBeNull();
+    expect(screen.queryByText('Rp18.000')).toBeNull();
   });
 
   it('labels TODAY and YESTERDAY from the campaign day the API reports', async () => {
