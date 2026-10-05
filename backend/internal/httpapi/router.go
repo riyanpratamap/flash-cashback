@@ -3,6 +3,7 @@ package httpapi
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -12,13 +13,32 @@ import (
 type Deps struct {
 	PingPostgres func(context.Context) error
 	PingRedis    func(context.Context) error
+	Log          *slog.Logger
+
+	// A route is registered only when its dependency is set.
+	Payments    Payer
+	Redemptions Redeemer
+	History     HistoryReader
 }
 
-// NewRouter builds the router with every route under /v1.
+// NewRouter builds the router with every route under /v1. A money route is
+// registered only when its service is set, so it answers 404 until then.
 func NewRouter(d Deps) http.Handler {
 	r := chi.NewRouter()
+	r.Use(requestID, d.accessLog, d.recoverer)
+	r.NotFound(notFound)
+	r.MethodNotAllowed(methodNotAllowed)
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/healthz", getHealth(d))
+		if d.Payments != nil {
+			r.Post("/payments", d.postMoney(d.Payments.Pay))
+		}
+		if d.Redemptions != nil {
+			r.Post("/redemptions", d.postMoney(d.Redemptions.Redeem))
+		}
+		if d.History != nil {
+			r.Get("/me/history", d.getHistory)
+		}
 	})
 	return r
 }

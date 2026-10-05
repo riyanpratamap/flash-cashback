@@ -63,6 +63,7 @@ func serve(cfg config.Config) int {
 		Handler: httpapi.NewRouter(httpapi.Deps{
 			PingPostgres: func(ctx context.Context) error { return store.Ping(ctx, pool) },
 			PingRedis:    func(ctx context.Context) error { return cache.Ping(ctx, rc) },
+			Log:          log,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

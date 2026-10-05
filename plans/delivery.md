@@ -87,12 +87,13 @@ The owner accepted this evidence; the subagent proof moves to P6.2.
   - Done when: `make test` exits 0 with the §3 award table, every reason, the AC-41 status table, `000042` /
     `1234567` references; **mutation:** check cap before budget for the reason → the tie row (D45) red.
   - Result: `make test`, `make gate` exit 0; `internal/domain` stdlib only, §3 award table (+ nonzero-spent, AC-71 rows), AC-41 table, `000042`/`1234567`, WIB day table; mutations red: cap before budget (tie row), budget/cap dropped from `min`, round up (INV-07 grid); cap above minimum (AC-07 row); min-bound check removed (OutOfRange rows).
-- [ ] **P1.2** Validators and HTTP edge — AC-17, AC-18, AC-54 · TC20 · `go` · **critical** (key parse, request hash)
+- [x] **P1.2** Validators and HTTP edge — AC-17, AC-18, AC-54 · TC20 · `go` · **critical** (key parse, request hash)
   - Pure validators in `internal/domain` (§1, §7, §11: user ID, key length + 8-4-4-4-12 + `uuid.Parse`, raw-token
     amount, `limit`), table-tested there; handlers call them. Request ID echo/generate, access log, recover; D21 error
     mapper incl. chi 404/405; `request_hash`.
   - Done when: `make test` exits 0 with domain tables for every AC-17/18 value, and `httptest` through the real router
     with service fakes for the user → key → body order, panic → fixed 500 with no stack, `request_id` = `X-Request-ID`.
+  - Result: `make test` and `make gate` exit 0; domain tables cover every AC-17/18 value, `httptest` through `NewRouter` covers check order, 404/405, panic → fixed 500, request ID echo, access log; google/uuid v1.6.0 pinned; mutations red: key before user, no 36-char/canonical check, no `recoverer`, amount decoded into an `int64` struct field.
 - [ ] **P1.3** Store reads, `GET /campaign`, `GET /me/cashback` — AC-16, AC-41 (flag rows), AC-48, AC-49 (these two) ·
   INV-10 · TC22 · `go` · not critical
   - `internal/store` pool, `campaigns.Get`, `balances.Today` (one query, day from `fc_campaign_day(fc_now())`);
