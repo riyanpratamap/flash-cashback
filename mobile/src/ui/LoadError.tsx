@@ -1,18 +1,18 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
-import { colors, fontSize, radius, spacing } from '@/ui/theme';
+import { colors, radius, spacing } from '@/ui/theme';
 
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <View style={styles.box} accessibilityRole="alert">
-      <Text style={styles.text}>{message}</Text>
+      <AppText>{message}</AppText>
       <Button label="Try again" onPress={onRetry} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  box: { padding: spacing.lg, gap: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.inputBorder },
-  text: { fontSize: fontSize.body },
+  box: { padding: spacing.lg, gap: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface },
 });

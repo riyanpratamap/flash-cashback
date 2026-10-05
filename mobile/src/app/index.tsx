@@ -1,6 +1,6 @@
 import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefreshOnFocus } from '@/api/hooks';
@@ -11,10 +11,11 @@ import { formatRp } from '@/money/format';
 import { useUser } from '@/user/UserProvider';
 import { DEMO_USERS, userLabel } from '@/user/users';
 import { ActivityRow } from '@/ui/ActivityRow';
+import { AppText } from '@/ui/AppText';
 import { Button, LinkText } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { LoadError } from '@/ui/LoadError';
-import { colors, fontSize, radius, spacing } from '@/ui/theme';
+import { colors, layout, radius, spacing } from '@/ui/theme';
 import { UnconfirmedCard } from '@/ui/UnconfirmedCard';
 
 const LOAD_ERROR = "Couldn't load your cashback. Your balance is safe. Check your connection and try again.";
@@ -47,10 +48,12 @@ export default function Home() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Text accessibilityRole="header" style={styles.heading}>
-          Flash Cashback
-        </Text>
-        <UserSwitcher />
+        <View style={styles.top}>
+          <AppText variant="title" accessibilityRole="header">
+            Flash Cashback
+          </AppText>
+          <UserSwitcher />
+        </View>
         {unconfirmed.map((attempt) => (
           <UnconfirmedCard
             key={attempt.key}
@@ -61,34 +64,40 @@ export default function Home() {
             }}
           />
         ))}
-        {dismissed ? <Text>{HISTORY_HINT}</Text> : null}
+        {dismissed ? <AppText tone="muted">{HISTORY_HINT}</AppText> : null}
         {campaign.data !== undefined && cashback.data !== undefined ? (
           <Loaded campaign={campaign.data} cashback={cashback.data} onNavigate={(href) => router.push(href)} />
         ) : campaign.isError || cashback.isError ? (
           <LoadError message={LOAD_ERROR} onRetry={() => void refetchAll()} />
         ) : (
-          <Text>Loading…</Text>
+          <AppText tone="muted">Loading…</AppText>
         )}
         {campaign.data !== undefined && cashback.data !== undefined ? (
-          <Card>
+          <View style={styles.group}>
             <View style={styles.rowBetween}>
-              <Text accessibilityRole="header" style={styles.section}>
+              <AppText variant="headline" accessibilityRole="header">
                 Recent activity
-              </Text>
+              </AppText>
               <LinkText label="See all" onPress={() => router.push('/history')} />
             </View>
-            {activity.data !== undefined ? (
-              activity.data.items.length === 0 ? (
-                <Text>No activity yet.</Text>
+            <Card style={styles.list}>
+              {activity.data !== undefined ? (
+                activity.data.items.length === 0 ? (
+                  <AppText tone="muted" style={styles.listNote}>No activity yet.</AppText>
+                ) : (
+                  activity.data.items.map((item, index, items) => (
+                    <ActivityRow key={`${item.type}-${item.id}`} item={item} last={index === items.length - 1} />
+                  ))
+                )
+              ) : activity.isError ? (
+                <AppText accessibilityRole="alert" tone="danger" style={styles.listNote}>
+                  {ACTIVITY_ERROR}
+                </AppText>
               ) : (
-                activity.data.items.map((item) => <ActivityRow key={`${item.type}-${item.id}`} item={item} />)
-              )
-            ) : activity.isError ? (
-              <Text accessibilityRole="alert">{ACTIVITY_ERROR}</Text>
-            ) : (
-              <Text>Loading…</Text>
-            )}
-          </Card>
+                <AppText tone="muted" style={styles.listNote}>Loading…</AppText>
+              )}
+            </Card>
+          </View>
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -99,12 +108,15 @@ function UserSwitcher() {
   const { user, setUser } = useUser();
   return (
     <View style={styles.switcher}>
-      <Text style={styles.demo}>DEMO</Text>
+      <AppText variant="caption" tone="muted" style={styles.demo}>
+        DEMO
+      </AppText>
       {DEMO_USERS.map((candidate) => (
         <Button
           key={candidate}
           label={userLabel(candidate)}
           variant={candidate === user ? 'primary' : 'secondary'}
+          size="small"
           selected={candidate === user}
           onPress={() => void setUser(candidate)}
         />
@@ -125,17 +137,21 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
 
   return (
     <>
-      <Card>
-        {banner.title === null ? null : <Text style={styles.section}>{banner.title}</Text>}
-        <Text>{banner.text}</Text>
+      <View style={[styles.banner, campaign.status === 'ACTIVE' ? styles.bannerInfo : styles.bannerWarning]}>
+        {banner.title === null ? null : <AppText variant="headline">{banner.title}</AppText>}
+        <AppText variant="subhead">{banner.text}</AppText>
         <LinkText label="How it works" onPress={() => onNavigate('/how-it-works')} />
-      </Card>
+      </View>
 
-      <Card>
+      <Card style={styles.hero}>
         <View style={styles.rowBetween}>
-          <View>
-            <Text>Cashback balance</Text>
-            <Text style={styles.amount}>{formatRp(cashback.balance)}</Text>
+          <View style={styles.balance}>
+            <AppText variant="subhead" tone="muted">
+              Cashback balance
+            </AppText>
+            <AppText variant="display" tabular>
+              {formatRp(cashback.balance)}
+            </AppText>
           </View>
           <Button
             label="Redeem"
@@ -143,16 +159,20 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
             onPress={() => onNavigate('/redeem')}
           />
         </View>
-        {redemptionPaused ? <Text>{HOLD_LINE}</Text> : null}
+        {redemptionPaused ? (
+          <AppText variant="subhead" tone="warning">
+            {HOLD_LINE}
+          </AppText>
+        ) : null}
       </Card>
 
       {ended ? null : (
-        <Card>
+        <View style={styles.group}>
           <View style={styles.rowBetween}>
-            <Text style={styles.section}>Earned today</Text>
-            <Text>
+            <AppText variant="headline">Earned today</AppText>
+            <AppText variant="subhead" tone="muted" tabular>
               {formatRp(cashback.today.earned)} / {formatRp(rules.daily_cap)}
-            </Text>
+            </AppText>
           </View>
           <View
             accessible
@@ -162,12 +182,12 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
           >
             <View style={[styles.fill, { width: `${earnedShare}%` }]} />
           </View>
-          <Text>
+          <AppText variant="caption" tone="muted">
             {cashback.today.remaining === 0
               ? `You've reached today's limit. ${reset}`
               : `${formatRp(cashback.today.remaining)} left to earn today. ${reset}`}
-          </Text>
-        </Card>
+          </AppText>
+        </View>
       )}
 
       <Button label="Make a payment" variant={ended ? 'secondary' : 'primary'} onPress={() => onNavigate('/pay')} />
@@ -177,13 +197,19 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.md },
-  heading: { fontSize: 24, fontWeight: '700' },
+  content: { padding: layout.margin, gap: layout.section },
+  top: { gap: spacing.md },
   switcher: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-  demo: { fontSize: fontSize.caption, fontWeight: '700', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.sm },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  section: { fontSize: fontSize.body, fontWeight: '600' },
-  amount: { fontSize: fontSize.title, fontWeight: '700' },
-  track: { height: 8, borderRadius: radius.sm, backgroundColor: colors.track, overflow: 'hidden' },
-  fill: { height: 8, backgroundColor: colors.primary },
+  demo: { letterSpacing: 0.5 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
+  banner: { padding: spacing.md, gap: spacing.xs, borderRadius: radius.md },
+  bannerInfo: { backgroundColor: colors.primaryTint },
+  bannerWarning: { backgroundColor: colors.warningTint },
+  hero: { gap: spacing.md },
+  balance: { flexShrink: 1 },
+  group: { gap: spacing.sm },
+  list: { paddingVertical: spacing.xs, gap: 0 },
+  listNote: { paddingVertical: spacing.md },
+  track: { height: 6, borderRadius: radius.pill, backgroundColor: colors.track, overflow: 'hidden' },
+  fill: { height: 6, backgroundColor: colors.primary },
 });

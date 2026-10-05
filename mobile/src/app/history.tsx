@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { HISTORY_LIMIT, useCampaign, useCashback, useHistory, useRefreshOnFocus } from '@/api/hooks';
 import { queryKeys } from '@/api/queries';
@@ -6,9 +6,10 @@ import { reasonCopy } from '@/copy/codes';
 import { groupByDay, timeOf } from '@/history/group';
 import { formatRp } from '@/money/format';
 import { ActivityRow } from '@/ui/ActivityRow';
+import { AppText } from '@/ui/AppText';
 import { Card } from '@/ui/Card';
 import { LoadError } from '@/ui/LoadError';
-import { fontSize, spacing } from '@/ui/theme';
+import { layout, spacing } from '@/ui/theme';
 import { useUser } from '@/user/UserProvider';
 
 export default function History() {
@@ -25,29 +26,44 @@ export default function History() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <Card style={styles.header}>
-        <Text>Current balance</Text>
-        {cashback.data === undefined ? null : <Text style={styles.balance}>{formatRp(cashback.data.balance)}</Text>}
-      </Card>
+      <View style={styles.header}>
+        <AppText variant="subhead" tone="muted">
+          Current balance
+        </AppText>
+        {cashback.data === undefined ? null : (
+          <AppText variant="title" tabular>
+            {formatRp(cashback.data.balance)}
+          </AppText>
+        )}
+      </View>
       {history.data === undefined ? (
         history.isError ? (
           <LoadError message="Couldn't load your history." onRetry={() => void refetchAll()} />
         ) : (
-          <Text>Loading…</Text>
+          <AppText tone="muted">Loading…</AppText>
         )
       ) : groups.length === 0 ? (
-        <Text>No activity yet. Make a payment to start earning cashback.</Text>
+        <AppText tone="muted">No activity yet. Make a payment to start earning cashback.</AppText>
       ) : (
         groups.map((group) => (
-          <View key={group.day}>
-            <Text accessibilityRole="header" style={styles.day}>
+          <View key={group.day} style={styles.group}>
+            <AppText variant="caption" tone="muted" accessibilityRole="header" style={styles.day}>
               {group.label}
-            </Text>
-            {group.items.map((item) => {
-              const chip = item.type === 'PAYMENT' && rules !== undefined ? reasonCopy(item.cashback.reason, rules).chip : null;
-              const detail = chip === null ? timeOf(item.created_at) : `${timeOf(item.created_at)} · ${chip}`;
-              return <ActivityRow key={`${item.type}-${item.id}`} item={item} detail={detail} />;
-            })}
+            </AppText>
+            <Card style={styles.list}>
+              {group.items.map((item, index) => {
+                const chip = item.type === 'PAYMENT' && rules !== undefined ? reasonCopy(item.cashback.reason, rules).chip : null;
+                const detail = chip === null ? timeOf(item.created_at) : `${timeOf(item.created_at)} · ${chip}`;
+                return (
+                  <ActivityRow
+                    key={`${item.type}-${item.id}`}
+                    item={item}
+                    detail={detail}
+                    last={index === group.items.length - 1}
+                  />
+                );
+              })}
+            </Card>
           </View>
         ))
       )}
@@ -56,8 +72,9 @@ export default function History() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.md },
+  content: { padding: layout.margin, gap: layout.section },
   header: { gap: spacing.xs },
-  balance: { fontSize: fontSize.title, fontWeight: '700' },
-  day: { fontSize: 13, fontWeight: '700', marginTop: spacing.sm },
+  group: { gap: spacing.sm },
+  day: { textTransform: 'uppercase', letterSpacing: 0.5 },
+  list: { paddingVertical: spacing.xs, gap: 0 },
 });

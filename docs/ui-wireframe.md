@@ -114,22 +114,25 @@ Payments under Rp20.000 earn no cashback.
 ## 3. Payment result
 
 ```
-                     ( ✓ )
               Payment successful
-                 Rp100.000
-   Ref. PAY-20261003-000042 · 3 Oct, 14:32 WIB
+
+              Cashback earned
+                 +Rp5.000
+        5% cashback added to your balance.
 
 +--------------------------------------------------+
-| Cashback earned                         +Rp5.000  |
-| 5% cashback added to your balance.                |
+| Amount                                 Rp100.000 |
+| Reference                    PAY-20261003-000042 |
+| Time                            3 Oct, 14:32 WIB |
 +--------------------------------------------------+
 
 [                    Done                          ]
 [             Make another payment                 ]
 ```
 
-The payment always shows as successful. Cashback is a separate card that leads with what the user got, then the
-reason. No balance is shown here; Done returns to Home, which refetches.
+The payment always shows as successful. The cashback leads, as the one large number, then the reason; the payment
+itself is a quiet two-column list of Amount, Reference and Time. No balance is shown here; Done returns to Home, which
+refetches.
 
 | Reason              | Amount     | Chip                | Text                                                          |
 | ------------------- | ---------- | ------------------- | ------------------------------------------------------------- |

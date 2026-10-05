@@ -1,15 +1,19 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, fontSize, radius, spacing } from '@/ui/theme';
+import { Pressable, StyleSheet } from 'react-native';
+
+import { AppText } from '@/ui/AppText';
+import { colors, radius, spacing } from '@/ui/theme';
 
 type ButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
+  size?: 'regular' | 'small';
   selected?: boolean;
 };
 
-export function Button({ label, onPress, disabled = false, variant = 'primary', selected }: ButtonProps) {
+export function Button({ label, onPress, disabled = false, variant = 'primary', size = 'regular', selected }: ButtonProps) {
+  const small = size === 'small';
   return (
     <Pressable
       accessibilityRole="button"
@@ -17,9 +21,22 @@ export function Button({ label, onPress, disabled = false, variant = 'primary', 
       accessibilityState={{ disabled, selected }}
       disabled={disabled}
       onPress={onPress}
-      style={[styles.base, variant === 'primary' ? styles.primary : styles.secondary, disabled && styles.disabled]}
+      hitSlop={small ? { top: spacing.sm, bottom: spacing.sm } : undefined}
+      style={({ pressed }) => [
+        styles.base,
+        small ? styles.small : styles.regular,
+        variant === 'primary' ? styles.primary : styles.secondary,
+        pressed && (variant === 'primary' ? styles.primaryPressed : styles.secondaryPressed),
+        disabled && styles.disabled,
+      ]}
     >
-      <Text style={[styles.text, variant === 'secondary' && styles.secondaryText]}>{label}</Text>
+      <AppText
+        variant={small ? 'subhead' : 'headline'}
+        tone={disabled ? 'muted' : variant === 'primary' ? 'onPrimary' : 'link'}
+        style={small && styles.smallText}
+      >
+        {label}
+      </AppText>
     </Pressable>
   );
 }
@@ -27,18 +44,22 @@ export function Button({ label, onPress, disabled = false, variant = 'primary', 
 export function LinkText({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={styles.link}>
-      <Text style={styles.linkText}>{label}</Text>
+      <AppText variant="subhead" tone="link">
+        {label}
+      </AppText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  base: { minHeight: 44, minWidth: 44, paddingHorizontal: spacing.lg, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  primary: { backgroundColor: colors.primary },
-  secondary: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.primary },
-  disabled: { opacity: 0.4 },
-  text: { color: colors.white, fontWeight: '600', fontSize: fontSize.body },
-  secondaryText: { color: colors.primary },
-  link: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
-  linkText: { color: colors.primary, fontSize: 14, textDecorationLine: 'underline' },
+  base: { paddingHorizontal: spacing.lg, alignItems: 'center', justifyContent: 'center' },
+  regular: { minHeight: 50, borderRadius: radius.md },
+  small: { minHeight: 36, minWidth: 44, borderRadius: radius.pill, paddingHorizontal: spacing.md },
+  smallText: { fontWeight: '600' },
+  primary: { backgroundColor: colors.primaryStrong },
+  primaryPressed: { backgroundColor: colors.primaryPressed },
+  secondary: { backgroundColor: colors.primaryTint },
+  secondaryPressed: { backgroundColor: colors.primaryTintPressed },
+  disabled: { backgroundColor: colors.track },
+  link: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignSelf: 'flex-start' },
 });

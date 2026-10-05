@@ -6,6 +6,7 @@ import { createQueryClient } from '@/api/query-client';
 import { AttemptNavigator } from '@/attempts/AttemptNavigator';
 import { AttemptProvider } from '@/attempts/AttemptProvider';
 import { CHECKING_SCREEN_OPTIONS } from '@/attempts/blockBack';
+import { colors } from '@/ui/theme';
 import { UserProvider } from '@/user/UserProvider';
 
 /** A screen opened directly (a deep link) gets Home beneath it, so its back button always has somewhere to go. */
@@ -18,7 +19,14 @@ export default function RootLayout() {
       <UserProvider>
         <AttemptProvider>
           <AttemptNavigator />
-          <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
+          <Stack
+            screenOptions={{
+              headerBackButtonDisplayMode: 'minimal',
+              headerTintColor: colors.primaryStrong,
+              headerStyle: { backgroundColor: colors.background },
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
             <Stack.Screen name="index" options={{ title: 'Flash Cashback', headerShown: false }} />
             <Stack.Screen name="pay" options={{ title: 'Make a payment' }} />
             <Stack.Screen name="payment-result" options={{ headerShown: false, gestureEnabled: false }} />

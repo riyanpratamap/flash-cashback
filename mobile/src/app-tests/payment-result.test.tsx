@@ -60,7 +60,9 @@ describe('Payment result (AC-58)', () => {
     await pay({ awarded: 5000, reason: 'AWARDED' });
     expect(screen.getByText('Payment successful')).toBeTruthy();
     expect(screen.getByText('Rp100.000')).toBeTruthy();
-    expect(screen.getByText('Ref. PAY-20261003-000042 · 3 Oct, 14:32 WIB')).toBeTruthy();
+    expect(screen.getByText('Amount')).toBeTruthy();
+    expect(screen.getByText('PAY-20261003-000042')).toBeTruthy();
+    expect(screen.getByText('3 Oct, 14:32 WIB')).toBeTruthy();
     expect(screen.getByText('Cashback earned')).toBeTruthy();
     expect(screen.getByText('+Rp5.000')).toBeTruthy();
     expect(screen.getByText('5% cashback added to your balance.')).toBeTruthy();

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useCampaign, useCashback } from '@/api/hooks';
 import { parseRedemptionResult } from '@/api/redemptions';
@@ -8,9 +8,11 @@ import { useAmountForm } from '@/attempts/useAmountForm';
 import { errorCopy } from '@/copy/codes';
 import { formatRp } from '@/money/format';
 import { AmountInput } from '@/ui/AmountInput';
+import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
+import { FormScreen } from '@/ui/FormScreen';
 import { LoadError } from '@/ui/LoadError';
-import { spacing } from '@/ui/theme';
+import { colors, layout, radius, spacing } from '@/ui/theme';
 
 const PAUSED_LINE = errorCopy('REDEMPTION_PAUSED', {});
 
@@ -33,14 +35,13 @@ export default function Redeem() {
       acknowledge();
     };
     return (
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text accessibilityRole="header" style={styles.title}>
+      <FormScreen footer={<Button label="Done" onPress={done} />}>
+        <AppText variant="title" accessibilityRole="header">
           {result === null
             ? 'Your redemption went through.'
             : `${formatRp(result.amount)} sent to your main account. Your balance is now ${formatRp(result.balanceAfter)}.`}
-        </Text>
-        <Button label="Done" onPress={done} />
-      </ScrollView>
+        </AppText>
+      </FormScreen>
     );
   }
 
@@ -61,40 +62,58 @@ export default function Redeem() {
   const error = paused ? PAUSED_LINE : rejection;
 
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <View style={styles.row}>
-        <Text>Available to redeem</Text>
-        <Text style={styles.strong}>{formatRp(balance)}</Text>
-      </View>
-      <AmountInput label="Amount to redeem (IDR)" value={text} onChangeText={setText} />
-      <View style={styles.row}>
-        <Text>Up to {formatRp(balance)}</Text>
+    <FormScreen
+      footer={
         <Button
-          label="Redeem all"
-          variant="secondary"
-          disabled={balance === 0}
-          onPress={() => setText(String(balance))}
+          label={amount !== null && amount > 0 ? `Redeem ${formatRp(amount)}` : 'Redeem'}
+          disabled={!canRedeem}
+          onPress={() => {
+            if (canRedeem) press('redemption', amount);
+          }}
         />
+      }
+    >
+      <View style={styles.group}>
+        <AmountInput label="Amount to redeem (IDR)" value={text} onChangeText={setText} />
+        {error === null ? null : (
+          <AppText variant="subhead" tone="danger" accessibilityRole="alert">
+            {error}
+          </AppText>
+        )}
+        <View style={styles.row}>
+          <AppText variant="subhead" tone="muted">
+            Up to {formatRp(balance)}
+          </AppText>
+          <Button
+            label="Redeem all"
+            variant="secondary"
+            size="small"
+            disabled={balance === 0}
+            onPress={() => setText(String(balance))}
+          />
+        </View>
       </View>
-      <View style={styles.row}>
-        <Text>Sent to</Text>
-        <Text style={styles.strong}>Main account</Text>
+      <View style={styles.details}>
+        <View style={[styles.detailRow, styles.separator]}>
+          <AppText tone="muted">Available to redeem</AppText>
+          <AppText variant="headline" tabular>
+            {formatRp(balance)}
+          </AppText>
+        </View>
+        <View style={styles.detailRow}>
+          <AppText tone="muted">Sent to</AppText>
+          <AppText variant="headline">Main account</AppText>
+        </View>
       </View>
-      {error === null ? null : <Text accessibilityRole="alert">{error}</Text>}
-      <Button
-        label={amount !== null && amount > 0 ? `Redeem ${formatRp(amount)}` : 'Redeem'}
-        disabled={!canRedeem}
-        onPress={() => {
-          if (canRedeem) press('redemption', amount);
-        }}
-      />
-    </ScrollView>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.md },
-  title: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
-  strong: { fontWeight: '700' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  content: { padding: layout.margin, gap: layout.section },
+  group: { gap: spacing.sm },
+  details: { backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.lg },
+  separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
 });

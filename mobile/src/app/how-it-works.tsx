@@ -1,11 +1,11 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useCampaign } from '@/api/hooks';
 import { formatPercent, zoneLabel, type Rules } from '@/copy/codes';
 import { formatRp } from '@/money/format';
-import { Card } from '@/ui/Card';
+import { AppText } from '@/ui/AppText';
 import { LoadError } from '@/ui/LoadError';
-import { fontSize, spacing } from '@/ui/theme';
+import { layout, spacing } from '@/ui/theme';
 
 const EXAMPLE_PAYMENT = 100_000;
 
@@ -24,7 +24,7 @@ export default function HowItWorks() {
         {campaign.isError ? (
           <LoadError message="Couldn't load the campaign rules." onRetry={() => void refetch()} />
         ) : (
-          <Text>Loading…</Text>
+          <AppText tone="muted">Loading…</AppText>
         )}
       </View>
     );
@@ -52,16 +52,20 @@ export default function HowItWorks() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <Card style={styles.example}>
-        <Text>Pay {formatRp(EXAMPLE_PAYMENT)}</Text>
-        <Text style={styles.title}>earn {formatRp(exampleEarn(rules))}</Text>
-      </Card>
+      <View style={styles.example}>
+        <AppText variant="subhead" tone="muted">
+          Pay {formatRp(EXAMPLE_PAYMENT)}
+        </AppText>
+        <AppText variant="title" tabular>
+          earn {formatRp(exampleEarn(rules))}
+        </AppText>
+      </View>
       {sections.map((section) => (
         <View key={section.title} style={styles.section}>
-          <Text accessibilityRole="header" style={styles.title}>
+          <AppText variant="headline" accessibilityRole="header">
             {section.title}
-          </Text>
-          <Text>{section.text}</Text>
+          </AppText>
+          <AppText>{section.text}</AppText>
         </View>
       ))}
     </ScrollView>
@@ -69,8 +73,7 @@ export default function HowItWorks() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.lg },
-  example: { flexDirection: 'row', justifyContent: 'space-between', gap: 0 },
-  section: { gap: spacing.xs },
-  title: { fontSize: fontSize.body, fontWeight: '600' },
+  content: { padding: layout.margin, gap: layout.section },
+  example: { gap: spacing.xs },
+  section: { gap: spacing.md },
 });

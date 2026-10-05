@@ -447,6 +447,15 @@ From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 foll
     `make mobile-check` exit 0, 294 tests. review: F1–F7 fixed in a follow-up commit (`useRefreshOnFocus(...keys)` now reads
     `queryClient.getQueryState` at focus).
 
+- [x] **C6** Mobile restyle: one type scale, spacing, and a focal point per screen · `ts` · not critical
+  - `src/ui/theme.ts` (colours with measured contrast, spacing, radius, six type variants, tabular digits), `AppText`,
+    restyled `Card`, `Button`, `LinkText`, `AmountInput`, `ActivityRow`, `LoadError`, `UnconfirmedCard`, new `FormScreen`
+    (pinned action above the keyboard); every screen uses them. Payment-result details become Amount / Reference / Time
+    (owner-approved copy change, wireframe screen 3 amended).
+  - Done when: no raw `fontSize` or hex literal in `src/app` or `src/ui` `.tsx`; no bare `<Text>` in `src/app`;
+    `make mobile-check` exits 0; the only test changed is `payment-result.test.tsx` (one line).
+  - Result: `make mobile-check` exit 0, 27 suites / 297 tests; only `payment-result.test.tsx` changed (one line into three assertions: `Amount`, the reference, `3 Oct, 14:32 WIB`; mutation: label `Amount` renamed -> red). Greps for raw `fontSize` / hex in `src/app` and `src/ui` and for `<Text` in `src/app`: empty. `primaryStrong` is `#1869B6` (5.62:1 on white; the suggested `#1A6FC0` gave 4.49:1 on the tint). `FormScreen` is new: it pins the action above the keyboard. Review: F1–F7 applied (keyboard view `padding` on Android too, `minHeight` buttons, vertical-only slop on small buttons, `primaryTintPressed` `#D6E9FB` 4.53:1, `gap: 0` on list cards, padded empty/loading/error notes, no bottom inset while the keyboard is up); F8 in the commit message; F9 not applied (owner's brief: no underline). `make mobile-check` exit 0, 297 tests.
+
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
 
