@@ -94,19 +94,17 @@ func TestCashbackNewUserWIBDay(t *testing.T) {
 
 func TestCampaignStatusRows(t *testing.T) {
 	for name, tc := range map[string]struct {
-		sql                string
+		cmd                string // the operator command that sets the row up
 		status, redemption string
 	}{
-		"row 1 active":             {``, "ACTIVE", "AVAILABLE"},
-		"row 2 awards paused":      {`UPDATE campaigns SET awards_paused = true`, "PAUSED", "AVAILABLE"},
-		"row 5 redemptions paused": {`UPDATE campaigns SET redemptions_paused = true`, "ACTIVE", "PAUSED"},
+		"row 1 active":             {"", "ACTIVE", "AVAILABLE"},
+		"row 2 awards paused":      {"pause-awards", "PAUSED", "AVAILABLE"},
+		"row 5 redemptions paused": {"pause-redemptions", "ACTIVE", "PAUSED"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			reset(t, 10_000_000)
-			if tc.sql != "" {
-				if _, err := pool.Exec(context.Background(), tc.sql); err != nil {
-					t.Fatal(err)
-				}
+			if tc.cmd != "" {
+				mustAdmin(t, tc.cmd, "--by", "owner")
 			}
 			_, got := getBody(t, "/v1/campaign", "user_new")
 			want := map[string]any{
@@ -119,6 +117,7 @@ func TestCampaignStatusRows(t *testing.T) {
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("body = %v, want %v", got, want)
 			}
+			assertReconciled(t)
 		})
 	}
 }

@@ -191,7 +191,7 @@ func TestRedeemWhilePausedAC32(t *testing.T) {
 			reset(t, 10_000_000)
 			mustSetNow(t, "2026-10-03T07:00:00Z")
 			fund(t, "user_a", 18000)
-			execSQL(t, `UPDATE campaigns SET redemptions_paused = true`)
+			mustAdmin(t, "pause-redemptions", "--by", "owner")
 			before := readRedeemShape(t, c.user)
 
 			got, err := doRedeem(payRouter(), map[string]string{"X-User-ID": c.user, "Idempotency-Key": uuid.NewString()}, c.body)
@@ -253,7 +253,7 @@ func TestRedeemReplayAC35(t *testing.T) {
 	}
 
 	// A replay is answered even while redemptions are paused.
-	execSQL(t, `UPDATE campaigns SET redemptions_paused = true`)
+	mustAdmin(t, "pause-redemptions", "--by", "owner")
 	if r := redeemKey(t, "user_a", key, 18000); r.status != http.StatusOK || r.raw != first.raw {
 		t.Errorf("replay while paused = %d %s, want 200 and the first body", r.status, r.raw)
 	}

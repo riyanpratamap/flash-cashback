@@ -201,9 +201,7 @@ func TestPayAwardTable(t *testing.T) {
 				}
 			}
 			if c.pause {
-				if _, err := pool.Exec(context.Background(), `UPDATE campaigns SET awards_paused = true`); err != nil {
-					t.Fatal(err)
-				}
+				mustAdmin(t, "pause-awards", "--by", "owner")
 			}
 			ledgerBefore := queryInt(t, `SELECT count(*) FROM ledger_entries`)
 			got := pay(t, "user_a", c.amount)
@@ -494,9 +492,11 @@ func TestCampaignStatusAfterPayments(t *testing.T) {
 			if r := pay(t, "user_a", 100000); r.status != http.StatusCreated {
 				t.Fatal(r.raw)
 			}
-			if _, err := pool.Exec(context.Background(),
-				`UPDATE campaigns SET awards_paused = $1, redemptions_paused = $2`, tc.pauseAwards, tc.pauseRedeems); err != nil {
-				t.Fatal(err)
+			if tc.pauseAwards {
+				mustAdmin(t, "pause-awards", "--by", "owner")
+			}
+			if tc.pauseRedeems {
+				mustAdmin(t, "pause-redemptions", "--by", "owner")
 			}
 			_, m := getBody(t, "/v1/campaign", "user_a")
 			if m["status"] != tc.status || m["redemption_status"] != tc.redemption {
@@ -505,6 +505,7 @@ func TestCampaignStatusAfterPayments(t *testing.T) {
 			noBudgetKey(t, m, "/v1/campaign ")
 			_, c := getBody(t, "/v1/me/cashback", "user_a")
 			noBudgetKey(t, c, "/v1/me/cashback ")
+			assertReconciled(t)
 		})
 	}
 }
