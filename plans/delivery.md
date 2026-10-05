@@ -82,10 +82,11 @@ The owner accepted this evidence; the subagent proof moves to P6.2.
 
 ## P1 — Pure rules and read endpoints
 
-- [ ] **P1.1** Domain rules — AC-01–12 and AC-71 (rule level), AC-13 (reference) · INV-07 · TC1, TC2 · `go` · **critical**
+- [x] **P1.1** Domain rules — AC-01–12 and AC-71 (rule level), AC-13 (reference) · INV-07 · TC1, TC2 · `go` · **critical**
   - `internal/domain`: `Award`, `CampaignStatus`, `TodayRemaining`, `Reference`, WIB formatting (fixed `+07:00`).
   - Done when: `make test` exits 0 with the §3 award table, every reason, the AC-41 status table, `000042` /
     `1234567` references; **mutation:** check cap before budget for the reason → the tie row (D45) red.
+  - Result: `make test`, `make gate` exit 0; `internal/domain` stdlib only, §3 award table (+ nonzero-spent, AC-71 rows), AC-41 table, `000042`/`1234567`, WIB day table; mutations red: cap before budget (tie row), budget/cap dropped from `min`, round up (INV-07 grid); cap above minimum (AC-07 row); min-bound check removed (OutOfRange rows).
 - [ ] **P1.2** Validators and HTTP edge — AC-17, AC-18, AC-54 · TC20 · `go` · **critical** (key parse, request hash)
   - Pure validators in `internal/domain` (§1, §7, §11: user ID, key length + 8-4-4-4-12 + `uuid.Parse`, raw-token
     amount, `limit`), table-tested there; handlers call them. Request ID echo/generate, access log, recover; D21 error
