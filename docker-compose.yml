@@ -39,6 +39,7 @@ services:
       STATEMENT_TIMEOUT: ${STATEMENT_TIMEOUT:-5s}
       CAMPAIGN_BUDGET: ${CAMPAIGN_BUDGET:-10000000}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      CACHE_READS: ${CACHE_READS:-on}
     healthcheck:
       test: ["CMD", "/app/api", "healthcheck"]
       interval: 5s
@@ -49,6 +50,18 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # Load test (D51): only under `--profile loadtest`, so `up` never starts it.
+  # No depends_on, so `run` never recreates api.
+  k6:
+    image: grafana/k6:2.3.0
+    profiles: [loadtest]
+    user: "${LOADTEST_UID:-12345}:${LOADTEST_GID:-12345}"
+    environment:
+      BASE_URL: http://api:8080
+    volumes:
+      - ./loadtest:/scripts:ro
+      - ./loadtest/results:/results
 
 volumes:
   pgdata:

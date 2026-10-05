@@ -20,3 +20,6 @@ web-build/
 *.log
 .DS_Store
 local-tmp/
+
+# Load test output
+loadtest/results/
