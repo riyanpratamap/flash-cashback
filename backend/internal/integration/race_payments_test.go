@@ -400,6 +400,19 @@ func countInt(sql string, args ...any) (int64, error) {
 	return n, err
 }
 
+// waitBlockedBy reports whether, within 5 s, a client backend is blocked by
+// the backend holderPid. The error is the last query error, if any.
+func waitBlockedBy(holderPid int64) (bool, error) {
+	var pollErr error
+	blocked := waitFor(5*time.Second, func() bool {
+		n, err := countInt(`SELECT count(*) FROM pg_stat_activity
+			WHERE backend_type = 'client backend' AND $1::int = ANY(pg_blocking_pids(pid))`, holderPid)
+		pollErr = err
+		return err == nil && n > 0
+	})
+	return blocked, pollErr
+}
+
 // AC-70: the client hangs up while its payment waits for the campaign lock.
 // The payment still commits, and the resend with the same key replays it.
 func TestRacePayClientDisconnectAC70(t *testing.T) {
@@ -429,13 +442,7 @@ func TestRacePayClientDisconnectAC70(t *testing.T) {
 		}
 	}()
 
-	var pollErr error
-	waiting := waitFor(5*time.Second, func() bool {
-		n, err := countInt(`SELECT count(*) FROM pg_stat_activity
-			WHERE backend_type = 'client backend' AND $1::int = ANY(pg_blocking_pids(pid))`, holderPid)
-		pollErr = err
-		return err == nil && n > 0
-	})
+	waiting, pollErr := waitBlockedBy(holderPid)
 	if !waiting {
 		release()
 		cancel()

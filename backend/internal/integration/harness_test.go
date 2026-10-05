@@ -87,6 +87,26 @@ func setNow(t *testing.T, ts time.Time) {
 	t.Cleanup(func() { restoreClock(t) })
 }
 
+// setClockFrom replaces fc_now() with the transaction start time shifted so
+// that the clock reads at now and keeps moving. The offset is at minus the
+// database wall clock, read once here. The real clock returns when the test
+// ends.
+func setClockFrom(t *testing.T, at time.Time) {
+	t.Helper()
+	ctx := context.Background()
+	var dbNow time.Time
+	if err := pool.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&dbNow); err != nil {
+		t.Fatalf("read db clock: %v", err)
+	}
+	offset := at.Sub(dbNow).Microseconds()
+	_, err := pool.Exec(ctx, fmt.Sprintf(
+		`CREATE OR REPLACE FUNCTION fc_now() RETURNS timestamptz LANGUAGE sql STABLE AS $$ SELECT now() + interval '%d microseconds' $$`, offset))
+	if err != nil {
+		t.Fatalf("set shifted fc_now: %v", err)
+	}
+	t.Cleanup(func() { restoreClock(t) })
+}
+
 // freshDB creates an empty database on the test server and returns its URL.
 // The database is dropped when the test ends.
 func freshDB(t *testing.T) string {
