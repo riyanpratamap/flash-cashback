@@ -1,5 +1,4 @@
 import { StyleSheet, Text, TextInput } from 'react-native';
-import { Fragment } from 'react';
 
 import { colors, radius, spacing } from '@/ui/theme';
 
@@ -8,7 +7,7 @@ type Props = { label: string; value: string; onChangeText: (next: string) => voi
 /** A label above a number-pad field, for the IDR amount of Pay and Redeem. The caller formats what is typed. */
 export function AmountInput({ label, value, onChangeText }: Props) {
   return (
-    <Fragment>
+    <>
       <Text>{label}</Text>
       <TextInput
         accessibilityLabel={label}
@@ -17,7 +16,7 @@ export function AmountInput({ label, value, onChangeText }: Props) {
         value={value}
         onChangeText={onChangeText}
       />
-    </Fragment>
+    </>
   );
 }
 

@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useCampaign, useCashback } from '@/api/hooks';
 import { parseRedemptionResult } from '@/api/redemptions';
 import { useAttempts } from '@/attempts/AttemptProvider';
+import { useAmountForm } from '@/attempts/useAmountForm';
 import { errorCopy } from '@/copy/codes';
-import { formatAsTyped, formatRp, parseDigits } from '@/money/format';
+import { formatRp } from '@/money/format';
 import { AmountInput } from '@/ui/AmountInput';
 import { Button } from '@/ui/Button';
 import { LoadError } from '@/ui/LoadError';
@@ -23,28 +23,7 @@ export default function Redeem() {
   const { state, press, acknowledge } = useAttempts();
   const campaign = useCampaign();
   const cashback = useCashback();
-  // A rejection found at launch lands here with the amount it was for.
-  const [text, setText] = useState(() =>
-    state.phase === 'rejected' && state.attempt.kind === 'redemption' ? formatAsTyped(String(state.attempt.amount)) : '',
-  );
-
-  // A rejection that arrives while Redeem is open (a launch resend) fills in the amount it was for, once per new state.
-  const [seen, setSeen] = useState(state);
-  if (seen !== state) {
-    setSeen(state);
-    if (state.phase === 'rejected' && state.attempt.kind === 'redemption') {
-      setText(formatAsTyped(String(state.attempt.amount)));
-    }
-  }
-
-  // Leaving by any route ends a definite answer: a launch resend waiting behind it can carry on.
-  useEffect(
-    () => () => {
-      acknowledge('done');
-      acknowledge('rejected');
-    },
-    [acknowledge],
-  );
+  const { text, setText, amount, inFlight, rejection: rejected } = useAmountForm('redemption');
 
   if (state.phase === 'done' && state.attempt.kind === 'redemption') {
     const result = parseRedemptionResult(state.body);
@@ -76,13 +55,8 @@ export default function Redeem() {
 
   const balance = cashback.data.balance;
   const paused = campaign.data?.redemption_status === 'PAUSED';
-  const amount = parseDigits(text);
-  const inFlight = state.phase === 'saving' || state.phase === 'sending';
   const canRedeem = amount !== null && amount > 0 && balance > 0 && !paused && !inFlight;
-  const rejection =
-    state.phase === 'rejected' && state.attempt.kind === 'redemption' && state.attempt.amount === amount
-      ? errorCopy(state.code, { balance })
-      : null;
+  const rejection = rejected === null ? null : errorCopy(rejected.code, { balance });
   const error = paused ? PAUSED_LINE : rejection;
 
   return (
@@ -91,18 +65,14 @@ export default function Redeem() {
         <Text>Available to redeem</Text>
         <Text style={styles.strong}>{formatRp(balance)}</Text>
       </View>
-      <AmountInput
-        label="Amount to redeem (IDR)"
-        value={text}
-        onChangeText={(next) => setText(formatAsTyped(next))}
-      />
+      <AmountInput label="Amount to redeem (IDR)" value={text} onChangeText={setText} />
       <View style={styles.row}>
         <Text>Up to {formatRp(balance)}</Text>
         <Button
           label="Redeem all"
           variant="secondary"
           disabled={balance === 0}
-          onPress={() => setText(formatAsTyped(String(balance)))}
+          onPress={() => setText(String(balance))}
         />
       </View>
       <View style={styles.row}>

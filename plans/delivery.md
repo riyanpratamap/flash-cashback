@@ -421,10 +421,11 @@ From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 foll
     and `UnconfirmedCard`, `Button`, `ActivityRow`, `LoadError`.
   - Done when: `make mobile-check` exits 0 with no test changed.
   - Result: `make mobile-check` exit 0, 24 suites / 274 tests, no test changed; `theme.ts`, `Card`, `AmountInput` added and used by all screens and the four `ui` components; formatting stays in the screens.
-- [ ] **C3** `useAmountForm(kind)` for Pay and Redeem · `ts` · critical (press path)
+- [x] **C3** `useAmountForm(kind)` for Pay and Redeem · `ts` · critical (press path)
   - Owns amount text, launch-rejection prefill, acknowledge on leave, `inFlight`, the rejection matching the amount.
   - Done when: hook tests (prefill, no overwrite after typing, acknowledge on unmount) red then green; mutation
     (drop the amount match) red; `pay`/`redeem` tests unchanged and green; code-checker report.
+  - Result: `make mobile-check` exit 0, 25 suites / 281 tests (7 new in `useAmountForm.test.tsx`; `pay` and `redeem` tests unchanged); `useAmountForm` owns text, prefill, `inFlight`, matching rejection and acknowledge on leave; `Fragment` replaced by `<>`. Mutations red: amount match dropped (rejection test), kind check dropped on the prefill (other-kind test); review: 2 minor test gaps fixed, mutations red (kind check dropped on `rejection` -> new other-kind test red; `inFlight` reduced to `sending` -> `saving` row red).
 - [ ] **C4** Split the attempt context · `ts` · critical (AttemptProvider)
   - Three contexts: attempt `state`; `unconfirmed` + `launchChecked`; actions (stable for the provider's life,
     `checkNow`/`dismiss` read `unconfirmed` through a ref). Guard, keys, launch queue, `refreshAfter` unchanged.
