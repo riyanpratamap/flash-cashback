@@ -41,10 +41,18 @@ export function Button({ label, onPress, disabled = false, variant = 'primary', 
   );
 }
 
-export function LinkText({ label, onPress }: { label: string; onPress: () => void }) {
+export function LinkText({
+  label,
+  onPress,
+  size = 'subhead',
+}: {
+  label: string;
+  onPress: () => void;
+  size?: 'subhead' | 'caption';
+}) {
   return (
     <Pressable accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={styles.link}>
-      <AppText variant="subhead" tone="link">
+      <AppText variant={size} tone="link">
         {label}
       </AppText>
     </Pressable>

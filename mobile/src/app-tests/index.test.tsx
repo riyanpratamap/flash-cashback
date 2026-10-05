@@ -93,6 +93,24 @@ describe('Home (AC-64)', () => {
     expect(screen.queryByText(/ending soon/i)).toBeNull();
   });
 
+  it('puts the campaign strip after Make a payment and before Earned today', async () => {
+    await renderApp(<Home />);
+    await loaded();
+    const texts: string[] = [];
+    const walk = (node: unknown): void => {
+      if (typeof node === 'string') texts.push(node);
+      else if (Array.isArray(node)) node.forEach(walk);
+      else if (node !== null && typeof node === 'object') walk((node as { children?: unknown }).children);
+    };
+    walk(screen.toJSON());
+    const pay = texts.indexOf('Make a payment');
+    const strip = texts.indexOf('Campaign active');
+    const earned = texts.indexOf('Earned today');
+    expect(pay).toBeGreaterThan(-1);
+    expect(strip).toBeGreaterThan(pay);
+    expect(earned).toBeGreaterThan(strip);
+  });
+
   it('shows the limit-reached line at nothing left', async () => {
     serve({ cashback: { ...cashback, today: { ...cashback.today, earned: 50000, remaining: 0 } } });
     await renderApp(<Home />);

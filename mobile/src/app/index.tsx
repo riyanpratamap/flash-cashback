@@ -137,12 +137,6 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
 
   return (
     <>
-      <View style={[styles.banner, campaign.status === 'ACTIVE' ? styles.bannerInfo : styles.bannerWarning]}>
-        {banner.title === null ? null : <AppText variant="headline">{banner.title}</AppText>}
-        <AppText variant="subhead">{banner.text}</AppText>
-        <LinkText label="How it works" onPress={() => onNavigate('/how-it-works')} />
-      </View>
-
       <Card style={styles.hero}>
         <View style={styles.rowBetween}>
           <View style={styles.balance}>
@@ -165,6 +159,18 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
           </AppText>
         ) : null}
       </Card>
+
+      <Button label="Make a payment" variant={ended ? 'secondary' : 'primary'} onPress={() => onNavigate('/pay')} />
+
+      <View style={[styles.banner, campaign.status === 'ACTIVE' ? styles.bannerInfo : styles.bannerWarning]}>
+        {banner.title === null ? null : (
+          <AppText variant="subhead" style={styles.bannerTitle}>
+            {banner.title}
+          </AppText>
+        )}
+        <AppText variant="caption">{banner.text}</AppText>
+        <LinkText label="How it works" size="caption" onPress={() => onNavigate('/how-it-works')} />
+      </View>
 
       {ended ? null : (
         <View style={styles.group}>
@@ -189,8 +195,6 @@ function Loaded({ campaign, cashback, onNavigate }: LoadedProps) {
           </AppText>
         </View>
       )}
-
-      <Button label="Make a payment" variant={ended ? 'secondary' : 'primary'} onPress={() => onNavigate('/pay')} />
     </>
   );
 }
@@ -202,7 +206,8 @@ const styles = StyleSheet.create({
   switcher: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   demo: { letterSpacing: 0.5 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
-  banner: { padding: spacing.md, gap: spacing.xs, borderRadius: radius.md },
+  banner: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, gap: spacing.xs, borderRadius: radius.md },
+  bannerTitle: { fontWeight: '600' },
   bannerInfo: { backgroundColor: colors.primaryTint },
   bannerWarning: { backgroundColor: colors.warningTint },
   hero: { gap: spacing.md },

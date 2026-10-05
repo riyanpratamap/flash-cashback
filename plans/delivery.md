@@ -458,11 +458,12 @@ From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 foll
 
 From `/change` (2026-10-06, after C6): AC-62, AC-63 amended, AC-65 split into AC-65a/b; wireframe screens 1, 2, 3, 5.
 
-- [ ] **C7** Home: the campaign strip below the hero and Make a payment, lighter · `ts` · not critical
+- [x] **C7** Home: the campaign strip below the hero and Make a payment, lighter · `ts` · not critical
   - Strip after the balance hero and the pay button, above Earned today; title subhead semibold, text caption,
     padding 8 / 12, tint kept, How it works in caption with its 44 pt target; the balance is the only display text.
   - Done when: a test asserts the strip text renders after `Make a payment` and before `Earned today`, red then green;
     `make mobile-check` exits 0.
+  - Result: `make mobile-check` exit 0, 27 suites / 298 tests; one test added (`index.test.tsx`: strip text after `Make a payment`, before `Earned today`; red `Expected: > 16, Received: 5`), none changed. Home order is now hero, Make a payment, strip, Earned today (the button moved up with the strip, as the wireframe says); strip title subhead 600, text caption, padding 8 / 12, tint kept; `LinkText` gained `size` (`subhead` default, `caption`), 44 pt target kept. Strings, roles, labels unchanged.
 - [ ] **C8** Redemption success screen; balance only on a fresh 201 — AC-65a, AC-65b · `ts` · **critical** (attempt state)
   - `done` carries `replayed` from `ApiResult` (`src/attempts/machine.ts`, owner-approved). New `src/ui/SuccessMark.tsx`
     (Views only, 72 pt positive-tint circle, check in positive, role image, label "Success"). Redeem success: mark,
