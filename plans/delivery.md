@@ -432,11 +432,19 @@ From `/change` (2026-10-06): no AC changes. C1–C4 change no behaviour; C5 foll
   - Done when: a Profiler test counts Home commits during a payment press, before and after (numbers in the result
     and learnings); provider and navigator tests unchanged and green; code-checker report.
   - Result: `make mobile-check` exit 0, 26 suites / 288 tests (2 new in `index.renders.test.tsx`). Three contexts (state, launch, actions) from the one provider; actions stable (`unconfirmed` and the user read through refs, the cards changed only via `updateUnconfirmed`, which writes the ref and the state together); `useAttempts` removed, callers on the narrowest hooks. Home renders (calls of `useCampaign`, a Profiler only reports the mount under this renderer) during a payment press: before 2, after 1 (the refetch after `done`); saving to sending: before 2, after 0. Mutation red: state and `unconfirmed` merged into the actions value (both tests red, 2 and 2 renders). Guard, keys, `refreshAfter`, launch queue logic untouched (comments only). review: F1 fixed (user synced in layout effect; switch-then-press test, mutation red).
-- [ ] **C5** Focus refetch skips fresh queries; screens drop manual memo · `ts` · not critical
+- [x] **C5** Focus refetch skips fresh queries; screens drop manual memo · `ts` · not critical
   - `useRefreshOnFocus(...queries)` returns `refetchAll` for pull and retry; on focus refetches only queries not
     fetching and older than 2 s. Home and History drop the destructured `refetch` + `useCallback` blocks.
   - Done when: a test red then green: after a `done` payment, returning Home sends no second `/me/cashback` GET
     within 2 s, and a focus after 2 s does; AC-58 test green.
+  - Result: `useRefreshOnFocus(...queries)` replaces `useRefetchOnFocus` (deleted); latest results in a ref, so focus reads
+    current `isFetching` / `dataUpdatedAt`; `FOCUS_FRESH_MS = 2000` exported. GETs of `/me/cashback` on return to Home
+    after a done payment: 3 before (mount, invalidation, focus), 2 after. Home and History lost their destructured
+    `refetch` and `useCallback` blocks. New `index.focus.test.tsx` (4 tests: no duplicate within 2 s, refetch after 2 s,
+    pull refetches all three while fresh, a query in error refetches on focus). Two existing focus tests (Home, History)
+    now move `Date.now` past 2 s before the focus: their data is fresh by the new rule. Mutations: `FOCUS_FRESH_MS = 0`
+    -> no-duplicate red (2 expected, 3 received); age check replaced by `false` -> after-2 s and error tests red.
+    `make mobile-check` exit 0, 294 tests.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

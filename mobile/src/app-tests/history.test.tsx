@@ -1,5 +1,6 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 
+import { FOCUS_FRESH_MS } from '@/api/hooks';
 import type { HistoryItem } from '@/api/queries';
 import { cashback, fetchMock, renderScreen, requestedUrls, resetStorage, serve } from '@/test/fixtures';
 import { regainFocus } from '@/test/router-mock';
@@ -144,7 +145,11 @@ describe('History (AC-66)', () => {
     await renderScreen(<History />);
     await screen.findByText('Redeemed to main account');
     const before = fetchMock.mock.calls.length;
+    // The data is fresh for FOCUS_FRESH_MS; the clock moves past it, as when the user was away.
+    const now = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(now + FOCUS_FRESH_MS + 1);
     await act(async () => regainFocus());
+    clock.mockRestore();
     expect(fetchMock.mock.calls.length).toBeGreaterThan(before);
   });
 });

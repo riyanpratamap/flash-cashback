@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
+import { FOCUS_FRESH_MS } from '@/api/hooks';
 import { USER_STORAGE_KEY } from '@/user/UserProvider';
 import { ATTEMPTS_STORAGE_KEY } from '@/attempts/store';
 import { AttemptNavigator } from '@/attempts/AttemptNavigator';
@@ -177,12 +178,16 @@ describe('Home (AC-64)', () => {
     await loaded();
     const before = fetchMock.mock.calls.length;
 
+    // The data is fresh for FOCUS_FRESH_MS; the clock moves past it, as when the user was away.
+    const now = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(now + FOCUS_FRESH_MS + 1);
     await act(async () => regainFocus());
     await waitFor(() => expect(fetchMock.mock.calls.length).toBe(before + 3));
 
     const after = fetchMock.mock.calls.length;
     await act(async () => screen.getByTestId('home-scroll').props.refreshControl.props.onRefresh());
     await waitFor(() => expect(fetchMock.mock.calls.length).toBe(after + 3));
+    clock.mockRestore();
   });
 });
 

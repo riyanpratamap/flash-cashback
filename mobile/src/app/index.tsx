@@ -1,9 +1,9 @@
 import { type Href, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '@/api/hooks';
+import { HOME_ACTIVITY_LIMIT, useCampaign, useCashback, useHistory, useRefreshOnFocus } from '@/api/hooks';
 import type { Campaign, CashbackSummary } from '@/api/queries';
 import { useAttemptLaunch, useAttemptActions } from '@/attempts/AttemptProvider';
 import { bannerCopy, zoneLabel } from '@/copy/codes';
@@ -32,14 +32,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  const { refetch: refetchCampaign } = campaign;
-  const { refetch: refetchCashback } = cashback;
-  const { refetch: refetchActivity } = activity;
-  const refetchAll = useCallback(
-    () => Promise.all([refetchCampaign(), refetchCashback(), refetchActivity()]),
-    [refetchCampaign, refetchCashback, refetchActivity],
-  );
-  useRefetchOnFocus(refetchAll);
+  const refetchAll = useRefreshOnFocus(campaign, cashback, activity);
 
   const onRefresh = () => {
     setRefreshing(true);

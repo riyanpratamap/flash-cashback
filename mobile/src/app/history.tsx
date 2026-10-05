@@ -1,7 +1,6 @@
-import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { HISTORY_LIMIT, useCampaign, useCashback, useHistory, useRefetchOnFocus } from '@/api/hooks';
+import { HISTORY_LIMIT, useCampaign, useCashback, useHistory, useRefreshOnFocus } from '@/api/hooks';
 import { reasonCopy } from '@/copy/codes';
 import { groupByDay, timeOf } from '@/history/group';
 import { formatRp } from '@/money/format';
@@ -15,14 +14,7 @@ export default function History() {
   const cashback = useCashback();
   const campaign = useCampaign();
 
-  const { refetch: refetchHistory } = history;
-  const { refetch: refetchCashback } = cashback;
-  const { refetch: refetchCampaign } = campaign;
-  const refetchAll = useCallback(
-    () => Promise.all([refetchHistory(), refetchCashback(), refetchCampaign()]),
-    [refetchHistory, refetchCashback, refetchCampaign],
-  );
-  useRefetchOnFocus(refetchAll);
+  const refetchAll = useRefreshOnFocus(history, cashback, campaign);
 
   const rules = campaign.data?.rules;
   // The newest 20 and stop, whatever the server sends (D08).

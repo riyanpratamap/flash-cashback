@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { type UseQueryResult, useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { useUser } from '@/user/UserProvider';
 import { campaignQuery, cashbackQuery, historyQuery, queryKeys } from '@/api/queries';
@@ -23,11 +23,23 @@ export function useHistory(limit: number) {
   return useQuery({ queryKey: queryKeys.history(user, limit), queryFn: () => historyQuery(user, limit) });
 }
 
+/** A focus refetch skips a query updated within this window (a money answer has just refetched it). */
+export const FOCUS_FRESH_MS = 2000;
+
+type Refreshable = Pick<UseQueryResult, 'refetch' | 'isFetching' | 'dataUpdatedAt'>;
+
 /**
- * Runs `refetch` each time the screen regains focus, not on the first focus (the queries already load on mount).
+ * Returns `refetchAll` (pull to refresh, the retry buttons). Each time the screen regains focus, not on the first
+ * focus (the queries already load on mount), it refetches the queries that are not fetching and were not updated in
+ * the last FOCUS_FRESH_MS; a query in error has `dataUpdatedAt` 0, so it counts as old.
  * An effect that survives: it synchronises with navigation focus.
  */
-export function useRefetchOnFocus(refetch: () => unknown) {
+export function useRefreshOnFocus(...queries: Refreshable[]) {
+  // Focus fires from navigation, not a render: it must read the latest state, not the render it was created in.
+  const latest = useRef(queries);
+  useEffect(() => {
+    latest.current = queries;
+  });
   const first = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -35,7 +47,11 @@ export function useRefetchOnFocus(refetch: () => unknown) {
         first.current = false;
         return;
       }
-      void refetch();
-    }, [refetch]),
+      const now = Date.now();
+      for (const q of latest.current) {
+        if (!q.isFetching && now - q.dataUpdatedAt >= FOCUS_FRESH_MS) void q.refetch();
+      }
+    }, []),
   );
+  return () => Promise.all(latest.current.map((q) => q.refetch()));
 }
