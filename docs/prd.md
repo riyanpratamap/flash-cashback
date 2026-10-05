@@ -139,7 +139,7 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
   false; without `--by` it exits 2, changes nothing, and prints no action line. The line is not stored anywhere (D47:
   no operator trail is claimed).
 
-### Reads and caches (D06, D08, D18, D50, D51, TC8, TC9, TC22)
+### Reads and caches (D06, D08, D18, D50, D51, D52, TC8, TC9, TC22)
 
 - **AC-41** Given the seeded row, `GET /campaign` serves rate 500 bps, minimum 20000, and daily cap 50000 from the
   campaign row, and its two statuses follow this table (spent built by real payments against a reseeded budget):
@@ -161,11 +161,7 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
 - **AC-49** No response of any endpoint, in any campaign state, contains a budget or spent figure; `GET /campaign` with budget left 2000 equals the one with 9000000 left.
 - **AC-76** Given `CACHE_READS=off`, when `GET /campaign` and `GET /me/cashback` are served, then both answer from
   PostgreSQL and no cache key is read or written; the deletes after commit still run. Default `on` behaves as AC-42.
-- **AC-77** `make load-test`, with the stack up, runs the k6 scenarios (`GET /campaign`, `GET /me/cashback` across many
-  users, and a read burst mixed with `POST /payments`) once with `CACHE_READS=on` and once with `off` at the same
-  arrival rate; it prints p50, p95, p99, request rate, and error counts per scenario and mode, plus payment
-  `SERVICE_BUSY` counts in the mixed scenario; any read 5xx or payment 5xx other than 503 fails it; reconcile exits 0
-  after each mode.
+- **AC-77** Removed by D52 (load test dropped); the ID is not reused.
 
 ### Operations and runtime (D23, D26, D42, C2, TC10, TC19, TC20)
 
@@ -259,8 +255,8 @@ Trust condition 11 (operator trail) is stated only (D47) and has no AC; AC-40 co
 | Out of scope: products; a payment is just an amount              | AC-17                                           |
 | Use AI to build this                                             | Process (AGENTS.md workflow); no AC             |
 | MVP, production grade                                            | AC-27, AC-43–46, AC-50–56, AC-70, AC-72–74, INV-01–11 |
-| Work out what's missing; decide what makes the cut               | Trust conditions; non-goals; D08, D51           |
-| Stack: Go, PostgreSQL, Redis, React Native                       | AC-43, AC-53, AC-56, AC-58, AC-76, AC-77        |
+| Work out what's missing; decide what makes the cut               | Trust conditions; non-goals; D08, D51, D52      |
+| Stack: Go, PostgreSQL, Redis, React Native                       | AC-43, AC-53, AC-56, AC-58, AC-76               |
 | A working demo we can run                                        | AC-56, AC-57, AC-67, AC-68                      |
 | Push to GitHub                                                   | Ship stage; CI kept (D08, D31); no AC           |
 | Interview: decisions, rejected options, where it breaks          | README sections; tech-spec "Where it breaks"    |
