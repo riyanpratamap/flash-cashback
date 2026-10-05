@@ -194,9 +194,10 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
   (screen 4); Check now opens Checking and resends with the saved key and user; Dismiss removes the attempt, shows
   "Check your history before paying again.", and sends nothing.
 - **AC-62** The Payment result leads with the payment: the success mark, "Payment successful", the payment amount, then
-  the time with zone and the reference; below them a Cashback block shows the amount, chip, and text of each reason in
-  the wireframe table, and the fallback for an unknown code (D17). A body that cannot be parsed shows the mark, the
-  title, and the attempt's amount, with no Cashback block.
+  the time with zone and the reference; below them one cashback pill shows the amount and the chip of each reason in
+  the wireframe table, and the amount alone for an unknown code (D17); there is no card, no "Cashback earned" label,
+  and no reason sentence. A body that cannot be parsed shows the mark, the title, and the attempt's amount, with no
+  pill.
 - **AC-63** Pay shows one line under the amount field, never two: the minimum hint while no amount is typed, the info
   line (each wireframe variant) once one is, or the error alert, which takes the slot. Below the minimum it reads "This
   payment won't earn cashback. The minimum is Rp20.000."; with today's remaining 3000 and amount Rp100.000, the

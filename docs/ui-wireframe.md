@@ -131,11 +131,7 @@ With no amount typed, the slot under the field reads "Payments under Rp20.000 ea
                3 Oct, 14:32 WIB
               PAY-20261003-000042
 
-+--------------------------------------------------+
-| Cashback earned                                   |
-| +Rp5.000                                          |
-| 5% cashback added to your balance.                |
-+--------------------------------------------------+
+               ( +Rp5.000 cashback )
 
 [                    Done                          ]
 [             Make another payment                 ]
@@ -148,25 +144,27 @@ Top to bottom:
 - "Payment successful";
 - the payment amount in display size, text colour;
 - a muted caption with the time and zone, then the reference;
-- a secondary "Cashback" block on a white surface: "Cashback earned" in subhead muted, the amount in headline
-  (positive colour above zero, text colour for Rp0), and the chip and reason text in subhead, with "How it works" when
-  the reason calls for it;
+- the cashback pill, centred, caption size: above Rp0 positive text on the positive tint, "+Rp{award} cashback",
+  followed by " · {chip}" when the reason has one; at Rp0 muted text on the track colour, "No cashback · {chip}";
+  under it a "How it works" link when the reason calls for it;
 - the footer: Done (primary) and Make another payment (secondary).
 
 The payment always shows as successful. The payment leads, as the one large number; the cashback is the bonus on top,
-in the block below it (D17). No balance is shown here; Done returns to Home, which refetches. When the body cannot be
-parsed: the mark, the title, and the attempt's amount, with no cashback block.
+in one small pill below it (D17). There is no card, no "Cashback earned" label, and no reason sentence. No balance is
+shown here; Done returns to Home, which refetches. When the body cannot be parsed: the mark, the title, and the
+attempt's amount, with no pill. An unknown code, or rules not loaded yet, shows the amount alone in the pill, with
+no chip.
 
-| Reason              | Amount     | Chip                | Text                                                          |
-| ------------------- | ---------- | ------------------- | ------------------------------------------------------------- |
-| `AWARDED`           | +Rp{award} | none                | "5% cashback added to your balance."                          |
-| `PARTIAL_DAILY_CAP` | +Rp{award} | Daily limit reached | "You've reached today's Rp50.000 cashback limit."             |
-| `PARTIAL_BUDGET`    | +Rp{award} | Last of the cashback | "This was the last of the campaign cashback. Flash Cashback has now ended." |
-| `DAILY_CAP_REACHED` | Rp0        | Daily limit reached | "You've already reached today's Rp50.000 cashback limit."     |
-| `BELOW_MINIMUM`     | Rp0        | Below minimum       | "Payments under Rp20.000 don't earn cashback."                |
-| `CAMPAIGN_ENDED`    | Rp0        | Campaign ended      | "Flash Cashback has ended. All cashback has been claimed."    |
-| `CAMPAIGN_PAUSED`   | Rp0        | Unavailable         | "Cashback is temporarily unavailable. Payments still work as usual." |
-| unknown code        | as sent    | none                | "See How it works for the cashback rules."                    |
+| Reason              | Amount     | Pill                                    |
+| ------------------- | ---------- | --------------------------------------- |
+| `AWARDED`           | +Rp{award} | "+Rp{award} cashback"                   |
+| `PARTIAL_DAILY_CAP` | +Rp{award} | "+Rp{award} cashback · Daily limit reached" |
+| `PARTIAL_BUDGET`    | +Rp{award} | "+Rp{award} cashback · Last of the cashback" |
+| `DAILY_CAP_REACHED` | Rp0        | "No cashback · Daily limit reached"     |
+| `BELOW_MINIMUM`     | Rp0        | "No cashback · Below minimum"           |
+| `CAMPAIGN_ENDED`    | Rp0        | "No cashback · Campaign ended"          |
+| `CAMPAIGN_PAUSED`   | Rp0        | "No cashback · Unavailable"             |
+| unknown code        | as sent    | the amount alone ("+Rp{award} cashback" or "No cashback") |
 
 "How it works" is offered on every variant except `AWARDED`. Cashback is credited at once; there is no pending state
 (D07, trust condition 18).
