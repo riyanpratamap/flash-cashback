@@ -78,8 +78,8 @@ A user with no activity gets zeros, never a 404.
 }
 ```
 
-`today` is the current campaign day: a calendar day in WIB, by the database clock (D04). This response may be served
-from a per-user cache that is cleared after each of the user's payments and redemptions commits (D06).
+`today` is the current campaign day: a calendar day in WIB, by the database clock (D04). This response is always read
+from the database, never from a cache (D53).
 
 ## POST /payments
 
@@ -212,8 +212,8 @@ PostgreSQL down is 503:
 ```
 
 - PostgreSQL down: 503.
-- Redis down or slow: 200 with Redis reported as `degraded`. Redis only holds read caches, and reads fall back to
-  PostgreSQL (D06).
+- Redis down or slow: 200 with Redis reported as `degraded`. Redis only holds the campaign read cache, and reads fall
+  back to PostgreSQL (D06, D53).
 
 ## Errors
 

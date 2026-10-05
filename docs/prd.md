@@ -139,7 +139,7 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
   false; without `--by` it exits 2, changes nothing, and prints no action line. The line is not stored anywhere (D47:
   no operator trail is claimed).
 
-### Reads and caches (D06, D08, D18, D50, D51, D52, TC8, TC9, TC22)
+### Reads and caches (D06, D08, D18, D50, D51, D52, D53, TC8, TC9, TC22)
 
 - **AC-41** Given the seeded row, `GET /campaign` serves rate 500 bps, minimum 20000, and daily cap 50000 from the
   campaign row, and its two statuses follow this table (spent built by real payments against a reseeded budget):
@@ -151,16 +151,16 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
   | equal           | no            | no                 | `ENDED`  | `AVAILABLE`       |
   | equal           | yes           | yes                | `ENDED`  | `PAUSED`          |
   | below           | no            | yes                | `ACTIVE` | `PAUSED`          |
-- **AC-42** Given `GET /me/cashback` was just served (cache warm) with balance 0, when user_a pays 100000 then reads again, then balance 5000; after redeeming 1000, 4000. After `pause-awards`, the next `GET /campaign` shows `PAUSED`.
+- **AC-42** Given `GET /campaign` was just served (cache warm), after `pause-awards` the next `GET /campaign` shows `PAUSED`, and after the award that takes the last of the budget it shows `ENDED`. `GET /me/cashback` is never cached (D53): with balance 0, when user_a pays 100000 then reads again, then balance 5000; after redeeming 1000, 4000; no `fc:v1:cashback:*` key is ever written.
 - **AC-43** Given Redis is stopped, then both reads return correct values from PostgreSQL, payments and redemptions return the same results as with Redis up, and `GET /v1/healthz` is 200 with Redis `degraded`.
 - **AC-44** Given Redis stalls for 500 ms, then a read waits at most about 50 ms on Redis and answers from PostgreSQL; payments are unaffected.
-- **AC-45** Given the cache holds invalid JSON for a key, then the read treats it as a miss and answers correctly; given it holds balance 999999 for user_a whose real balance is 18000, a redemption of 20000 is 422.
-- **AC-46** Given the database clock at 23:59:30 WIB, when `GET /me/cashback` populates the cache, then that entry expires no later than 00:00:00 WIB.
+- **AC-45** Given the cache holds invalid JSON for `fc:v1:campaign`, then the read treats it as a miss and answers correctly; given `fc:v1:cashback:user_a` holds balance 999999 (left by an older build) and user_a's real balance is 18000, then `GET /me/cashback` shows 18000 and a redemption of 20000 is 422.
+- **AC-46** Removed by D53 (`GET /me/cashback` is not cached); the ID is not reused.
 - **AC-47** `GET /me/history` lists payments (Rp0 included) and redemptions newest first, 20 by default, up to `limit` 50; `limit` 0, 51, or `abc` is 400 `MALFORMED_REQUEST`.
 - **AC-48** Given user_a has payments and a balance, then user_b's balance, today, and history show none of it, and user_b cannot redeem user_a's balance.
 - **AC-49** No response of any endpoint, in any campaign state, contains a budget or spent figure; `GET /campaign` with budget left 2000 equals the one with 9000000 left.
-- **AC-76** Given `CACHE_READS=off`, when `GET /campaign` and `GET /me/cashback` are served, then both answer from
-  PostgreSQL and no cache key is read or written; the deletes after commit still run. Default `on` behaves as AC-42.
+- **AC-76** Given `CACHE_READS=off`, when `GET /campaign` is served, then it answers from PostgreSQL and no cache key
+  is read or written; the deletes after commit still run. Default `on` behaves as AC-42.
 - **AC-77** Removed by D52 (load test dropped); the ID is not reused.
 
 ### Operations and runtime (D23, D26, D42, C2, TC10, TC19, TC20)
@@ -234,7 +234,7 @@ Asserted by reconcile (D42) after every concurrency test, and by the reconcile c
 | 6 midnight | AC-13, AC-14, INV-08 | 21 app never double pays, even if killed (D48) | AC-59–61, AC-72–74 |
 | 7 pause vs in-flight award / redemption (D43, D46) | AC-38, AC-39 | 22 no budget figures | AC-49, INV-10 |
 | 8 Redis down/slow | AC-43, AC-44 | | |
-| 9 stale cache | AC-42, AC-45, AC-46, INV-11 | | |
+| 9 stale cache | AC-42, AC-45, INV-11 | | |
 
 Trust condition 11 (operator trail) is stated only (D47) and has no AC; AC-40 covers only the command's own output.
 

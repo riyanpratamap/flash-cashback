@@ -8,7 +8,7 @@ restated. Engine behaviour this design relies on is checked against [known-pitfa
 
 ```
  Expo app (host / phone) --HTTP--> api (Go, chi) --pgx--> PostgreSQL   (truth: every money read and write)
-                                       |  \------go-redis--> Redis      (read caches only, D06, D50)
+                                       |  \------go-redis--> Redis      (campaign read cache only, D06, D53)
  operator: docker compose exec api /app/admin | /app/reconcile  --> PostgreSQL (+ Redis key delete)
 ```
 
@@ -237,8 +237,8 @@ campaign → balance order and the redemption's balance → (key share) campaign
 9. New rows: `INSERT INTO payments (... created_at = $now, campaign_day = $day ...) ON CONFLICT ON CONSTRAINT
    payments_user_key_unique DO NOTHING RETURNING id`. No row (KP: a conflict returns no row) → `ROLLBACK` (which also
    undoes step 8), replay. If `awarded > 0`: `INSERT INTO ledger_entries (AWARD, +a, payment_id, balance_after)`.
-10. `COMMIT`; its error is checked (KP). After commit, on a fresh 50 ms context: delete `fc:v1:cashback:{user}`; if
-    `spent = budget` after this award, delete `fc:v1:campaign`. One log line (§7). 201.
+10. `COMMIT`; its error is checked (KP). After commit, on a fresh 50 ms context: if `spent = budget` after this award,
+    delete `fc:v1:campaign`. One log line (§7). 201.
 
 `created_at` and `campaign_day` come from the same `fc_now()` (transaction start), so a transaction that starts at
 23:59:59 WIB and commits after midnight counts once, for the old day (TC6, KP).
@@ -262,7 +262,7 @@ campaign → balance order and the redemption's balance → (key share) campaign
 10. `INSERT INTO redemptions (status 'COMPLETED', destination 'MAIN_ACCOUNT', balance_after, ...) ON CONFLICT ...
     DO NOTHING RETURNING id`; no row → `ROLLBACK`, replay. `INSERT INTO ledger_entries (REDEMPTION, −a, ...)`.
 11. The main-account payout is a stub that completes at once and makes no call (TC13, stated only).
-12. `COMMIT`; delete `fc:v1:cashback:{user}` after commit; log; 201.
+12. `COMMIT`; log; 201. No cache key is deleted (D53).
 
 ### 4.3 Switch commands (D05, D23, D43, D44, D46, D47, TC7)
 
@@ -307,23 +307,24 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
   409 and writes nothing). The unique constraint with `ON CONFLICT DO NOTHING` is the last guard. A
   duplicate that waits past `lock_timeout` gets 503 and retries.
 
-## 6. Caches (D06, D50, TC8, TC9)
+## 6. Caches (D06, D53, TC8, TC9)
 
 | Key                        | Value                     | TTL                                         | Deleted after                                    |
 | -------------------------- | ------------------------- | ------------------------------------------- | ------------------------------------------------ |
 | `fc:v1:campaign`           | `GET /campaign` body      | `CACHE_CAMPAIGN_TTL` 5 s                    | a switch command; an award that makes spent = budget; `demo-reset` |
-| `fc:v1:cashback:{user_id}` | `GET /me/cashback` body   | min(`CACHE_CASHBACK_TTL` 60 s, `resets_at` − `fc_now()`); not cached if < 1 s | any payment or redemption commit of that user; `demo-reset` |
 
 - Read: GET with a 50 ms deadline → hit: parse and validate, a bad value is a miss (KP) → miss: read PostgreSQL,
-  respond, then SET with a 50 ms deadline. Errors and partial results are never cached.
+  respond, then SET with a 50 ms deadline. Errors and partial results are never cached. `GET /me/cashback` and
+  `GET /me/history` are not cached; they always read PostgreSQL (D53).
 - Client: `ContextTimeoutEnabled: true` (KP), dial/read/write/pool timeouts 50 ms, `MaxRetries: -1` (in go-redis v9,
   0 means the default of 3 retries; -1 disables them), so one slow call costs at most one 50 ms deadline. Any Redis error or
   timeout is a miss; failures log `warn` at most once per 10 s per operation.
 - Deletes happen after commit only, on a detached context (KP). If a delete fails, the TTL bounds the staleness. A
-  COMMIT whose outcome is unknown (§4.4) also deletes, since it may have committed and a delete is always safe.
+  COMMIT whose outcome is unknown (§4.4) deletes nothing: whether that award exhausted the budget is unknown, and the
+  5 s TTL bounds the campaign key.
 - No money path reads the cache; the write services do not hold a cache client for reads (INV-11).
-- `CACHE_READS` (D51, kept by D52): `on` by default; `off` makes `Reads` skip every cache GET and SET and answer from
-  PostgreSQL (AC-76). Deletes after commit run in both modes. It lets an operator serve reads without the cache while
+- `CACHE_READS` (D51, kept by D52): `on` by default; `off` makes `Reads` skip the campaign cache GET and SET and
+  answer from PostgreSQL (AC-76). Deletes after commit run in both modes. It lets an operator serve reads without the cache while
   Redis stays up; it is not a Redis health switch (a down Redis is already a miss).
 - Known window: a reader that read PostgreSQL before a commit can SET the old value after the delete; it lives until
   the TTL (KP). Accepted by D06.
@@ -369,7 +370,6 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
 | `REDIS_ADDR`          | `redis:6379`                                                  | api, admin         |
 | `REDIS_TIMEOUT`       | `50ms`                                                        | api, admin         |
 | `CACHE_CAMPAIGN_TTL`  | `5s`                                                          | api                |
-| `CACHE_CASHBACK_TTL`  | `60s`                                                         | api                |
 | `CACHE_READS`         | `on` (`on` or `off`; anything else rejected at start)         | api                |
 | `LOCK_TIMEOUT`        | `2s`                                                          | api                |
 | `STATEMENT_TIMEOUT`   | `5s`                                                          | api                |
@@ -456,7 +456,7 @@ GET queries retry once; the attempt machine is the only retry for POSTs.
 | domain       | table tests: §3 award table, every reason, status, remaining, reference, amount and key validation          |
 | handler      | `httptest` through the real router with service fakes: every 4xx code, envelope, request ID, header order, raw-token amount cases, no budget keys (AC-49) |
 | integration  | real PostgreSQL and Redis from the test compose file on uncommon host ports (D30); `-tags integration -p 1 -count=1`; tables truncated between tests and the campaign row reseeded, with `budget` set to the remaining budget the test needs and `spent` 0 (so reconcile's `spent = sum(awards)` holds); earned, balances, and every other state built only through the services (KP) |
-| clock        | tests replace `fc_now()` in the test database to a fixed instant and restore it in cleanup (AC-13, AC-46)   |
+| clock        | tests replace `fc_now()` in the test database to a fixed instant and restore it in cleanup (AC-13)          |
 | cache        | Redis stopped (client at a closed port), Redis stalled (`CLIENT PAUSE 500 ALL`), a bad cached value, freshness after writes |
 | mobile       | Jest + RNTL (D34): fetch and AsyncStorage stubbed; every screen state; the retry path asserts the same key is resent; the double press; day grouping with `TZ=UTC`; D48: the attempt is stored before fetch is called and removed on 2xx/4xx only (AC-72), "killed during checking → relaunch → same key" by remounting the app over the saved store with another user selected and asserting key and `X-User-ID` (AC-73), an 11-minute-old attempt sends nothing until Check now (AC-74) |
 | system       | CI compose smoke: `up --wait`, healthz, one payment by curl, reconcile exits 0                              |
