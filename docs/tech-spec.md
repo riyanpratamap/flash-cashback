@@ -38,7 +38,7 @@ Endpoint → handler → service → repository (shapes: [contract](api-contract
 | `GET /v1/me/cashback` | `getCashback`     | `Reads.Cashback`          | `balances.Today` (one query)                     |
 | `POST /v1/payments`   | `postPayment`     | `Payments.Pay`            | `campaigns`, `daily`, `payments`, `balances`, `ledger` |
 | `POST /v1/redemptions`| `postRedemption`  | `Redemptions.Redeem`      | `campaigns`, `balances`, `redemptions`, `ledger` |
-| `GET /v1/me/history`  | `getHistory`      | `Reads.History`           | `history.Newest`                                 |
+| `GET /v1/me/history`  | `getHistory`      | `Reads.History`           | `history.Page` (keyset, §3, D54)                 |
 | `GET /v1/healthz`     | `getHealth`       | — (pings)                 | pool ping, Redis ping                            |
 
 ## 2. Data model
@@ -199,6 +199,33 @@ including a tie with `cap − earned`, D45, contract reason table per C15), else
 **Reference (C9).** `Reference("PAY"|"RDM", campaignDay, id)` → `PAY-20261003-000042`; the ID is zero-padded to 6
 digits and grows past that (`1234567` → `PAY-20261003-1234567`). IDs have gaps (KP: sequences).
 
+**History order and cursor (D54).** Order key `(created_at DESC, type_rank DESC, id DESC)`, `PAYMENT` = 1,
+`REDEMPTION` = 0: a total order, since a payment and a redemption can share an `id`. The cursor is the key of the last
+row of a page: `EncodeCursor(t, type, id)` = base64url without padding (`RawURLEncoding`) of `v1|<t>|<P|R>|<id>`, `t`
+in UTC formatted `RFC3339Nano`. `timestamptz` holds microseconds and pgx scans them exactly, so the cursor round-trips
+exactly; the response's `created_at` is second precision (D19) and can never serve as a cursor. `DecodeCursor` fails
+(→ 400 `MALFORMED_REQUEST`) unless: the base64url decodes, there are four `|` fields, the version is `v1`, the type is
+`P` or `R`, `id` is a positive int64, `t` parses, `t` has no sub-microsecond digits, and `EncodeCursor` of the parsed
+values gives back the input exactly (one canonical form per position). Both are pure, in `internal/domain`.
+
+The page query: two `UNION ALL` branches (payments with `1 AS type_rank`, redemptions with `0`), each `WHERE user_id =
+$user AND (created_at, id) < ($t, $bound) ORDER BY created_at DESC, id DESC LIMIT $limit + 1` (KP: limit each branch;
+both columns `DESC`, so the row comparison matches the `*_user_newest` index), then `ORDER BY created_at DESC,
+type_rank DESC, id DESC LIMIT $limit + 1`. Without a cursor the branches have no `(created_at, id)` filter (a second
+static query text). Go picks `$bound` per branch from the branch rank and the cursor rank:
+
+| Cursor at (t, rank, id) | Branch rank | `$bound`                | Rows of this branch at `created_at = t`  |
+| ----------------------- | ----------- | ----------------------- | ---------------------------------------- |
+| (t, P=1, 42)            | P=1 (equal) | 42                      | `id < 42`: older payments at t           |
+| (t, P=1, 42)            | R=0 (lower) | 9223372036854775807     | all of them (they sort after any payment) |
+| (t, R=0, 3)             | R=0 (equal) | 3                       | `id < 3`                                 |
+| (t, R=0, 3)             | P=1 (higher)| 0                       | none (they sorted before the cursor; ids are ≥ 1) |
+
+Rows with `created_at < t` pass in every case. The `max int64` bound misses only a row whose id is `max int64`, which
+a `bigserial` never reaches in practice. `limit + 1` rows back means a next page exists: the extra row is dropped and
+`next_cursor` encodes the last kept row; fewer means `next_cursor` is null. Rows are always scoped by `$user` from
+`X-User-ID`; the cursor is only a position (AC-47a).
+
 ## 4. Critical write paths
 
 Isolation READ COMMITTED. Every money transaction runs on a context detached from the client (`context.WithoutCancel`)
@@ -335,7 +362,8 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
   characters, 8-4-4-4-12 hex, then `uuid.Parse`, KP); body ≤ 1 KiB, a JSON object with exactly the key `amount`
   (case-sensitive, no duplicates, no other keys) whose raw token is a number (else 400 `MALFORMED_REQUEST`); the token
   must be plain digits with value 1..10000000 (else 422 `INVALID_AMOUNT`). The raw token is inspected, not decoded into
-  `any` (KP). `limit` on history: digits, 1..50.
+  `any` (KP). `limit` on history: digits, 1..50; `cursor` on history: absent, or `DecodeCursor` succeeds (§3; an empty value fails), else
+  400 `MALFORMED_REQUEST`.
 - One error mapper turns typed errors into the D21 envelope and the contract's codes; 500 always has a fixed message.
   chi's 404/405 handlers use the same mapper. A recover middleware turns a panic into 500.
 - Request ID: `X-Request-ID` echoed if it matches `^[A-Za-z0-9._-]{1,128}$`, else a new UUID; on every response and
@@ -408,7 +436,7 @@ operator trail (D47, trust condition 11 stated only). Exit 0 done, 1 failure (in
 | `app/_layout.tsx`                      | `QueryClientProvider`, `UserProvider`, `AttemptProvider`, stack                           |
 | `app/index.tsx` … `app/how-it-works.tsx` | screens 1–7: `index`, `pay`, `payment-result`, `checking`, `redeem`, `history`, `how-it-works` |
 | `src/api/client.ts`                    | base URL `EXPO_PUBLIC_API_URL` (default `http://localhost:8080/v1`, D09), headers, 10 s `AbortController` timeout (KP), outcome classification |
-| `src/api/queries.ts`                   | query keys `['campaign']`, `['cashback', user]`, `['history', user, limit]`               |
+| `src/api/queries.ts`                   | query keys `['campaign']`, `['cashback', user]`, Home `['history', user, 5]`, History `['history', user, 'pages']` (D54) |
 | `src/money/format.ts`                  | hand-written `Rp100.000` formatter and digit parser (KP)                                   |
 | `src/copy/payInfo.ts`                  | the one client estimate and info-line variant (pure)                                      |
 | `src/copy/codes.ts`                    | reason, status, and error code → copy, with the fallback (D20)                            |
@@ -429,7 +457,7 @@ Money attempt (payment or redemption), one per press:
 ```
 idle --press (ref guard, new key from expo-crypto)--> saving
 saving --stored in fc:attempts--> sending      saving --storage error--> rejected (generic error; nothing sent)
-sending --2xx--> done: show result / confirmation; invalidate campaign, cashback, history; remove saved attempt
+sending --2xx--> done: show result / confirmation; invalidate campaign, cashback, ['history', user]; remove saved attempt
 sending --4xx--> rejected: show its copy (INSUFFICIENT_BALANCE: refetch cashback first;
                  REDEMPTION_PAUSED: refetch campaign); remove saved attempt; next press is a new attempt
 sending --timeout | network | 5xx--> checking (screen 4, back blocked): resend same key x3, ~2 s apart
@@ -454,11 +482,20 @@ The age is the device clock minus the saved `created_at`; a negative age (clock 
 
 GET queries retry once; the attempt machine is the only retry for POSTs.
 
+History paging (D54, AC-66c, AC-66d): Home reads `limit=5` under `['history', user, 5]`. The History screen is a
+`SectionList` fed by `useInfiniteQuery` under `['history', user, 'pages']`: `initialPageParam` none, `limit=20`,
+`getNextPageParam` returns `next_cursor`, `undefined` when null. The pages are flattened, then grouped by day (from
+`created_at`, as above), so a day spanning two pages gets one header. `onEndReached` calls `fetchNextPage` only when
+`hasNextPage && !isFetchingNextPage && !isFetchNextPageError`; the footer shows a spinner while `isFetchingNextPage`,
+and "Couldn't load more." with Try again (`fetchNextPage`, same cursor) on `isFetchNextPageError`, leaving loaded pages
+in place. A money write invalidates the prefix `['history', user]`, so both keys refetch; the infinite query refetches
+its loaded pages in order from the first, with fresh cursors.
+
 ## 11. Testing strategy
 
 | Layer        | Tests                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------- |
-| domain       | table tests: §3 award table, every reason, status, remaining, reference, amount and key validation          |
+| domain       | table tests: §3 award table, every reason, status, remaining, reference, amount and key validation; history cursor round-trip (µs `t`, both types, large id) and every rejected form, and the §3 bound table (D54) |
 | handler      | `httptest` through the real router with service fakes: every 4xx code, envelope, request ID, header order, raw-token amount cases, no budget keys (AC-49) |
 | integration  | real PostgreSQL and Redis from the test compose file on uncommon host ports (D30); `-tags integration -p 1 -count=1`; tables truncated between tests and the campaign row reseeded, with `budget` set to the remaining budget the test needs and `spent` 0 (so reconcile's `spent = sum(awards)` holds); earned, balances, and every other state built only through the services (KP) |
 | clock        | tests replace `fc_now()` in the test database to a fixed instant and restore it in cleanup (AC-13)          |
@@ -497,6 +534,18 @@ then rolls the holder back after 500 ms and waits for the row or the 5 s cap.
 (transaction start, §4) is later than `clock_timestamp()` read from the database right after the command exits.
 Reconcile (INV-01–09) runs after both.
 
+History paging (AC-47a) is an integration test, not a race. The fixture is built through the services, stepping
+`fc_now()` one second per item, with the AC's two equal-time pairs pinned at the page boundaries: items 20/21 (payment
+then redemption, same instant, same `id`, aligned by `setval` on the two sequences, test-only SQL; page 1's cursor is
+on the payment, so the redemption branch takes the `max int64` bound) and items 39/40 (same instant, payment `id`
+lower; page 2's cursor is on the redemption, so the payment branch takes bound 0). Before the mid-walk payment the test
+sets `fc_now()` later than every item. Mutations that must turn it red: pass the cursor id as `$bound` in both branches
+(item 21 is skipped; item 39 repeats on page 3); drop `type_rank` from the outer `ORDER BY` (items 39/40 swap, since
+the redemption's `id` is higher); drop `user_id` from one branch (the cross-user case). The test also runs `EXPLAIN`
+on the cursor query, with `SET LOCAL enable_seqscan = off` because 45 rows would otherwise plan as a sequential scan,
+and asserts each branch is an Index Scan on its `*_user_newest` index with no Sort node below the
+branch `LIMIT` (KP).
+
 ## 12. Where it breaks
 
 | Limit                                                                 | At higher scale                                                       |
@@ -512,7 +561,8 @@ Reconcile (INV-01–09) runs after both.
 | Midnight rush: a full cap before and after 00:00 WIB (D04)            | Rolling window or abuse signals                                       |
 | Payout is a stub (TC13); awards on unsettled payments (TC18)          | Outbox, pending status, settlement events                             |
 | One campaign, rules fixed at seed (TC12)                              | Campaign versions with effective-from times                           |
-| History shows the newest 50 at most (D08)                             | Cursor paging                                                         |
+| History orders by `created_at`, the transaction start (§4.1): a row that commits late (up to the 5 s cap) can land behind a cursor the app already passed; it shows on the next refresh, never twice (D54) | A sequence taken just before `COMMIT` narrows the window but does not close it; an order assigned after commit (a visibility watermark) closes it |
+| A History refetch after a money write reloads every loaded page in sequence (§10, D54) | `maxPages`, or refetch the first page only and merge             |
 
 ## Assumptions
 
@@ -533,5 +583,6 @@ Reconcile (INV-01–09) runs after both.
   (the wireframe's Assumption), or with a negative age, is resent at launch.
 - Assumption: the app's request timeout is 10 s; GET queries retry once; a 4xx during Checking returns to the
   originating screen with its copy.
-- Assumption: history orders by `created_at DESC, id DESC`, with `LIMIT` in each `UNION ALL` branch (KP).
+- Assumption: the D54 cursor is `v1|<created_at>|<P|R>|<id>` in base64url, with one canonical form; a `v1` prefix
+  lets a later format be told apart. The order and per-branch `LIMIT` are in §3 (KP).
 - Assumption: PostgreSQL and Redis image majors and the Go version are pinned at P0 to the current stable releases.

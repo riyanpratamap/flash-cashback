@@ -65,7 +65,8 @@ connected."
 | D04 | Calendar day in WIB by the database clock; accepted: a full cap just before and after 00:00 WIB |
 | D05 | Two switches, awards and redemptions, stored on the campaign row and operated by CLI |
 | D06, D53 | Redis caches `GET /campaign` only (about 5 s); no money decision reads it; when Redis is down or slow, reads fall back to PostgreSQL (fail open). `GET /me/cashback` always reads PostgreSQL |
-| D08 | Cut: `ENDING_SOON`, cursor paging, payment detail sheet, load test. Kept: read cache, CI |
+| D08 | Cut: `ENDING_SOON`, cursor paging (later built, D54), payment detail sheet, load test. Kept: read cache, CI |
+| D54 | History pages by a keyset cursor, 20 per page, loaded on scroll; Home shows the 5 newest. "Scrolling must never show duplicate or missing rows"; a write that commits mid-scroll appears on the next refresh |
 | D09 | Demo on the iOS simulator or Expo Go on a phone, with the API address in `EXPO_PUBLIC_API_URL`; no web build, no CORS |
 | D16, D39 | A retryable request is idempotent by a key stored with the row it creates, in the same transaction |
 | D43, D46 | A redemption reads the redemption flag with no lock, after its balance lock, so it never queues behind awards. Cost: one redemption that already read the flag may commit milliseconds after a pause |
@@ -87,6 +88,7 @@ connected."
 | Redemption flag on its own locked row (D43 option C) | Not needed unless operations needs a hard freeze |
 | Cache `GET /me/cashback` (D53) | Gain not measurable; the shared campaign cache is the one that helps every user. Chosen against the recommendation |
 | Load test (D51, dropped by D52) | Built with k6 in P4.5, then dropped: a tool outside the stack, and "the numbers don't prove anything". The one-off measurement was Apple M2, k6 and the stack sharing 8 CPUs, 4000 reads/s, 30 s per scenario: read p50 about 0.25 ms with the cache on and off, no measurable gain, no payment 503. It cannot be reproduced; the limits are proved by the concurrency tests |
+| Offset paging; no paging with 50 rows (D54) | An offset shifts when a new item lands, so a scroll repeats or skips rows; no paging stops at a fixed count |
 
 ## Out of scope
 
@@ -102,7 +104,7 @@ connected."
 | Live rule-change command (TC12) | Out: rules are snapshotted per payment; no live change |
 | Cashback expiry (TC19) | Out: liability is reported, not expired (D03) |
 | Alert routing (TC20) | Stated only: no paging system here |
-| `ENDING_SOON`, history paging, payment detail sheet | Dropped by the cut line (D08) |
+| `ENDING_SOON`, payment detail sheet | Dropped by the cut line (D08); history paging is built (D54) |
 | Web build of the app, CORS | Not needed for the chosen demo path (D09) |
 
 ## Where it breaks
@@ -120,4 +122,5 @@ connected."
 | Midnight rush: a full cap before and after 00:00 WIB (D04) | Rolling window or abuse signals |
 | Payout is a stub (TC13); awards on unsettled payments (TC18) | Outbox, pending status, settlement events |
 | One campaign, rules fixed at seed (TC12) | Campaign versions with effective-from times |
-| History shows the newest 50 at most (D08) | Cursor paging |
+| History orders by `created_at`, the transaction start (§4.1): a row that commits late (up to the 5 s cap) can land behind a cursor the app already passed; it shows on the next refresh, never twice (D54) | A sequence taken just before `COMMIT` narrows the window but does not close it; an order assigned after commit (a visibility watermark) closes it |
+| A History refetch after a money write reloads every loaded page in sequence (§10, D54) | `maxPages`, or refetch the first page only and merge |

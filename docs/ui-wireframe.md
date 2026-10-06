@@ -23,7 +23,7 @@ Worked example used throughout: **User A**, balance Rp15.000, earned today Rp47.
 
 | #   | Screen                   | Reached from                       | Data                                                |
 | --- | ------------------------ | ---------------------------------- | --------------------------------------------------- |
-| 1   | Home                     | app start                          | `GET /campaign`, `GET /me/cashback`, `GET /me/history` (two newest) |
+| 1   | Home                     | app start                          | `GET /campaign`, `GET /me/cashback`, `GET /me/history` (five newest) |
 | 2   | Make a payment           | Home, Payment result               | campaign rules and today's remaining, already loaded |
 | 3   | Payment result           | Make a payment, Checking           | the `POST /payments` response                       |
 | 4   | Checking                 | a payment or redemption with an unknown outcome | retries of the same request          |
@@ -81,7 +81,7 @@ Earned Rp25.000 cashback
   banner drops ", and you can still redeem your balance".
 - **Earned today:** earned, cap, a progress bar, and what is left, then "Resets at 00:00 WIB." (D04). At 0 left:
   "You've reached today's limit. Resets at 00:00 WIB."
-- **Recent activity:** the two newest items, in the History row format (screen 6) without the time; a Rp0 payment
+- **Recent activity:** the five newest items (D54), in the History row format (screen 6) without the time; a Rp0 payment
   has no subtitle line. Empty: "No activity yet."
 - **Refresh:** on open, on return from another screen, and on pull to refresh.
 - **Load error:** "Couldn't load your cashback. Your balance is safe. Check your connection and try again." with Try
@@ -282,7 +282,10 @@ Payment                                 −Rp200.000
 - Grouped by day, from the date in `created_at` as sent by the API, never converted to the device's time zone.
 - Empty: "No activity yet. Make a payment to start earning cashback." Error: "Couldn't load your history." with Try
   again.
-- Shows the newest 20 and stops; no loading more on scroll (D08).
+- **Paging (D54):** the first 20 load on open. Nearing the end of the list loads the next 20 and appends them, with
+  a spinner in the list footer while it loads. A day that spans two pages keeps one header. If the next page fails,
+  the rows already loaded stay and the footer reads "Couldn't load more." with Try again. Once the API answers
+  `next_cursor: null`, nothing more is requested and the footer is empty.
 
 ## 7. How Flash Cashback works
 

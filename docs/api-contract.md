@@ -178,6 +178,7 @@ Assumption: checks run in this order: amount range, then the switch, then the ba
 ## GET /me/history
 
 Payments (Rp0 ones included) and redemptions in one list, newest first. Each item carries what the list row needs.
+The example answers `GET /v1/me/history?limit=2` for a user with older items.
 
 ```json
 {
@@ -187,14 +188,28 @@ Payments (Rp0 ones included) and redemptions in one list, newest first. Each ite
       "cashback": { "awarded": 5000, "reason": "AWARDED" } },
     { "type": "REDEMPTION", "id": 3, "reference": "RDM-20261003-000003", "amount": 42000,
       "status": "COMPLETED", "destination": "MAIN_ACCOUNT", "created_at": "2026-10-03T11:20:00+07:00" }
-  ]
+  ],
+  "next_cursor": "djF8MjAyNi0xMC0wM1QwNDoyMDowMFp8Unwz"
 }
 ```
 
 Amounts are always positive; `type` decides the sign the app shows.
 
-The newest items only: `?limit=`, default 20, maximum 50. No paging (D08). Assumption: a `limit` outside 1 to
-50 is 400 `MALFORMED_REQUEST`.
+Paged by a keyset cursor (D54). `?limit=`, default 20, maximum 50. Assumption: a `limit` outside 1 to 50 is 400
+`MALFORMED_REQUEST`.
+
+- **Order:** `created_at` newest first; at an equal `created_at`, `PAYMENT` before `REDEMPTION`; then `id` highest
+  first. This is a total order: a payment and a redemption can share an `id`.
+- **`cursor`** (optional query): the opaque string from a previous response's `next_cursor`. Without it, the newest
+  page. With it, the items strictly after that position in the order above. The app never builds or reads one, and
+  omits the parameter for the first page; an empty `?cursor=` is 400 `MALFORMED_REQUEST`.
+- **`next_cursor`:** a string when at least one older item exists, else `null`. Pass it back unchanged to get the
+  next page. An item created between two fetches never makes a later page repeat or skip an item.
+- `created_at` is when the write's transaction started, not when it committed. A write that commits after a page was
+  read, with a `created_at` that places it within the pages already read (it can trail by a few seconds), is not in
+  the later pages of that walk; it appears on the next refresh from the first page.
+- A cursor that cannot be decoded is 400 `MALFORMED_REQUEST`. A cursor is only a position: rows are always scoped to
+  `X-User-ID`, so a cursor from another user's list never shows that user's rows.
 
 ## GET /healthz
 

@@ -42,7 +42,7 @@ retries, concurrency, partial failures, and operator action, the money adds up e
 | Live rule-change command (TC12)                          | Out: rules are snapshotted per payment; no live change     |
 | Cashback expiry (TC19)                                   | Out: liability is reported, not expired (D03)              |
 | Alert routing (TC20)                                     | Stated only: no paging system here                         |
-| `ENDING_SOON`, history paging, payment detail sheet       | Dropped by the cut line (D08)                              |
+| `ENDING_SOON`, payment detail sheet                       | Dropped by the cut line (D08); history paging is built (D54) |
 | Web build of the app, CORS                               | Not needed for the chosen demo path (D09)                  |
 
 ## User stories
@@ -139,7 +139,7 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
   false; without `--by` it exits 2, changes nothing, and prints no action line. The line is not stored anywhere (D47:
   no operator trail is claimed).
 
-### Reads and caches (D06, D08, D18, D50, D51, D52, D53, TC8, TC9, TC22)
+### Reads and caches (D06, D08, D18, D50, D51, D52, D53, D54, TC8, TC9, TC22)
 
 - **AC-41** Given the seeded row, `GET /campaign` serves rate 500 bps, minimum 20000, and daily cap 50000 from the
   campaign row, and its two statuses follow this table (spent built by real payments against a reseeded budget):
@@ -157,6 +157,15 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
 - **AC-45** Given the cache holds invalid JSON for `fc:v1:campaign`, then the read treats it as a miss and answers correctly; given `fc:v1:cashback:user_a` holds balance 999999 (left by an older build) and user_a's real balance is 18000, then `GET /me/cashback` shows 18000 and a redemption of 20000 is 422.
 - **AC-46** Removed by D53 (`GET /me/cashback` is not cached); the ID is not reused.
 - **AC-47** `GET /me/history` lists payments (Rp0 included) and redemptions newest first, 20 by default, up to `limit` 50; `limit` 0, 51, or `abc` is 400 `MALFORMED_REQUEST`.
+- **AC-47a** (D54) Given user_a has 45 items, each at its own `fc_now()` instant except two equal-time pairs, newest
+  first: items 20 and 21 are a payment and a redemption at one instant with the same `id` (page 1's cursor lands on
+  the payment); items 39 and 40 are a payment and a redemption at one instant, the payment's `id` lower (page 2's
+  cursor lands on the redemption). When the pages are walked with `limit` 20 by passing each `next_cursor` back, then
+  the pages hold 20, 20, and 5 items, every item appears exactly once and in the contract order, and the last page
+  has `next_cursor` null. When, after the first fetch, `fc_now()` is set later than every existing item and user_a
+  pays, then the new payment appears in no later page and the second and third pages are unchanged. A `cursor` that
+  is empty (`?cursor=`), `abc`, `!!!`, or a valid encoding of `v9|x` is 400 `MALFORMED_REQUEST`. When user_b sends
+  user_a's `next_cursor`, then only user_b's rows older than that position come back, never one of user_a's.
 - **AC-48** Given user_a has payments and a balance, then user_b's balance, today, and history show none of it, and user_b cannot redeem user_a's balance.
 - **AC-49** No response of any endpoint, in any campaign state, contains a budget or spent figure; `GET /campaign` with budget left 2000 equals the one with 9000000 left.
 - **AC-76** Given `CACHE_READS=off`, when `GET /campaign` is served, then it answers from PostgreSQL and no cache key
@@ -211,13 +220,21 @@ with budget N and spent 0; "earned" and "balance" states are built through real 
   returns Home.
 - **AC-65b** A replay (200 with `Idempotent-Replayed: true`) shows no balance. A body that cannot be parsed shows the
   mark, "Your redemption went through.", and "Check your balance on the home screen.", with no balance.
-- **AC-66** With the device in UTC and an item at 2026-10-04T00:30:00+07:00, History groups it under 4 Oct; it shows at most 20 rows; row content is AC-66a.
+- **AC-66** With the device in UTC and an item at 2026-10-04T00:30:00+07:00, History groups it under 4 Oct; row content is AC-66a; paging is AC-66c.
 - **AC-66a** History (titled "Transaction history", no balance header) shows a payment of Rp100.000 that
   earned Rp5.000 as "Payment", "14:32 · Earned Rp5.000 cashback", and "−Rp100.000"; a partial award adds its reason
   chip after the cashback; a Rp0 payment shows only its time, "13:05"; a redemption of Rp42.000 shows "Cashback
   redeemed", "11:20 · To main account", and "+Rp42.000".
 - **AC-66b** Home recent activity rows have the AC-66a title, amount, and subtitle without the time; a Rp0 payment
   has no subtitle line.
+- **AC-66c** (D54) Given user_a has 25 items, the newest 21 on 3 Oct, when History opens, then it requests `limit` 20
+  with no cursor and shows 20 rows; when the list is scrolled to its end, then it requests the next page with the
+  returned `next_cursor` and appends 5 rows, with exactly one header for 3 Oct (the day spanning both pages is not repeated)
+  and a footer spinner while loading. If that request fails, then the 20 rows stay and the footer shows "Couldn't
+  load more." with Try again, which resends the same cursor. After a page with `next_cursor` null, scrolling to the
+  end sends no request.
+- **AC-66d** (D54) Given user_a has 7 items, Home recent activity requests `limit` 5 and shows the 5 newest, newest
+  first; with 3 items it shows 3.
 - **AC-67** The chosen demo user sets `X-User-ID` on every request and is remembered after the app restarts.
 - **AC-68** The app calls `EXPO_PUBLIC_API_URL` when set, else `http://localhost:8080/v1`.
 - **AC-75** (US-6) How Flash Cashback works shows the rate, minimum, daily cap, and reset time from `GET /campaign`
@@ -280,6 +297,7 @@ Trust condition 11 (operator trail) is stated only (D47) and has no AC; AC-40 co
 | A working demo we can run                                        | AC-56, AC-57, AC-67, AC-68                      |
 | Push to GitHub                                                   | Ship stage; CI kept (D08, D31); no AC           |
 | Interview: decisions, rejected options, where it breaks          | `docs/design-overview.md`; tech-spec "Where it breaks" |
+| Change request D54: History pages on scroll; Home shows 5        | AC-47a, AC-66c, AC-66d                          |
 
 ## Assumptions
 
