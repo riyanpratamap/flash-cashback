@@ -651,6 +651,137 @@ From `/change` (2026-10-06, after C17): AC-62 amended; wireframe screen 3.
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.
 
+## Changes — history paging (D54)
+
+From `/feature` (2026-10-06, D54; commits 2d55556, 1bed867): AC-47a, AC-66c, AC-66d added, AC-66 amended; contract
+`GET /me/history`; wireframe screens 1 and 6; tech-spec §3, §7, §10, §11, §12. Order: C23a → C23b → C23c → C25;
+C24 is independent. No new dependency (TanStack Query's `useInfiniteQuery` and RN `SectionList` are already
+installed). No migration: the `*_user_newest` indexes exist. No concurrency test: AC-47a is an integration test
+(tech-spec §11).
+
+Not critical: C23a–C23c read only. They touch no money write, lock, idempotency key, award rule, reconcile, or
+migration, so the AGENTS.md definition does not apply. The cross-user scoping and the keyset order are proved by the
+named mutations and by the owner's diff read. The owner can still ask for a code-checker.
+
+Interim interface (each task leaves `make gate` green): C23a adds `domain.Cursor` (time, type, id) unused. C23b
+changes `HistoryReader.History` and `Reads.History` to `(ctx, user, limit, cursor *domain.Cursor)`, with `nil` meaning
+the first page; the handler passes `nil` until C23c. C23b also adds `NextCursor *string` with tag `next_cursor` to
+`domain.HistoryView`, an additive field. C23c parses the query parameter and passes the decoded cursor.
+
+- [ ] **C23a** History cursor encode and decode, pure — AC-47a · go · not critical
+  - Skills: programming-go, developing-backend.
+  - `internal/domain`: `Cursor`, `EncodeCursor(Cursor) string` and `DecodeCursor(s) (Cursor, error)` per tech-spec
+    §3: base64url with no padding of `v1|<t UTC RFC3339Nano>|<P|R>|<id>`. Also the branch `$bound` helper, which turns
+    the cursor rank and the branch rank into the bound.
+  - Tests (table, `domain`): round-trip at µs `t`, both types, `id` max int64. Rejected forms: empty, `abc`, `!!!`,
+    padded base64, a valid encoding of `v9|x`, a canonical four-field `v2|<t>|P|1`, three or five fields, type `X`,
+    `id` 0, negative or overflowing, an unparsable `t`, sub-µs digits, and a non-canonical `t` (an offset that is not
+    `Z`, or trailing zeros). The four §3 bound rows.
+  - Mutations (red, then restored): drop the canonical re-encode check (non-canonical row red); drop the version check
+    (`v2` row red); bound for a higher branch rank 0 → max int64 (bound table red).
+  - Done when: `make test` exit 0, every new test red on an assertion first; mutations reported.
+- [ ] **C23b** History keyset page in store and service — AC-47, AC-47a · go · not critical
+  - Skills: programming-go, developing-backend; known-pitfalls PostgreSQL (row comparison, limit each branch).
+  - `internal/store/history.go`: `store.HistoryPage(ctx, pool, user, limit, cursor *domain.Cursor)` replaces `Newest`.
+    It has two static query texts (with and without a cursor). Each `UNION ALL` branch is limited to `limit + 1`, and
+    the outer order is `created_at DESC, type_rank DESC, id DESC`. The rows carry the µs `created_at` and the type
+    rank. The C22 `TestNewestQueryErrorIsWrapped` moves to `HistoryPage`.
+    Assumption: `store.HistoryPage` is the Go name for tech-spec §1 `history.Page`, as `store.GetCampaign` is for
+    `campaigns.Get`.
+  - `internal/service/reads.go`: `Reads.History(ctx, user, limit, cursor)` drops the extra row and sets `NextCursor`
+    from the last kept row (`nil` when there is none). `httpapi` interface, handler (`nil`) and `edge_test.go` fake are
+    updated to the new signature only.
+  - `internal/integration/history_test.go`: AC-47a through `Reads.History`, with each `next_cursor` decoded by
+    `DecodeCursor`. The pinned fixture (tech-spec §11) has 45 items through the services, `fc_now()` stepped 1 s, and
+    `setval` pairs at items 20/21 and 39/40. Pages hold 20/20/5, each item appears once and in order, and the last
+    cursor is `nil`. A mid-walk payment at a later `fc_now()` leaves pages 2 and 3 unchanged.
+  - Cross-user case: user_b has rows newer and older than the position of user_a's page 1 cursor. user_b with that
+    cursor gets exactly user_b's older rows, and no user_a id.
+  - `EXPLAIN` runs with `SET LOCAL enable_seqscan = off`. Pass: an Index Scan on each `*_user_newest` index and no
+    Sort below the branch `LIMIT`. Reconcile invariants are asserted after.
+  - Mutations (tech-spec §11, each red, then restored): cursor id as `$bound` in both branches (item 21 skipped, 39
+    repeated); `type_rank` dropped from the outer `ORDER BY` (39/40 swap); `user_id` dropped from one branch
+    (cross-user case red).
+  - Done when: `make gate` exit 0; the three mutations reported red; AC-47 tests unchanged and green.
+- [ ] **C23c** History `cursor` parameter and `next_cursor` in the response — AC-47a · go · not critical
+  - Skills: programming-go, developing-backend.
+  - `internal/httpapi/money.go`: validation runs user, then `limit`, then `cursor`. An absent `cursor` is `nil`;
+    otherwise `DecodeCursor` must succeed and the result is passed as `*domain.Cursor`, else 400 `MALFORMED_REQUEST`
+    (§7).
+    Assumption: a repeated `cursor` is 400, as a repeated `limit` is.
+  - `edge_test.go` `TestHistoryCursor`, with a fake that records the cursor:
+    - absent → `nil`; a valid cursor → its decoded value.
+    - `?cursor=`, `abc`, `!!!`, an encoded `v9|x`, and a repeated cursor → 400 `MALFORMED_REQUEST` each.
+    - missing user still wins (`MISSING_USER`).
+    - JSON has `"next_cursor":null` when unset and the string when set.
+  - `internal/integration/history_test.go`: one HTTP walk over the AC-47a fixture follows `next_cursor` to `null`
+    (20/20/5), and the four AC-47a malformed cursors are 400 over HTTP.
+  - Mutation (red, then restored): the handler ignores `cursor` (passes `nil`), so the HTTP walk repeats page 1.
+  - Done when: `make gate` exit 0; new tests red on an assertion first; mutation reported.
+- [ ] **C24** Home recent activity shows the 5 newest — AC-66d · `ts` · not critical
+  - Skills: programming-typescript, developing-mobile-ui.
+  - Home requests `limit=5` under `['history', user, 5]` (tech-spec §10), replacing `limit=2`.
+  - Tests: `index.test.tsx` covers the `/me/history?limit=5` request, 7 items showing the 5 newest in order, and 3
+    items showing 3. `queries.test.ts` URL updated.
+  - Done when: red on an assertion then green; mutation (slice to 2 kept) red; `make mobile-check` exit 0.
+- [ ] **C25** History pages on scroll — AC-66, AC-66c · `ts` · not critical
+  - Skills: programming-typescript, developing-mobile-ui.
+  - `src/api/queries.ts`: parse `next_cursor` (string or null; any other value is a parse error). The infinite query
+    uses key `['history', user, 'pages']`, `limit=20`, no `initialPageParam` cursor, and `getNextPageParam` returning
+    `next_cursor ?? undefined`. Prefix invalidation `['history', user]` is unchanged (AttemptProvider test still
+    green).
+  - `app/history.tsx`: a `SectionList` over the flattened pages, grouped by day after flattening. `onEndReached`
+    calls `fetchNextPage` only when `hasNextPage && !isFetchingNextPage && !isFetchNextPageError`. The footer shows a
+    spinner, or "Couldn't load more." with Try again (same cursor), or nothing. The first-load error and empty states
+    are unchanged.
+  - Tests (`history.test.tsx`, AC-66c fixture of 25 items with the newest 21 on 3 Oct): first request is `limit=20`
+    with no cursor and shows 20 rows. End reached sends the returned cursor and appends 5 rows. There is one 3 Oct
+    header and a footer spinner while loading. A failed next page keeps the 20 rows and shows the footer error; Try
+    again resends the same cursor. After `next_cursor` null, end reached sends nothing and the footer is empty (no
+    spinner, no "Couldn't load more."). AC-66 UTC grouping stays green.
+  - Mutations (red, then restored): drop `hasNextPage` from the guard (no-request test red); group per page before
+    flattening (one-header test red).
+  - Done when: red on an assertion then green; mutations reported; `make mobile-check` exit 0.
+
+**D54 gate:** in order:
+
+1. `make gate` exits 0.
+2. `make mobile-check` exits 0.
+3. Stack walk (Assumption: `jq` and `uuidgen` on the host, for the gate only):
+
+   ```sh
+   docker compose up -d --build --wait
+   docker compose exec -e FC_DEMO=1 api /app/admin demo-reset; echo exit=$?           # exit=0
+   for i in $(seq 30); do curl -fsS -o /dev/null -X POST localhost:8080/v1/payments \
+     -H 'X-User-ID: user_a' -H "Idempotency-Key: $(uuidgen | tr A-Z a-z)" \
+     -H 'Content-Type: application/json' -d '{"amount":20000}' || echo FAIL; done      # no FAIL
+   c=''; : > /tmp/fc-ids; : > /tmp/fc-sizes
+   while :; do
+     q='limit=20'; [ -n "$c" ] && q="$q&cursor=$c"
+     r=$(curl -fsS -H 'X-User-ID: user_a' "localhost:8080/v1/me/history?$q") || { echo FAIL; break; }
+     echo "$r" | jq -r '.items[] | "\(.type):\(.id)"' >> /tmp/fc-ids
+     echo "$r" | jq '.items | length' >> /tmp/fc-sizes
+     c=$(echo "$r" | jq -r '.next_cursor // empty'); [ -z "$c" ] && break
+   done
+   cat /tmp/fc-sizes; wc -l < /tmp/fc-ids; sort /tmp/fc-ids | uniq -d
+   curl -s -o /dev/null -w '%{http_code}\n' -H 'X-User-ID: user_a' \
+     'localhost:8080/v1/me/history?cursor='                                             # 400
+   ```
+
+   Pass:
+   - no `FAIL` is printed.
+   - every page size is 20 except the last, which is 1–20, so there are at least two pages.
+   - the id count is at least 31.
+   - `uniq -d` prints nothing.
+   - the walk stopped on `next_cursor` `null`.
+   - `?cursor=` is `400`.
+4. Expo Go walkthrough: Home shows 5 rows → See all → scrolling loads more with the footer spinner, and loading stops
+   at the end with an empty footer.
+5. `docker compose exec api /app/reconcile; echo exit=$?` → exit=0, then `docker compose down`.
+
+**D54 gate result:** to fill in when the gate runs, each step with its exit code or observation, also recorded in
+the C25 commit body.
+
 ## Slip rule
 
 If the work must shrink, the only planned cut is mobile polish beyond the wireframe's states and copy. Any other cut
