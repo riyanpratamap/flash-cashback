@@ -626,6 +626,27 @@ From `/change` (2026-10-06, after C17): AC-62 amended; wireframe screen 3.
     Counts exclude `TestMain`. Review: helpers excluded, package column widened, `cmd/*` note reworded.
     `make gate` exit 0; `make mobile-check` exit 0; no new links.
     Assumption: no `-race` in the cover run (the gate and `test-race` already cover it).
+- [x] **C22** Raise internal/store coverage · go · critical
+  - From `/change`, classified tiny: tests only, no production change, no AC amended. `internal/store` was 77.5%
+    (README): the replay-on-conflict branches of `Pay` and `Redeem` and the driver-error wraps had no test.
+  - A `faultTx` test helper (real transaction; a statement matched by SQL text can run a hook first or fail) and
+    tests in `internal/integration/fault_test.go`: step 9/10 insert conflict is `ErrReplay` with the winner's row and
+    the loser's writes rolled back, conflict without a stored row, failed re-read; every `Pay`, `Redeem`,
+    `SetSwitch`, `DemoTruncate` driver error wrapped with its step and rolled back; `Find*` driver error and wrong
+    hash length (fake querier); `Newest` query error; a lost connection is `ErrUnknownOutcome`.
+  - Done when: `make gate` and `make cover` exit 0; `internal/store` at least 95%, no package lower; each group
+    proved by a mutation in the store code (red, then restored).
+  - Result: 14 integration tests; `internal/store` 77.5% to 96.8%, backend total 84.8% to 88.5%, no package lower;
+    10 mutations red and restored (conflict returns nil for `Pay` and `Redeem`, no-row conflict as replay, a
+    swallowed ledger, budget, switch update and campaign reset error, closed-connection branch, hash length check,
+    history query error); `make gate` exit 0, `make cover` exit 0. Left uncovered: the `SET LOCAL` and rollback
+    failures in `InTx`, the non-`ErrNoRows` `pgErr` passthrough line, and the scan and `rows.Err` branches of
+    `Newest`, none reachable without changing production code.
+    Review fixes: the two re-read-error tests now check the row counts and call `assertReconciled`; proved by a
+    temporary mutation (`InTx` commits when `fn` fails), both red, restored. Rollback claims dropped where the fault
+    fires before any write (`SetSwitch` update, `DemoTruncate` TRUNCATE, `Pay` find payment). Numbers unchanged.
+    Assumption: the conflict winner is committed from the pool inside the hook, so the loser holds its locks while
+    the winner commits; the winner's balance and ledger rows are completed after the call, to reconcile.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

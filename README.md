@@ -153,16 +153,16 @@ make mobile-check  # lint, typecheck, and tests of the app (run npm ci in mobile
 | Area    | Kind                                | Tests | Command                 |
 | ------- | ----------------------------------- | ----- | ----------------------- |
 | Backend | unit (no database)                  | 53    | `make test`             |
-| Backend | integration                         | 113   | `make test-integration` |
+| Backend | integration                         | 127   | `make test-integration` |
 | Backend | concurrency (subset of integration) | 18    | `make test-race`        |
 | Mobile  | Jest, 30 test files                 | 323   | `make mobile-check`     |
 
 | Coverage                                   | Statements |
 | ------------------------------------------ | ---------- |
-| Backend total (unit + integration)         | 84.8%      |
+| Backend total (unit + integration)         | 88.5%      |
 | `internal/domain` (award and status rules) | 97.3%      |
 | `internal/service` (payment, redemption)   | 94.0%      |
-| `internal/store` (SQL, locks)              | 77.5%      |
+| `internal/store` (SQL, locks)              | 96.8%      |
 | `internal/httpapi`                         | 96.7%      |
 | `internal/reconcile`                       | 86.7%      |
 
