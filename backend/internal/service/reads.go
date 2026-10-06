@@ -3,6 +3,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -89,18 +90,35 @@ func cashbackView(t store.TodayRow) domain.CashbackView {
 	}
 }
 
-// History returns the user's newest payments and redemptions, newest first.
+// History returns one page of the user's payments and redemptions, newest
+// first, after cursor (nil is the first page). The store returns one row more
+// than limit: its presence means an older item exists, so it is dropped and
+// next_cursor is the position of the last row kept; otherwise it is nil.
 // A user with no rows gets an empty list, not null.
-func (r *Reads) History(ctx context.Context, user domain.UserID, limit int) (domain.HistoryView, error) {
-	rows, err := store.Newest(ctx, r.pool, user, limit)
+func (r *Reads) History(ctx context.Context, user domain.UserID, limit int, cursor *domain.Cursor) (domain.HistoryView, error) {
+	if limit <= 0 {
+		return domain.HistoryView{}, fmt.Errorf("read history: limit %d must be positive", limit)
+	}
+	rows, err := store.HistoryPage(ctx, r.pool, user, limit, cursor)
 	if err != nil {
 		return domain.HistoryView{}, err
+	}
+	var next *string
+	if len(rows) > limit {
+		rows = rows[:limit]
+		last := rows[limit-1]
+		typ := domain.CursorRedemption
+		if last.TypeRank == 1 {
+			typ = domain.CursorPayment
+		}
+		enc := domain.EncodeCursor(domain.Cursor{T: last.CreatedAt, Type: typ, ID: last.ID})
+		next = &enc
 	}
 	items := make([]domain.HistoryItem, 0, len(rows))
 	for _, row := range rows {
 		items = append(items, historyItem(row))
 	}
-	return domain.HistoryView{Items: items}, nil
+	return domain.HistoryView{Items: items, NextCursor: next}, nil
 }
 
 func historyItem(row store.HistoryRow) domain.HistoryItem {

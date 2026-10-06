@@ -681,7 +681,8 @@ the first page; the handler passes `nil` until C23c. C23b also adds `NextCursor 
   - Mutations (red, then restored): drop the canonical re-encode check (non-canonical row red); drop the version check
     (`v2` row red); bound for a higher branch rank 0 → max int64 (bound table red).
   - Done when: `make test` exit 0, every new test red on an assertion first; mutations reported.
-- [ ] **C23b** History keyset page in store and service — AC-47, AC-47a · go · not critical
+- [x] **C23b** History keyset page in store and service — AC-47, AC-47a · go · not critical
+  - Result: `store.HistoryPage` (static `HistoryFirstSQL` and `HistoryCursorSQL`, `limit+1`, `type_rank` in the outer order) replaces `Newest`; `Reads.History(..., cursor)` drops the extra row and sets `NextCursor`; the C22 fault test moved. Integration: the 45-item walk (20/20/5, mid-walk payment), cross-user, and `EXPLAIN`. Mutations red: cursor id as bound (item 21 skipped), `type_rank` dropped (39/40 swap), `user_id` dropped from the redemption branch (cross-user and `EXPLAIN` red). Review fixes: a limit-boundary test (45 items at limit 44/45/46 and 5 left at limit 5/4; mutation `len(rows) > limit` to `>=` red), `EXPLAIN` now asserts the row comparison is in `Index Cond` with no `Filter` (mutation to the `OR` form goes red: it lands in `Filter`), a non-positive limit returns an error, and page 2's cursor time is asserted. The two exact-body empty-history tests now expect `"next_cursor":null`. `make gate` exit 0.
   - Skills: programming-go, developing-backend; known-pitfalls PostgreSQL (row comparison, limit each branch).
   - `internal/store/history.go`: `store.HistoryPage(ctx, pool, user, limit, cursor *domain.Cursor)` replaces `Newest`.
     It has two static query texts (with and without a cursor). Each `UNION ALL` branch is limited to `limit + 1`, and

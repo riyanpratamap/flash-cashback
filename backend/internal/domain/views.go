@@ -88,7 +88,8 @@ const (
 
 // HistoryView is the body of GET /me/history.
 type HistoryView struct {
-	Items []HistoryItem `json:"items"`
+	Items      []HistoryItem `json:"items"`
+	NextCursor *string       `json:"next_cursor"`
 }
 
 // HistoryItem is one payment or redemption row. Cashback is set on payments

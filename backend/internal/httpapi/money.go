@@ -21,7 +21,7 @@ type Redeemer interface {
 
 // HistoryReader is what GET /me/history needs.
 type HistoryReader interface {
-	History(ctx context.Context, user domain.UserID, limit int) (domain.HistoryView, error)
+	History(ctx context.Context, user domain.UserID, limit int, cursor *domain.Cursor) (domain.HistoryView, error)
 }
 
 const maxBodyBytes = 1024
@@ -123,7 +123,7 @@ func (d Deps) getHistory(w http.ResponseWriter, r *http.Request) {
 		d.writeFailure(w, r, err)
 		return
 	}
-	view, err := d.History.History(r.Context(), user, limit)
+	view, err := d.History.History(r.Context(), user, limit, nil)
 	if err != nil {
 		d.writeFailure(w, r, err)
 		return

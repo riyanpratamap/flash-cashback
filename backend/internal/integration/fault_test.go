@@ -462,11 +462,11 @@ func TestDemoTruncateErrorsAreWrapped(t *testing.T) {
 	}
 }
 
-func TestNewestQueryErrorIsWrapped(t *testing.T) {
+func TestHistoryPageQueryErrorIsWrapped(t *testing.T) {
 	reset(t, 10_000_000)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	rows, err := store.Newest(ctx, pool, "user_a", 10)
+	rows, err := store.HistoryPage(ctx, pool, "user_a", 10, nil)
 	if !errors.Is(err, context.Canceled) || !strings.Contains(err.Error(), "read history:") || rows != nil {
 		t.Fatalf("rows = %v, err = %v, want read history wrapping context.Canceled", rows, err)
 	}
