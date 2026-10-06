@@ -705,7 +705,8 @@ the first page; the handler passes `nil` until C23c. C23b also adds `NextCursor 
     repeated); `type_rank` dropped from the outer `ORDER BY` (39/40 swap); `user_id` dropped from one branch
     (cross-user case red).
   - Done when: `make gate` exit 0; the three mutations reported red; AC-47 tests unchanged and green.
-- [ ] **C23c** History `cursor` parameter and `next_cursor` in the response — AC-47a · go · not critical
+- [x] **C23c** History `cursor` parameter and `next_cursor` in the response — AC-47a · go · not critical
+  - Result: `getHistory` parses `cursor` after user and `limit` (`parseCursor`: absent is `nil`; empty, repeated or undecodable is 400 `MALFORMED_REQUEST` with the fixed message). `TestHistoryCursor` (fake records the cursor), `TestHistoryNextCursorJSON`, an HTTP walk (20/20/5 to `null`) and the four malformed cursors over HTTP. Red first: the unit cases failed on 200 / nil cursor. Mutations red: handler passes `nil` (HTTP walk repeats page 1, "more than 3 pages"); `next_cursor,omitempty` (unset body lacks the key); `parseCursor` ignoring the decode error and returning a zero cursor turns `TestHistoryCursor` (empty, abc, bang, v9) and the HTTP malformed-cursor test red (200, want 400), then restored. `make gate` exit 0.
   - Skills: programming-go, developing-backend.
   - `internal/httpapi/money.go`: validation runs user, then `limit`, then `cursor`. An absent `cursor` is `nil`;
     otherwise `DecodeCursor` must succeed and the result is passed as `*domain.Cursor`, else 400 `MALFORMED_REQUEST`

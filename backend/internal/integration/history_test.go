@@ -4,9 +4,12 @@ package integration
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
@@ -491,4 +494,45 @@ type planNode struct {
 	IndexCond string     `json:"Index Cond"`
 	Filter    string     `json:"Filter"`
 	Plans     []planNode `json:"Plans"`
+}
+
+// AC-47a over HTTP: following next_cursor from the query string walks the same
+// 20/20/5 pages as the service walk, and the last page's next_cursor is null.
+func TestHistoryCursorHTTPWalkAC47a(t *testing.T) {
+	reset(t, 10_000_000)
+	f := buildAC47a(t)
+
+	var got []string
+	query, pages := "", 0
+	for {
+		v := historyOf(t, "user_a", query)
+		pages++
+		if pages > 3 {
+			t.Fatalf("more than 3 pages, last query %q", query)
+		}
+		got = append(got, pageKeys(v)...)
+		if v.NextCursor == nil {
+			break
+		}
+		query = "?limit=20&cursor=" + url.QueryEscape(*v.NextCursor)
+	}
+	if want := f.wantPage(1, 45); !reflect.DeepEqual(got, want) || pages != 3 {
+		t.Fatalf("pages %d, items\n%v\nwant\n%v", pages, got, want)
+	}
+	assertReconciled(t)
+}
+
+// AC-47a: an empty, undecodable, or wrong-version cursor is 400 over HTTP.
+func TestHistoryMalformedCursorHTTPAC47a(t *testing.T) {
+	reset(t, 10_000_000)
+	v9 := base64.RawURLEncoding.EncodeToString([]byte("v9|x"))
+	for _, q := range []string{"?cursor=", "?cursor=abc", "?cursor=!!!", "?cursor=" + v9} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/me/history"+q, nil)
+		req.Header.Set("X-User-ID", "user_a")
+		rec := httptest.NewRecorder()
+		readsRouter().ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"code":"MALFORMED_REQUEST"`) {
+			t.Errorf("%s = %d: %s", q, rec.Code, rec.Body)
+		}
+	}
 }

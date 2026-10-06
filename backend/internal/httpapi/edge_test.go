@@ -3,6 +3,7 @@ package httpapi
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/riyanpratamap/flash-cashback/backend/internal/domain"
@@ -20,6 +22,8 @@ const goodKey = "123e4567-e89b-12d3-a456-426614174000"
 type fakeMoney struct {
 	calls    []domain.MoneyCommand
 	histCall []histArgs
+	cursors  []*domain.Cursor
+	histView domain.HistoryView
 	err      error
 	panicVal any
 	replayed bool
@@ -43,9 +47,10 @@ func (f *fakeMoney) record(c domain.MoneyCommand) error {
 	}
 	return f.err
 }
-func (f *fakeMoney) History(_ context.Context, u domain.UserID, limit int, _ *domain.Cursor) (domain.HistoryView, error) {
+func (f *fakeMoney) History(_ context.Context, u domain.UserID, limit int, c *domain.Cursor) (domain.HistoryView, error) {
 	f.histCall = append(f.histCall, histArgs{u, limit})
-	return domain.HistoryView{}, f.err
+	f.cursors = append(f.cursors, c)
+	return f.histView, f.err
 }
 
 type rig struct {
@@ -412,4 +417,69 @@ func TestHistoryLimit(t *testing.T) {
 	}
 	r := newRig()
 	r.wantError(t, r.do("GET", "/v1/me/history?limit=51", reqOpt{}), 400, "MISSING_USER")
+}
+
+func TestHistoryCursor(t *testing.T) {
+	want := domain.Cursor{T: time.Date(2026, 10, 3, 7, 0, 20, 123456000, time.UTC), Type: domain.CursorPayment, ID: 77}
+	good := domain.EncodeCursor(want)
+	v9 := base64.RawURLEncoding.EncodeToString([]byte("v9|x"))
+	tests := []struct {
+		name, query string
+		cursor      *domain.Cursor
+		code        string
+	}{
+		{"absent", "", nil, ""},
+		{"valid", "?cursor=" + good, &want, ""},
+		{"valid after limit", "?limit=5&cursor=" + good, &want, ""},
+		{"empty", "?cursor=", nil, "MALFORMED_REQUEST"},
+		{"abc", "?cursor=abc", nil, "MALFORMED_REQUEST"},
+		{"bang", "?cursor=!!!", nil, "MALFORMED_REQUEST"},
+		{"v9", "?cursor=" + v9, nil, "MALFORMED_REQUEST"},
+		{"repeated", "?cursor=" + good + "&cursor=" + good, nil, "MALFORMED_REQUEST"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := newRig()
+			rec := r.do("GET", "/v1/me/history"+tc.query, reqOpt{user: str("user_a")})
+			if tc.code != "" {
+				r.wantError(t, rec, 400, tc.code)
+				if len(r.fake.histCall) != 0 {
+					t.Fatal("service called on a 4xx")
+				}
+				if m := decodeEnvelope(t, rec).Error.Message; strings.Contains(m, "cursor") || strings.Contains(m, "v9") {
+					t.Errorf("message leaks detail: %q", m)
+				}
+				return
+			}
+			if rec.Code != 200 || len(r.fake.cursors) != 1 {
+				t.Fatalf("status %d calls %d", rec.Code, len(r.fake.cursors))
+			}
+			got := r.fake.cursors[0]
+			if (got == nil) != (tc.cursor == nil) || (got != nil && (!got.T.Equal(tc.cursor.T) || got.Type != tc.cursor.Type || got.ID != tc.cursor.ID)) {
+				t.Fatalf("cursor = %+v, want %+v", got, tc.cursor)
+			}
+		})
+	}
+	r := newRig()
+	r.wantError(t, r.do("GET", "/v1/me/history?cursor=abc", reqOpt{}), 400, "MISSING_USER")
+	// A bad limit with a good cursor never reaches the service. The order of
+	// the limit and cursor checks is not observable: both give the same 400.
+	r.wantError(t, r.do("GET", "/v1/me/history?limit=0&cursor="+good, reqOpt{user: str("user_a")}), 400, "MALFORMED_REQUEST")
+	if len(r.fake.histCall) != 0 {
+		t.Fatal("service called on a 4xx")
+	}
+}
+
+func TestHistoryNextCursorJSON(t *testing.T) {
+	r := newRig()
+	r.fake.histView = domain.HistoryView{Items: []domain.HistoryItem{}}
+	body := r.do("GET", "/v1/me/history", reqOpt{user: str("user_a")}).Body.String()
+	if !strings.Contains(body, `"next_cursor":null`) {
+		t.Errorf("unset: %s", body)
+	}
+	r.fake.histView.NextCursor = str("abc")
+	body = r.do("GET", "/v1/me/history", reqOpt{user: str("user_a")}).Body.String()
+	if !strings.Contains(body, `"next_cursor":"abc"`) {
+		t.Errorf("set: %s", body)
+	}
 }

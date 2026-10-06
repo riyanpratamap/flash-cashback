@@ -96,7 +96,7 @@ func (d Deps) postRedemption(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, res)
 }
 
-// getHistory validates user, then limit, then calls the reader.
+// getHistory validates user, then limit, then cursor, then calls the reader.
 func (d Deps) getHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := domain.ParseUserID(r.Header.Values("X-User-ID"))
 	if err != nil {
@@ -123,10 +123,32 @@ func (d Deps) getHistory(w http.ResponseWriter, r *http.Request) {
 		d.writeFailure(w, r, err)
 		return
 	}
-	view, err := d.History.History(r.Context(), user, limit, nil)
+	cursor, err := parseCursor(query)
+	if err != nil {
+		d.writeFailure(w, r, err)
+		return
+	}
+	view, err := d.History.History(r.Context(), user, limit, cursor)
 	if err != nil {
 		d.writeFailure(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, view)
+}
+
+// parseCursor returns nil when cursor is absent. A present cursor (empty,
+// repeated, or undecodable) is a malformed request, with no detail.
+func parseCursor(query url.Values) (*domain.Cursor, error) {
+	vals, present := query["cursor"]
+	if !present {
+		return nil, nil
+	}
+	if len(vals) != 1 {
+		return nil, domain.ErrMalformedRequest
+	}
+	c, err := domain.DecodeCursor(vals[0])
+	if err != nil {
+		return nil, domain.ErrMalformedRequest
+	}
+	return &c, nil
 }
