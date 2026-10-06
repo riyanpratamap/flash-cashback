@@ -170,7 +170,7 @@ describe('Home (AC-64)', () => {
     expect(push.mock.calls).toEqual([['/redeem'], ['/pay'], ['/history']]);
   });
 
-  it('lists the two newest activities', async () => {
+  it('lists the newest activities and requests limit=5', async () => {
     await renderApp(<Home />);
     expect(await screen.findByText('Cashback redeemed')).toBeTruthy();
     expect(screen.getByText('To main account')).toBeTruthy();
@@ -178,7 +178,33 @@ describe('Home (AC-64)', () => {
     expect(screen.getByText('Payment')).toBeTruthy();
     expect(screen.getByText('Earned Rp25.000 cashback')).toBeTruthy();
     expect(screen.getByText('−Rp500.000')).toBeTruthy();
-    expect(requestedUrls().some((u) => u.endsWith('/me/history?limit=2'))).toBe(true);
+    expect(requestedUrls().some((u) => u.endsWith('/me/history?limit=5'))).toBe(true);
+  });
+
+  it('shows only the 5 newest of 7 served activities, in order', async () => {
+    const pay = (id: number) => ({
+      type: 'PAYMENT', id, reference: `PAY-${id}`, amount: id * 1000, status: 'SUCCEEDED',
+      created_at: '2026-10-03T14:32:00+07:00', cashback: { awarded: 0, reason: 'BELOW_MINIMUM' },
+    });
+    serve({ history: { items: [7, 6, 5, 4, 3, 2, 1].map(pay) } });
+    await renderApp(<Home />);
+    expect(await screen.findByText('−Rp7.000')).toBeTruthy();
+    expect(screen.getAllByText('Payment')).toHaveLength(5);
+    expect(screen.getByText('−Rp3.000')).toBeTruthy();
+    expect(screen.queryByText('−Rp2.000')).toBeNull();
+    expect(screen.queryByText('−Rp1.000')).toBeNull();
+    expect(requestedUrls().some((u) => u.endsWith('/me/history?limit=5'))).toBe(true);
+  });
+
+  it('shows all 3 when 3 activities are served', async () => {
+    const pay = (id: number) => ({
+      type: 'PAYMENT', id, reference: `PAY-${id}`, amount: id * 1000, status: 'SUCCEEDED',
+      created_at: '2026-10-03T14:32:00+07:00', cashback: { awarded: 0, reason: 'BELOW_MINIMUM' },
+    });
+    serve({ history: { items: [3, 2, 1].map(pay) } });
+    await renderApp(<Home />);
+    expect(await screen.findByText('−Rp3.000')).toBeTruthy();
+    expect(screen.getAllByText('Payment')).toHaveLength(3);
   });
 
   it('lists a partial and a Rp0 payment with the chip only on the partial, and no caption on the Rp0', async () => {

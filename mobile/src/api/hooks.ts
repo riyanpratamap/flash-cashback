@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useUser } from '@/user/UserProvider';
 import { campaignQuery, cashbackQuery, historyQuery, queryKeys } from '@/api/queries';
 
-export const HOME_ACTIVITY_LIMIT = 2;
+export const HOME_ACTIVITY_LIMIT = 5;
 export const HISTORY_LIMIT = 20; // D08: the newest 20, no paging
 
 export function useCampaign() {

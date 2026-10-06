@@ -85,7 +85,7 @@ export default function Home() {
                 activity.data.items.length === 0 ? (
                   <AppText tone="muted" style={styles.listNote}>No activity yet.</AppText>
                 ) : (
-                  activity.data.items.map((item, index, items) => (
+                  activity.data.items.slice(0, HOME_ACTIVITY_LIMIT).map((item, index, items) => (
                     <ActivityRow
                       key={`${item.type}-${item.id}`}
                       item={item}

@@ -68,8 +68,8 @@ describe('query functions', () => {
 
   it('history reads GET /me/history?limit=', async () => {
     fetchMock.mockResolvedValue(ok(history));
-    expect(await historyQuery('user_a', 2)).toEqual(history);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8080/v1/me/history?limit=2');
+    expect(await historyQuery('user_a', 5)).toEqual(history);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8080/v1/me/history?limit=5');
   });
 
   it('a body of the wrong shape is an error, not a value', async () => {

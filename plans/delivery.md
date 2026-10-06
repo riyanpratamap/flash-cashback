@@ -721,12 +721,13 @@ the first page; the handler passes `nil` until C23c. C23b also adds `NextCursor 
     (20/20/5), and the four AC-47a malformed cursors are 400 over HTTP.
   - Mutation (red, then restored): the handler ignores `cursor` (passes `nil`), so the HTTP walk repeats page 1.
   - Done when: `make gate` exit 0; new tests red on an assertion first; mutation reported.
-- [ ] **C24** Home recent activity shows the 5 newest — AC-66d · `ts` · not critical
+- [x] **C24** Home recent activity shows the 5 newest — AC-66d · `ts` · not critical
   - Skills: programming-typescript, developing-mobile-ui.
   - Home requests `limit=5` under `['history', user, 5]` (tech-spec §10), replacing `limit=2`.
   - Tests: `index.test.tsx` covers the `/me/history?limit=5` request, 7 items showing the 5 newest in order, and 3
     items showing 3. `queries.test.ts` URL updated.
   - Done when: red on an assertion then green; mutation (slice to 2 kept) red; `make mobile-check` exit 0.
+  - Result: `HOME_ACTIVITY_LIMIT` 2 to 5 (request `/me/history?limit=5`, key `['history', user, 5]`); Home renders `items.slice(0, HOME_ACTIVITY_LIMIT)`, as History does with its limit. `index.test.tsx`: the two-newest test renamed and asserts `limit=5`; new tests 7 served show the 5 newest in order (red: 7 rows) and 3 served show 3; `queries.test.ts` URL and arg to 5. Mutation red: slice kept at 2 (both new tests red). `make mobile-check` exit 0 (325 tests).
 - [ ] **C25** History pages on scroll — AC-66, AC-66c · `ts` · not critical
   - Skills: programming-typescript, developing-mobile-ui.
   - `src/api/queries.ts`: parse `next_cursor` (string or null; any other value is a parse error). The infinite query
