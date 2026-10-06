@@ -7,32 +7,58 @@ PostgreSQL inside the payment transaction.
 How it is made safe for money, the rules as interpreted, and its limits are in
 [docs/design-overview.md](docs/design-overview.md).
 
-## How to run
+## Demo
 
-Prerequisites: Docker with Compose v2; Node LTS for the app. No `.env` is needed.
+TODO(owner): paste the GitHub user-attachments video URL here, on its own line.
+
+## Prerequisites
+
+| Need                          | For                         | Notes                                                       |
+| ----------------------------- | --------------------------- | ----------------------------------------------------------- |
+| Docker with Compose v2        | API, PostgreSQL, Redis      | Port 8080 free on the host. No `.env` is needed.            |
+| Node 20.19+ or 22.13+, npm    | the mobile app              | Required by React Native 0.86                               |
+| Expo Go (SDK 57) on a phone   | the mobile app, any OS      | Or the iOS simulator on a Mac (Xcode)                       |
+| Go 1.26                       | running the tests only      | Not needed to run the demo                                  |
+
+## Quick start
+
+**1. Start the stack.** Migrations and the campaign seed run on first boot.
 
 ```sh
 docker compose up -d --build --wait
 curl -fsS localhost:8080/v1/healthz
 ```
 
-Expect `{"status":"ok","dependencies":{"postgres":"ok","redis":"ok"}}`. Only port 8080 is published. To change it, edit
-the `ports` mapping in `docker-compose.yml` (for example `"18080:8080"`), use that port in every URL below, and set
-`EXPO_PUBLIC_API_URL` to match.
+Expect `{"status":"ok","dependencies":{"postgres":"ok","redis":"ok"}}`.
 
-### Demo state
-
-`demo-reset` refuses unless `FC_DEMO=1` (exit 2, nothing changed). It truncates the money tables, so use it only on a
-demo database.
+**2. Load the demo state.** `demo-reset` refuses unless `FC_DEMO=1` (exit 2, nothing changed). It truncates the money
+tables, so use it only on a demo database.
 
 ```sh
 docker compose exec -e FC_DEMO=1 api /app/admin demo-reset
 ```
 
-Result (AC-57): `user_a` has balance 15000 and has earned 47000 today; `user_b` has no rows; `user_c` has earned
-50000 today (the daily cap). The demo users are `user_a`, `user_b`, `user_c`.
+Expect exit 0 and one `demo_reset` JSON line.
 
-### Try the API with curl
+**3. Open the app.**
+
+```sh
+cd mobile && npm ci && npx expo start
+```
+
+Press `i` for the iOS simulator, or scan the QR code with Expo Go. On a phone, see [The app](#the-app) for the API URL.
+
+## Demo users
+
+Pick the user with the `DEMO` switcher at the top of Home, or send it as `X-User-ID`. State after `demo-reset` (AC-57):
+
+| User     | Starting state                          | Try                                                             |
+| -------- | --------------------------------------- | --------------------------------------------------------------- |
+| `user_a` | balance 15000, earned 47000 today       | pay Rp100.000: earns 3000, `PARTIAL_DAILY_CAP`; then redeem     |
+| `user_b` | no rows                                 | pay Rp19.999: Rp0, `BELOW_MINIMUM`; pay Rp100.000: 5000 `AWARDED` |
+| `user_c` | earned 50000 today (the daily cap)      | pay any amount from Rp20.000: Rp0, `DAILY_CAP_REACHED`          |
+
+## Try the API with curl
 
 Every route except health needs `X-User-ID`; every POST needs an `Idempotency-Key` (a UUID). Shapes and codes are in
 [docs/api-contract.md](docs/api-contract.md).
@@ -62,7 +88,7 @@ curl -s 'localhost:8080/v1/me/history?limit=5' -H 'X-User-ID: user_a'
 The examples run in order after `demo-reset`. Rerunning them without a reset replays the stored answers, because the
 keys are the same.
 
-### Operations
+## Operations
 
 Operations are command-line tools, not HTTP endpoints (D23). `--by` names the operator.
 
@@ -76,11 +102,7 @@ docker compose exec api /app/reconcile                            # checks the i
 
 Reconcile only reports. It also prints the outstanding cashback liability.
 
-### The app
-
-```sh
-cd mobile && npm ci && npx expo start
-```
+## The app
 
 The app reads `EXPO_PUBLIC_API_URL`, default `http://localhost:8080/v1` (D09).
 
@@ -88,7 +110,26 @@ The app reads `EXPO_PUBLIC_API_URL`, default `http://localhost:8080/v1` (D09).
 - **Expo Go on Android or iPhone:** the phone must be on the same network as your computer. Start with your
   computer's LAN address: `EXPO_PUBLIC_API_URL=http://<your-computer-LAN-IP>:8080/v1 npx expo start`.
 
-Screen recording: TODO(owner): screen recording
+To use another host port, edit the `ports` mapping in `docker-compose.yml` (for example `"18080:8080"`), use that port
+in every URL above, and set `EXPO_PUBLIC_API_URL` to match.
+
+## Run the tests
+
+Run from the repo root. The integration tests start their own PostgreSQL and Redis from `docker-compose.test.yml`, on
+ports apart from the demo stack.
+
+```sh
+make gate          # gofmt check, vet, staticcheck, unit tests, integration tests with -race
+make test-race     # the concurrency tests, -race -count=20
+make mobile-check  # lint, typecheck, and tests of the app (run npm ci in mobile/ first)
+```
+
+## Stop and clean up
+
+```sh
+docker compose down      # stop; the database is kept
+docker compose down -v   # stop and drop the database volume; the next start seeds a fresh campaign
+```
 
 ## More detail
 
