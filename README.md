@@ -14,21 +14,21 @@ Recorded on the app against the [demo state](#demo-users). Reason codes are in [
 <table>
   <tr>
     <td width="50%" valign="top">
-      <b>Full cashback</b><br>A payment earns the full 5% (<code>AWARDED</code>).<br>
+      <b>Full cashback</b><br>
       <video src="https://github.com/user-attachments/assets/ddde82c8-5707-4f29-b48a-4591b318ef4f" controls width="100%"></video>
     </td>
     <td width="50%" valign="top">
-      <b>Partial cashback</b><br>Today's cap cuts the award below 5% (<code>PARTIAL_DAILY_CAP</code>).<br>
+      <b>Partial cashback</b><br>
       <video src="https://github.com/user-attachments/assets/6ccca6f6-b7a2-4bad-a120-4db07e517694" controls width="100%"></video>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <b>No cashback</b><br>The payment succeeds and earns Rp0, with the reason shown.<br>
+      <b>No cashback</b><br>
       <video src="https://github.com/user-attachments/assets/8504b1ae-69eb-4040-b06e-e655898c7f8f" controls width="100%"></video>
     </td>
     <td width="50%" valign="top">
-      <b>Redeem</b><br>The cashback balance is redeemed to the main account.<br>
+      <b>Redeem</b><br>
       <video src="https://github.com/user-attachments/assets/c0f457c7-c7a9-40ac-902e-2cfc8d61aa4a" controls width="100%"></video>
     </td>
   </tr>
