@@ -609,6 +609,23 @@ From `/change` (2026-10-06, after C17): AC-62 amended; wireframe screen 3.
     without the flag and 0 with it, curl reads, payment 201 then replay 200, redeem 201, the demo users table rows,
     four switch commands, reconcile), each as stated; relative links resolve. The owner uploaded four videos (issues
     #1, #2); the Demo section embeds them as full cashback, partial cashback, no cashback, and redeem.
+- [x] **C21** README test results section; `make cover` · docs, `make` · not critical
+  - Owner request: a README section listing the backend and mobile tests and their coverage. Owner agreed: a
+    `make cover` target, and backend coverage counts unit and integration tests together.
+  - `make cover`: backend unit + integration tests (`-tags integration`, test compose up) with `-coverpkg=./...`,
+    printing the total and per-package figures; mobile `jest --coverage` with a text summary. No new dependency.
+  - README `## Test results` after "Run the tests": a suites table (area, kind, count, command), a coverage table
+    (backend total and the key packages; mobile statements, branches, functions, lines), the commit and date measured,
+    and how to regenerate (`make cover`).
+  - Done when: `make cover` exits 0; every README number equals that run's output; `make gate` and
+    `make mobile-check` still exit 0; relative links resolve.
+  - Result: `make cover` (test compose up; `go test -tags integration -p 1 -count=1 -coverpkg=./...` with a profile;
+    `go tool cover -func`; an awk per-package table that merges blocks across test binaries; `jest --coverage` text
+    summary, test helpers in `src/test/` excluded); exit 0. README `## Test results`: 53 unit, 113 integration (18
+    `TestRace*` among them), 323 Jest tests in 30 files; backend 84.8% total; mobile 97.66 / 94.17 / 98.11 / 99.51.
+    Counts exclude `TestMain`. Review: helpers excluded, package column widened, `cmd/*` note reworded.
+    `make gate` exit 0; `make mobile-check` exit 0; no new links.
+    Assumption: no `-race` in the cover run (the gate and `test-race` already cover it).
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

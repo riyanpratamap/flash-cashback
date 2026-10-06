@@ -144,8 +144,38 @@ ports apart from the demo stack.
 ```sh
 make gate          # gofmt check, vet, staticcheck, unit tests, integration tests with -race
 make test-race     # the concurrency tests, -race -count=20
+make cover         # unit and integration coverage of the backend, jest coverage of the app
 make mobile-check  # lint, typecheck, and tests of the app (run npm ci in mobile/ first)
 ```
+
+## Test results
+
+| Area    | Kind                                | Tests | Command                 |
+| ------- | ----------------------------------- | ----- | ----------------------- |
+| Backend | unit (no database)                  | 53    | `make test`             |
+| Backend | integration                         | 113   | `make test-integration` |
+| Backend | concurrency (subset of integration) | 18    | `make test-race`        |
+| Mobile  | Jest, 30 test files                 | 323   | `make mobile-check`     |
+
+| Coverage                                   | Statements |
+| ------------------------------------------ | ---------- |
+| Backend total (unit + integration)         | 84.8%      |
+| `internal/domain` (award and status rules) | 97.3%      |
+| `internal/service` (payment, redemption)   | 94.0%      |
+| `internal/store` (SQL, locks)              | 77.5%      |
+| `internal/httpapi`                         | 96.7%      |
+| `internal/reconcile`                       | 86.7%      |
+
+| Mobile     | Covered           |
+| ---------- | ----------------- |
+| Statements | 97.66% (712/729)  |
+| Branches   | 94.17% (501/532)  |
+| Functions  | 98.11% (208/212)  |
+| Lines      | 99.51% (617/620)  |
+
+Measured at commit `8673bce` on 2026-10-06. `make cover` regenerates the figures; it runs without `-race` and prints
+every package, including `cmd/*`, whose `main` functions only the compose smoke test runs. Mobile figures leave
+out the test helpers in `src/test/`.
 
 ## Stop and clean up
 
