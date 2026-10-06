@@ -598,13 +598,17 @@ From `/change` (2026-10-06, after C17): AC-62 amended; wireframe screen 3.
     AGENTS.md README rule and Sources of Truth row, DECISIONS.md D07 note, prd.md traceability row, the
     api-contract.md trust condition 18 pointer, and the known-pitfalls.md rule-summary line updated.
     Assumption: no content rewritten; docs only, so no gate beyond the diffs and link check.
-- [ ] **C20** README restructured for a quick reviewer start; demo video slot · docs · not critical
+- [x] **C20** README restructured for a quick reviewer start; demo video slot · docs · not critical
   - Owner request: a demo video under the title (a GitHub user-attachments mp4, pasted by the owner), a prerequisites
     table, a three-step quick start with expected output, a demo users table, how to run the tests, and stop and clean
     up; the curl, operations, and app sections and the doc links are kept. No troubleshooting section. The README
     still holds only the description and how to run (C19).
   - Done when: every README command runs as written on the stack after `demo-reset`; every relative link resolves;
     the video URL is filled in by the owner.
+  - Result: README in the agreed order; every command run as written after `demo-reset` (healthz, demo-reset exit 2
+    without the flag and 0 with it, curl reads, payment 201 then replay 200, redeem 201, the demo users table rows,
+    four switch commands, reconcile), each as stated; relative links resolve. The owner uploaded four videos (issues
+    #1, #2); the Demo section embeds them as full cashback, partial cashback, no cashback, and redeem.
 
 **Changes gate:** `make mobile-check` exit 0; walkthrough Home → Pay → result → Done → History → Redeem
 on Expo Go.

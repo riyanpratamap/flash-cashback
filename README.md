@@ -9,7 +9,31 @@ How it is made safe for money, the rules as interpreted, and its limits are in
 
 ## Demo
 
-TODO(owner): paste the GitHub user-attachments video URL here, on its own line.
+Recorded on the app against the demo state below. Reason codes are in [docs/api-contract.md](docs/api-contract.md).
+
+### Full cashback
+
+A payment earns the full 5% (`AWARDED`).
+
+https://github.com/user-attachments/assets/ddde82c8-5707-4f29-b48a-4591b318ef4f
+
+### Partial cashback
+
+Today's cap cuts the award below 5% (`PARTIAL_DAILY_CAP`).
+
+https://github.com/user-attachments/assets/6ccca6f6-b7a2-4bad-a120-4db07e517694
+
+### No cashback
+
+The payment succeeds and earns Rp0, with the reason shown.
+
+https://github.com/user-attachments/assets/8504b1ae-69eb-4040-b06e-e655898c7f8f
+
+### Redeem
+
+The cashback balance is redeemed to the main account.
+
+https://github.com/user-attachments/assets/c0f457c7-c7a9-40ac-902e-2cfc8d61aa4a
 
 ## Prerequisites
 
