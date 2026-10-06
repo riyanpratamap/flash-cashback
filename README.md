@@ -152,28 +152,28 @@ make mobile-check  # lint, typecheck, and tests of the app (run npm ci in mobile
 
 | Area    | Kind                                | Tests | Command                 |
 | ------- | ----------------------------------- | ----- | ----------------------- |
-| Backend | unit (no database)                  | 53    | `make test`             |
-| Backend | integration                         | 127   | `make test-integration` |
+| Backend | unit (no database)                  | 59    | `make test`             |
+| Backend | integration                         | 134   | `make test-integration` |
 | Backend | concurrency (subset of integration) | 18    | `make test-race`        |
-| Mobile  | Jest, 30 test files                 | 323   | `make mobile-check`     |
+| Mobile  | Jest, 30 test files                 | 334   | `make mobile-check`     |
 
 | Coverage                                   | Statements |
 | ------------------------------------------ | ---------- |
-| Backend total (unit + integration)         | 88.5%      |
-| `internal/domain` (award and status rules) | 97.3%      |
-| `internal/service` (payment, redemption)   | 94.0%      |
-| `internal/store` (SQL, locks)              | 96.8%      |
-| `internal/httpapi`                         | 96.7%      |
+| Backend total (unit + integration)         | 89.1%      |
+| `internal/domain` (award and status rules) | 97.8%      |
+| `internal/service` (payment, redemption)   | 94.5%      |
+| `internal/store` (SQL, locks)              | 96.9%      |
+| `internal/httpapi`                         | 96.9%      |
 | `internal/reconcile`                       | 86.7%      |
 
 | Mobile     | Covered           |
 | ---------- | ----------------- |
-| Statements | 97.66% (712/729)  |
-| Branches   | 94.17% (501/532)  |
-| Functions  | 98.11% (208/212)  |
-| Lines      | 99.51% (617/620)  |
+| Statements | 97.71% (728/745)  |
+| Branches   | 94.57% (523/553)  |
+| Functions  | 98.19% (218/222)  |
+| Lines      | 99.52% (633/636)  |
 
-Measured at commit `63f95cf` on 2026-10-06. `make cover` regenerates the figures; it runs without `-race` and prints
+Measured at commit `7f26d74` on 2026-10-07. `make cover` regenerates the figures; it runs without `-race` and prints
 every package, including `cmd/*`, whose `main` functions only the compose smoke test runs. Mobile figures leave
 out the test helpers in `src/test/`.
 
