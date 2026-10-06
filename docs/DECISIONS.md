@@ -16,7 +16,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D05 | Kill switch                                    | Two independent switches: awards, redemptions                                          |
 | D06 | What Redis is for                              | Read caches for `GET /campaign` and `GET /me/cashback`; no rate limiting               |
 | D07 | Trust conditions                               | The trust conditions table below                                                       |
-| D08 | Cut line                                       | Keep read caches, CI; drop `ENDING_SOON`, cursor paging, detail sheet (load test: D52) |
+| D08 | Cut line                                       | Keep read caches, CI; drop `ENDING_SOON`, cursor paging (built later, D54), detail sheet (load test: D52) |
 | D09 | Demo path without a Mac                        | Expo Go on a phone; iOS simulator documented; README recording and curl examples      |
 | D10 | Base URL                                       | `http://localhost:8080/v1`                                                             |
 | D11 | Money                                          | Integer IDR, `int64` / `BIGINT`                                                        |
@@ -62,6 +62,7 @@ are never reused. A later change adds a new entry that supersedes an old one; it
 | D51 | Load test for the read caches                  | k6 in Docker, three scenarios, cache on vs off; supersedes the D08 load-test drop      |
 | D52 | Load test (revisits D51)                       | Dropped again; `CACHE_READS` kept; P4.5 numbers kept as a one-off measurement          |
 | D53 | Where the Redis layer goes (revisits D50)      | Cache `GET /campaign` only; `GET /me/cashback` always reads PostgreSQL                 |
+| D54 | History paging (revisits D08)                  | Keyset cursor, 20 per page, auto-load on scroll; Home shows the 5 newest               |
 
 ## Open decisions
 
@@ -410,6 +411,23 @@ Supersedes D50; the rest of D06 (no rate limiting, fail open when Redis is down)
 - **Would revisit if:** as stated in D06.
 - **Assumptions:** `fc:v1:cashback:*` is no longer read, written, or deleted; keys left by an older build expire within
   their 60 s TTL. `CACHE_CASHBACK_TTL` is removed. `CACHE_READS` now switches the campaign cache only.
+
+### D54 — History paging (revisits D08)
+
+Raised by the owner's change request: Home recent activity shows at most 5 items, and History loads 20 per fetch and
+fetches more on scroll. Supersedes the cursor-paging drop of D08 only; the `ENDING_SOON` and detail-sheet drops stand.
+
+- **Options:** A. Opaque keyset cursor (`cursor` in, `next_cursor` out, ordered by `created_at`, type, `id`) ·
+  B. Offset paging · C. No paging, raise the screen to 50
+- **Recommended:** A
+- **Chosen:** A
+- **Rationale:** "scrolling must never show duplicate or missing rows"
+- **Cost accepted:** "accept it, refresh shows it later", on the limit raised by the spec check: `created_at` is the
+  transaction start, so a write that commits during a scroll with a time among rows already passed is missing from
+  that scroll and appears on the next refresh. Also the stated cost of A: the history order gains a type tie-break,
+  and a cursor encode and decode with its own tests.
+- **Would revisit if:** not stated by the owner.
+- **Home count:** Home recent activity shows the 5 newest items (was 2), as the owner asked; not debated.
 
 ## Further batch
 
