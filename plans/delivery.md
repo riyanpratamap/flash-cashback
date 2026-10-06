@@ -668,7 +668,8 @@ changes `HistoryReader.History` and `Reads.History` to `(ctx, user, limit, curso
 the first page; the handler passes `nil` until C23c. C23b also adds `NextCursor *string` with tag `next_cursor` to
 `domain.HistoryView`, an additive field. C23c parses the query parameter and passes the decoded cursor.
 
-- [ ] **C23a** History cursor encode and decode, pure — AC-47a · go · not critical
+- [x] **C23a** History cursor encode and decode, pure — AC-47a · go · not critical
+  - Result: `domain.Cursor` (`T`, `Type`, `ID`), `EncodeCursor`, `DecodeCursor`, `ErrBadCursor`, and `BranchBound(c, branch)` in `cursor.go`, unused until C23b; table tests for round-trip, 17 rejected forms and the four §3 bound rows. Mutations red: re-encode check dropped (offset, trailing-zero, plus-sign rows); version check dropped alone stays green (the re-encode check rejects `v2` too), both dropped (`v2` row red); lower-rank bound 0 for max int64 (bound row red). `make gate` exit 0.
   - Skills: programming-go, developing-backend.
   - `internal/domain`: `Cursor`, `EncodeCursor(Cursor) string` and `DecodeCursor(s) (Cursor, error)` per tech-spec
     §3: base64url with no padding of `v1|<t UTC RFC3339Nano>|<P|R>|<id>`. Also the branch `$bound` helper, which turns
