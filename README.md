@@ -173,7 +173,7 @@ make mobile-check  # lint, typecheck, and tests of the app (run npm ci in mobile
 | Functions  | 98.11% (208/212)  |
 | Lines      | 99.51% (617/620)  |
 
-Measured at commit `8673bce` on 2026-10-06. `make cover` regenerates the figures; it runs without `-race` and prints
+Measured at commit `63f95cf` on 2026-10-06. `make cover` regenerates the figures; it runs without `-race` and prints
 every package, including `cmd/*`, whose `main` functions only the compose smoke test runs. Mobile figures leave
 out the test helpers in `src/test/`.
 
