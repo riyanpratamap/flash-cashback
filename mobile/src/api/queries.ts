@@ -39,12 +39,13 @@ export type HistoryItem =
       created_at: string;
     };
 
-export type History = { items: readonly HistoryItem[] };
+export type History = { items: readonly HistoryItem[]; next_cursor: string | null };
 
 export const queryKeys = {
   campaign: () => ['campaign'] as const,
   cashback: (user: string) => ['cashback', user] as const,
   history: (user: string, limit: number) => ['history', user, limit] as const,
+  historyPages: (user: string) => ['history', user, 'pages'] as const,
 };
 
 
@@ -80,7 +81,12 @@ function isHistoryItem(v: unknown): v is HistoryItem {
 }
 
 function isHistory(v: unknown): v is History {
-  return isRecord(v) && Array.isArray(v.items) && v.items.every(isHistoryItem);
+  return (
+    isRecord(v) &&
+    Array.isArray(v.items) &&
+    v.items.every(isHistoryItem) &&
+    (v.next_cursor === null || isStr(v.next_cursor))
+  );
 }
 
 async function get<T>(path: string, user: string, isValid: (body: unknown) => body is T): Promise<T> {
@@ -97,4 +103,6 @@ async function get<T>(path: string, user: string, isValid: (body: unknown) => bo
 
 export const campaignQuery = (user: string) => get('/campaign', user, isCampaign);
 export const cashbackQuery = (user: string) => get('/me/cashback', user, isCashbackSummary);
-export const historyQuery = (user: string, limit: number) => get(`/me/history?limit=${limit}`, user, isHistory);
+/** `cursor` is the previous page's `next_cursor`, opaque; absent for the first page. */
+export const historyQuery = (user: string, limit: number, cursor?: string) =>
+  get(`/me/history?limit=${limit}${cursor === undefined ? '' : `&cursor=${encodeURIComponent(cursor)}`}`, user, isHistory);

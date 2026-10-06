@@ -21,6 +21,7 @@ export const cashback: CashbackSummary = {
 };
 
 export const history: History = {
+  next_cursor: null,
   items: [
     {
       type: 'REDEMPTION',
@@ -50,13 +51,17 @@ const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200
 
 export const fetchMock = jest.fn<Promise<Response>, [string, RequestInit & { headers: Record<string, string> }]>();
 
+/** A history body written as `{ items }` is a last page: the API always sends `next_cursor`, null on the last. */
+const withCursor = (body: unknown) =>
+  typeof body === 'object' && body !== null && !('next_cursor' in body) ? { ...body, next_cursor: null } : body;
+
 /** Serves the three read endpoints. A value that is an Error answers 500; the history `limit` is in the URL. */
 export function serve(overrides: Partial<Record<keyof Served, Answer>> = {}) {
   const served: Record<keyof Served, Answer> = { campaign, cashback, history, ...overrides };
   fetchMock.mockReset();
   fetchMock.mockImplementation(async (url) => {
     const key = url.includes('/me/history') ? 'history' : url.includes('/me/cashback') ? 'cashback' : 'campaign';
-    const answer = served[key];
+    const answer = key === 'history' ? withCursor(served.history) : served[key];
     return answer instanceof Error ? new Response('{}', { status: 500 }) : json(answer);
   });
   globalThis.fetch = fetchMock as unknown as typeof fetch;

@@ -1,4 +1,4 @@
-import { type QueryKey, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryKey, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
 
@@ -6,7 +6,7 @@ import { useUser } from '@/user/UserProvider';
 import { campaignQuery, cashbackQuery, historyQuery, queryKeys } from '@/api/queries';
 
 export const HOME_ACTIVITY_LIMIT = 5;
-export const HISTORY_LIMIT = 20; // D08: the newest 20, no paging
+export const HISTORY_LIMIT = 20; // D54: the page size of the History screen
 
 export function useCampaign() {
   const { user } = useUser();
@@ -21,6 +21,17 @@ export function useCashback() {
 export function useHistory(limit: number) {
   const { user } = useUser();
   return useQuery({ queryKey: queryKeys.history(user, limit), queryFn: () => historyQuery(user, limit) });
+}
+
+/** The History screen: pages of HISTORY_LIMIT, each asked with the previous page's `next_cursor`; the first has none. */
+export function useHistoryPages() {
+  const { user } = useUser();
+  return useInfiniteQuery({
+    queryKey: queryKeys.historyPages(user),
+    queryFn: ({ pageParam }) => historyQuery(user, HISTORY_LIMIT, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
 }
 
 /** A focus refetch skips a query updated within this window (a money answer has just refetched it). */

@@ -1,8 +1,8 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { FOCUS_FRESH_MS } from '@/api/hooks';
 import type { HistoryItem } from '@/api/queries';
-import { cashback, fetchMock, renderScreen, requestedUrls, resetStorage, serve } from '@/test/fixtures';
+import { cashback, fetchMock, newClient, renderScreen, requestedUrls, resetStorage, serve } from '@/test/fixtures';
 import { regainFocus } from '@/test/router-mock';
 import History from '@/app/history';
 
@@ -107,17 +107,6 @@ describe('History (AC-66)', () => {
     expect(screen.getByText('+Rp42.000')).toBeTruthy();
   });
 
-  it('asks for 20 and shows at most 20 rows', async () => {
-    const items = Array.from({ length: 25 }, (_, i) =>
-      payment(100 - i, '2026-10-03T10:00:00+07:00', 100000, 5000, 'AWARDED'),
-    );
-    serve({ history: { items } });
-    await renderScreen(<History />);
-    await screen.findAllByText('Payment');
-    expect(requestedUrls().some((u) => u.endsWith('/me/history?limit=20'))).toBe(true);
-    expect(screen.getAllByText('Payment')).toHaveLength(20);
-  });
-
   it('shows the empty copy', async () => {
     serve({ history: { items: [] } });
     await renderScreen(<History />);
@@ -145,5 +134,117 @@ describe('History (AC-66)', () => {
     jest.spyOn(Date, 'now').mockReturnValue(now + FOCUS_FRESH_MS + 1);
     await act(async () => regainFocus());
     expect(fetchMock.mock.calls.length).toBeGreaterThan(before);
+    // Let the refetch's notification land inside this test, not in the next one.
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+  });
+});
+
+describe('History paging (AC-66c)', () => {
+  // 25 items: ids 100..76, the newest 21 on 3 Oct, the last 4 on 2 Oct. Page 1 is 20 items with cursor C1.
+  const all = Array.from({ length: 25 }, (_, i) =>
+    payment(100 - i, i < 21 ? '2026-10-03T10:00:00+07:00' : '2026-10-02T10:00:00+07:00', 100000, 5000, 'AWARDED'),
+  );
+  const PAGE_ONE = { items: all.slice(0, 20), next_cursor: 'C1' };
+  const PAGE_TWO = { items: all.slice(20), next_cursor: null };
+  const historyUrls = () => requestedUrls().filter((u) => u.includes('/me/history'));
+
+  /** Page 1 without a cursor, page 2 for C1; `second` can answer the second page differently (an Error is a 500). */
+  function servePages(second: unknown = PAGE_TWO) {
+    serve();
+    const base = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation(async (url, init) => {
+      if (!url.includes('/me/history')) return base!(url, init);
+      if (!url.includes('cursor=')) return new Response(JSON.stringify(PAGE_ONE), { status: 200 });
+      return second instanceof Error ? new Response('{}', { status: 500 }) : new Response(JSON.stringify(second), { status: 200 });
+    });
+  }
+  const reachEnd = async () => fireEvent(await screen.findByTestId('history-list'), 'endReached');
+
+  it('requests limit 20 with no cursor and shows 20 rows', async () => {
+    servePages();
+    await renderScreen(<History />);
+    await screen.findAllByText('Payment');
+    expect(historyUrls()).toEqual(['http://localhost:8080/v1/me/history?limit=20']);
+    expect(screen.getAllByText('Payment')).toHaveLength(20);
+  });
+
+  it('sends the returned cursor at the end and appends the next 5 rows', async () => {
+    servePages();
+    await renderScreen(<History />);
+    await screen.findAllByText('Payment');
+    await reachEnd();
+    await waitFor(() => expect(screen.getAllByText('Payment')).toHaveLength(25));
+    expect(historyUrls()).toEqual([
+      'http://localhost:8080/v1/me/history?limit=20',
+      'http://localhost:8080/v1/me/history?limit=20&cursor=C1',
+    ]);
+  });
+
+  it('shows one 3 Oct header across both pages and a spinner while loading more', async () => {
+    servePages();
+    await renderScreen(<History />);
+    await screen.findAllByText('Payment');
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const paged = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (url.includes('cursor=')) await gate;
+      return paged(url, init);
+    });
+    await reachEnd();
+    expect(await screen.findByLabelText('Loading more')).toBeTruthy();
+    release();
+    await waitFor(() => expect(screen.getAllByText('Payment')).toHaveLength(25));
+    expect(screen.queryByLabelText('Loading more')).toBeNull();
+    expect(screen.getAllByText('TODAY, 3 OCT')).toHaveLength(1);
+    expect(screen.getAllByText('YESTERDAY, 2 OCT')).toHaveLength(1);
+  });
+
+  it('keeps the loaded rows on a failed next page and Try again resends the same cursor', async () => {
+    servePages(new Error('boom'));
+    await renderScreen(<History />);
+    await screen.findAllByText('Payment');
+    await reachEnd();
+    expect(await screen.findByText("Couldn't load more.")).toBeTruthy();
+    expect(screen.getAllByText('Payment')).toHaveLength(20);
+    expect(screen.queryByText("Couldn't load your history.")).toBeNull();
+
+    servePages();
+    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(screen.getAllByText('Payment')).toHaveLength(25));
+    expect(historyUrls().at(-1)).toBe('http://localhost:8080/v1/me/history?limit=20&cursor=C1');
+    expect(screen.queryByText("Couldn't load more.")).toBeNull();
+  });
+
+  it('does not request again while the failed footer shows', async () => {
+    servePages(new Error('boom'));
+    await renderScreen(<History />);
+    await screen.findAllByText('Payment');
+    await reachEnd();
+    await screen.findByText("Couldn't load more.");
+    const before = historyUrls().length;
+    await reachEnd();
+    expect(historyUrls()).toHaveLength(before);
+  });
+
+  it('sends nothing and shows an empty footer after next_cursor is null', async () => {
+    servePages();
+    const client = newClient();
+    await renderScreen(<History />, client);
+    await screen.findAllByText('Payment');
+    await reachEnd();
+    await waitFor(() => expect(screen.getAllByText('Payment')).toHaveLength(25));
+    const before = historyUrls().length;
+    // Even a no-op fetchNextPage starts a fetch in the cache; the guard must not call it at all.
+    let fetches = 0;
+    const stop = client.getQueryCache().subscribe((event) => {
+      if (event.type === 'updated' && event.action.type === 'fetch') fetches += 1;
+    });
+    await reachEnd();
+    stop();
+    expect(fetches).toBe(0);
+    expect(historyUrls()).toHaveLength(before);
+    expect(screen.queryByLabelText('Loading more')).toBeNull();
+    expect(screen.queryByText("Couldn't load more.")).toBeNull();
   });
 });

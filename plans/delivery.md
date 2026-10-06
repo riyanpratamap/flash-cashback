@@ -728,7 +728,8 @@ the first page; the handler passes `nil` until C23c. C23b also adds `NextCursor 
     items showing 3. `queries.test.ts` URL updated.
   - Done when: red on an assertion then green; mutation (slice to 2 kept) red; `make mobile-check` exit 0.
   - Result: `HOME_ACTIVITY_LIMIT` 2 to 5 (request `/me/history?limit=5`, key `['history', user, 5]`); Home renders `items.slice(0, HOME_ACTIVITY_LIMIT)`, as History does with its limit. `index.test.tsx`: the two-newest test renamed and asserts `limit=5`; new tests 7 served show the 5 newest in order (red: 7 rows) and 3 served show 3; `queries.test.ts` URL and arg to 5. Mutation red: slice kept at 2 (both new tests red). `make mobile-check` exit 0 (325 tests).
-- [ ] **C25** History pages on scroll — AC-66, AC-66c · `ts` · not critical
+- [x] **C25** History pages on scroll — AC-66, AC-66c · `ts` · not critical
+  - Result: `historyQuery(user, limit, cursor?)` omits `cursor` when absent and URL-encodes it; `History.next_cursor` is `string | null` and any other value (missing, number, bool) is a parse error. `useHistoryPages` is a `useInfiniteQuery` under `['history', user, 'pages']` (`queryKeys.historyPages`), `getNextPageParam` = `next_cursor ?? undefined`. History is a `SectionList` over pages flattened then `groupByDay`; the guard, footer (spinner `Loading more` / "Couldn't load more." + Try again / none) and the unchanged first-load error and empty states are as specified; the stale D08 comment is replaced. Tests: 6 paging tests in `history.test.tsx` (the old "at most 20 rows" slice test is replaced) plus 4 in `queries.test.ts`. Red first: the paging tests failed on the missing list, the cursor tests on missing parse and URL. Mutations: group per page before flattening red (one-header test, 2 headers); `hasNextPage` dropped from the guard stayed green on request count and spinner (TanStack's `fetchNextPage` is itself a no-op without a next page), so the null-cursor test also asserts no cache fetch starts, which turns red (1 fetch, want 0), restored. `make mobile-check` exit 0 (334 tests).
   - Skills: programming-typescript, developing-mobile-ui.
   - `src/api/queries.ts`: parse `next_cursor` (string or null; any other value is a parse error). The infinite query
     uses key `['history', user, 'pages']`, `limit=20`, no `initialPageParam` cursor, and `getNextPageParam` returning
@@ -783,8 +784,10 @@ the first page; the handler passes `nil` until C23c. C23b also adds `NextCursor 
    at the end with an empty footer.
 5. `docker compose exec api /app/reconcile; echo exit=$?` → exit=0, then `docker compose down`.
 
-**D54 gate result:** to fill in when the gate runs, each step with its exit code or observation, also recorded in
-the C25 commit body.
+**D54 gate result:** 1 `make gate` exit 0. 2 `make mobile-check` exit 0 (334 tests). 3 stack walk: `docker compose up -d
+--build --wait` exit 0; `demo-reset` exit=0; 30 payments, no `FAIL`; page sizes 20 then 12, 32 ids, `uniq -d` empty,
+walk stopped on `next_cursor` null, `?cursor=` is 400. 4 walkthrough: passed on the iOS simulator (owner, 2026-10-07). 5 reconcile
+exit=0 (all nine invariants ok), then `docker compose down` exit 0.
 
 ## Slip rule
 

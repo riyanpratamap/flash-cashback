@@ -22,6 +22,7 @@ const cashback = {
   today: { date: '2026-10-03', earned: 47000, remaining: 3000, resets_at: '2026-10-04T00:00:00+07:00' },
 };
 const history = {
+  next_cursor: null,
   items: [
     {
       type: 'PAYMENT',
@@ -71,6 +72,23 @@ describe('query functions', () => {
     expect(await historyQuery('user_a', 5)).toEqual(history);
     expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8080/v1/me/history?limit=5');
   });
+
+  it('history sends the cursor when given and omits it when absent', async () => {
+    fetchMock.mockImplementation(async () => ok({ ...history, next_cursor: 'abc_-' }));
+    expect((await historyQuery('user_a', 20)).next_cursor).toBe('abc_-');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8080/v1/me/history?limit=20');
+    await historyQuery('user_a', 20, 'abc_-');
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('http://localhost:8080/v1/me/history?limit=20&cursor=abc_-');
+  });
+
+  it.each([['missing', undefined], ['a number', 7], ['a bool', false]])(
+    'history with next_cursor %s is a parse error',
+    async (_name, value) => {
+      const { next_cursor: _drop, ...rest } = history;
+      fetchMock.mockResolvedValue(ok(value === undefined ? rest : { ...rest, next_cursor: value }));
+      await expect(historyQuery('user_a', 20)).rejects.toThrow();
+    },
+  );
 
   it('a body of the wrong shape is an error, not a value', async () => {
     fetchMock.mockResolvedValue(ok({ balance: '15000' }));
