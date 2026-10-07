@@ -45,6 +45,9 @@
   "private": true,
   "jest": {
     "preset": "jest-expo",
-    "globalSetup": "./jest.global-setup.js"
+    "globalSetup": "./jest.global-setup.js",
+    "setupFilesAfterEnv": [
+      "./jest.setup.js"
+    ]
   }
 }
